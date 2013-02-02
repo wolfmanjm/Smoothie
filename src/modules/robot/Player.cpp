@@ -112,9 +112,10 @@ void Player::pop_and_process_new_block(int debug){
     // Tell all modules about it
     this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);
 
-    // In case the module was not taken
+	// In case the module was not taken
     if( this->current_block->times_taken < 1 ){
-        this->current_block->release();
+		this->current_block->release();
+		this->current_block = NULL; ///jm+++ FIX? appears to be
     }
 
     this->looking_for_new_block = false;
