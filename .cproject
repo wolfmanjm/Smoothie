@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?>
+
+<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552" moduleId="org.eclipse.cdt.core.settings" name="Debug">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="Smoothie" buildProperties="" description="" id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552" name="Debug" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552." name="/" resourcePath="">
+						<toolChain id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.392445548" name="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base">
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.processor.874610444" name="Processor" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.processor"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.thumb.653321111" name="Thumb (-mthumb)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.thumb"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.thumbinterwork.1195548601" name="Thumb interwork (-mthumb-interwork)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.thumbinterwork"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.endiannes.1066452150" name="Endiannes" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.endiannes"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.fpu.abi.1377463791" name="Float ABI" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.fpu.abi"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.fpu.unit.2037518476" name="FPU Type" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.fpu.unit"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.level.1048095664" name="Debug level" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.level"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.format.85985952" name="Debug format" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.format"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.other.2023087819" name="Other debugging flags" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.other"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.prof.962562513" name="Generate prof information (-p)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.prof"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.gprof.1289355600" name="Generate gprof information (-pg)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.gprof"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.createflash.588011562" name="Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.createflash"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.createlisting.1911599965" name="Create Extended Listing" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.createlisting"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.printsize.362087172" name="Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.printsize"/>
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.GNU_ELF" id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.platform.base.253154849" isAbstract="false" name="Linux Platform" osList="linux" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.platform.base"/>
+							<builder id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.builder.base.1280083465" incrementalBuildTarget="all GCC4MBED_TYPE=Debug ENABLE_DEBUG_MONITOR=1" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="ARM Sourcery Linux GNU Make builder" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.builder.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.2008718836" name="ARM Sourcery Linux GCC Assembler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths.2041634188" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Smoothie/gcc4mbed/external/mbed/LPC1768}&quot;"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.input.1831101964" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.580393852" name="ARM Sourcery Linux GCC C Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths.438016249" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Smoothie/gcc4mbed/external/mbed/LPC1768}&quot;"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.input.1135108974" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.764273957" name="ARM Sourcery Linux GCC C++ Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.include.paths.1968285483" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Smoothie/gcc4mbed/external/mbed/LPC1768}&quot;"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.input.569982195" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.linker.base.177279037" name="ARM Sourcery Linux GCC C Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.linker.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.linker.base.1389130694" name="ARM Sourcery Linux GCC C++ Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.linker.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.archiver.base.1651952926" name="ARM Sourcery Linux GCC Archiver" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.archiver.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.createflash.base.1091356882" name="ARM Sourcery Linux GNU Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.createflash.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.createlisting.base.6642205" name="ARM Sourcery Linux GNU Create Listing" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.createlisting.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.printsize.base.1168545174" name="ARM Sourcery Linux GNU Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.printsize.base"/>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447" moduleId="org.eclipse.cdt.core.settings" name="Release">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="Smoothie" buildProperties="" description="" id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447" name="Release" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447." name="/" resourcePath="">
+						<toolChain id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.280689743" name="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base">
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.processor.950344947" name="Processor" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.processor"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.thumb.1780982473" name="Thumb (-mthumb)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.thumb"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.thumbinterwork.313413530" name="Thumb interwork (-mthumb-interwork)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.thumbinterwork"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.endiannes.1041020208" name="Endiannes" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.endiannes"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.fpu.abi.1929459044" name="Float ABI" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.fpu.abi"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.fpu.unit.1293374850" name="FPU Type" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.target.fpu.unit"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.level.323124858" name="Debug level" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.level"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.format.418898244" name="Debug format" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.format"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.other.2032746991" name="Other debugging flags" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.other"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.prof.2043894761" name="Generate prof information (-p)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.prof"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.gprof.663133650" name="Generate gprof information (-pg)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.debugging.gprof"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.createflash.1600935229" name="Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.createflash"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.createlisting.1726557100" name="Create Extended Listing" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.createlisting"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.printsize.1099853962" name="Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.option.addtools.printsize"/>
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.GNU_ELF" id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.platform.base.398811859" isAbstract="false" name="Linux Platform" osList="linux" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.platform.base"/>
+							<builder id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.builder.base.1487316365" incrementalBuildTarget="all upload GCC4MBED_TYPE=Checked ENABLE_DEBUG_MONITOR=1" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="ARM Sourcery Linux GNU Make builder" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.builder.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.1824754675" name="ARM Sourcery Linux GCC Assembler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths.470704101" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../../external/mbed/LPC1768&quot;"/>
+									<listOptionValue builtIn="false" value="/Smoothie/gcc4mbed/external/mbed/LPC1768"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.input.583724675" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.588629490" name="ARM Sourcery Linux GCC C Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths.631261215" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../../external/mbed/LPC1768&quot;"/>
+									<listOptionValue builtIn="false" value="/Smoothie/gcc4mbed/external/mbed/LPC1768"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.input.1078507566" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.335108246" name="ARM Sourcery Linux GCC C++ Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.include.paths.410384176" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../../external/mbed/LPC1768&quot;"/>
+									<listOptionValue builtIn="false" value="/Smoothie/gcc4mbed/external/mbed/LPC1768"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.input.265690917" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.linker.base.2083416836" name="ARM Sourcery Linux GCC C Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.linker.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.linker.base.1274143875" name="ARM Sourcery Linux GCC C++ Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.linker.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.archiver.base.440834018" name="ARM Sourcery Linux GCC Archiver" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.archiver.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.createflash.base.537502696" name="ARM Sourcery Linux GNU Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.createflash.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.createlisting.base.1539010005" name="ARM Sourcery Linux GNU Create Listing" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.createlisting.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.printsize.base.305196249" name="ARM Sourcery Linux GNU Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.printsize.base"/>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="Smoothie.null.1222211216" name="Smoothie"/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/Smoothie"/>
+		</configuration>
+		<configuration configurationName="Release"/>
+		<configuration configurationName="Debug"/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1478607448;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.398270797;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.input.157865912">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552.;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.2008718836;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.input.1831101964">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1478607448;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.486954518;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.input.479793987">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileCPP"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447.;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.588629490;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.input.1078507566">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552.;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.764273957;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.input.569982195">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileCPP"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447.;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.1824754675;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.input.583724675">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1874827552.;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.580393852;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.c.compiler.base.input.1135108974">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1846234447.;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.335108246;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.cpp.compiler.base.input.265690917">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileCPP"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.toolchain.base.1173408712.1478607448;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.556347222;org.eclipse.cdt.cross.arm.gnu.sourcery.linux.assembler.base.input.1156091433">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+	</storageModule>
+</cproject>
