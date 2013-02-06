@@ -36,6 +36,7 @@ void TemperatureControl::on_module_loaded(){
     this->acceleration_factor = 10;
 
     // Register for events
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
@@ -53,6 +54,8 @@ void TemperatureControl::on_config_reload(void* argument){
     this->set_and_wait_m_code = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
     this->get_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
     this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
+    
+    this->max_pwm             = this->kernel->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number();
 
     this->designator          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
@@ -268,6 +271,8 @@ void TemperatureControl::pid_process(double temperature)
             i = 0;
         this->o = 0;
     }
+
+    if( this->o > this->max_pwm ){ this->o = max_pwm; }
 
     this->heater_pin->pwm(o);
 }
