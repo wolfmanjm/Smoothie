@@ -42,7 +42,7 @@ MRI_BREAK_ON_INIT=0
 MRI_SEMIHOST_STDIO=0
 endif
 
-CONSOLE=/dev/ttyS0
+CONSOLE=/dev/ttyUSB0
 
 include ./gcc4mbed/build/gcc4mbed.mk
 
