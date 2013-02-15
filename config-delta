@@ -5,7 +5,7 @@ beta_relative_angle                          120.0            # this is the angl
 gamma_relative_angle                         240.0            # this is the angle in degrees from the alpha tower to the gamma tower
 
 arm_length                                   430.0            # this is the length of an arm from hinge to hinge
-arm_radius                                   247.19           # this is the horiontal distance from hinge to hinge when the effector is centered
+arm_radius                                   197.19           # this is the horiontal distance from hinge to hinge when the effector is centered
 
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
