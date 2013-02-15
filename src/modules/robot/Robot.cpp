@@ -19,6 +19,7 @@ using std::string;
 #include "../communication/utils/Gcode.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
+#include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
 
 Robot::Robot(){
@@ -58,6 +59,9 @@ void Robot::on_config_reload(void* argument){
 	}else if(solution_checksum ==  delta_checksum) {
 		// place holder for now
 		this->arm_solution = new RostockSolution(this->kernel->config);
+
+    }else if(solution_checksum == rotatable_cartesian_checksum) {
+        this->arm_solution = new RotatableCartesianSolution(this->kernel->config);
 
 	}else if(solution_checksum == cartesian_checksum) {
 		this->arm_solution = new CartesianSolution(this->kernel->config);
@@ -106,6 +110,12 @@ void Robot::on_gcode_received(void * argument){
         block->append_gcode(gcode);
         gcode->queued++;
     }
+}
+
+
+void Robot::reset_axis_position(double position, int axis) {
+    this->last_milestone[axis] = this->current_position[axis] = position;
+    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
 }
 
 
