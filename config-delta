@@ -1,6 +1,6 @@
 arm_solution                                 rostock          # same as rostock for now
 
-alpha_angle                                  0.0              # this provides an optional offset from the alpha tower to the x/y system
+alpha_angle                                  30.0             # this provides an optional offset from the alpha tower to the x/y system
 beta_relative_angle                          120.0            # this is the angle in degrees from the alpha tower to the beta tower
 gamma_relative_angle                         240.0            # this is the angle in degrees from the alpha tower to the gamma tower
 
@@ -35,19 +35,19 @@ alpha_step_pin                               2.0              # Pin for alpha st
 alpha_dir_pin                                0.5              # Pin for alpha stepper direction
 alpha_en_pin                                 0.4              # Pin for alpha enable pin
 alpha_current                                1.5              # X stepper motor current
-x_axis_max_speed                             80000            # mm/min
+x_axis_max_speed                             40000            # mm/min
 
 beta_step_pin                                2.1              # Pin for beta stepper step signal
 beta_dir_pin                                 0.11             # Pin for beta stepper direction
 beta_en_pin                                  0.10             # Pin for beta enable
 beta_current                                 1.5              # Y stepper motor current
-y_axis_max_speed                             80000            # mm/min
+y_axis_max_speed                             40000            # mm/min
 
 gamma_step_pin                               2.2              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction
 gamma_en_pin                                 0.19             # Pin for gamma enable
 gamma_current                                1.5              # Z stepper motor current
-z_axis_max_speed                             80000            # mm/min
+z_axis_max_speed                             40000            # mm/min
 
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default serial port
@@ -101,30 +101,30 @@ switch.spindle.enable                        false            #
 # Endstops
 alpha_min_endstop                            1.24             #
 alpha_max_endstop                            1.25             #
-alpha_homing_direction                       1                #
+alpha_homing_direction                       0                # Home up 
 alpha_min                                    0                #
 alpha_max                                    0                #
 beta_min_endstop                             1.26             #
 beta_max_endstop                             1.27             #
-beta_homing_direction                        1                #
+beta_homing_direction                        0                #
 beta_min                                     0                #
 beta_max                                     0                #
 gamma_min_endstop                            1.28             #
 gamma_max_endstop                            1.29             #
-gamma_homing_direction                       1                #
+gamma_homing_direction                       0                #
 gamma_min                                    0                #
 gamma_max                                    400              #
 
-alpha_fast_homing_rate                       6000              # rates in steps/second 
-beta_fast_homing_rate                        6000              #
-gamma_fast_homing_rate                       6000              #
+alpha_fast_homing_rate                       8000              # rates in steps/second 
+beta_fast_homing_rate                        8000              #
+gamma_fast_homing_rate                       8000              #
 alpha_slow_homing_rate                       2000              # 
 beta_slow_homing_rate                        2000              #
 gamma_slow_homing_rate                       2000              
 
-alpha_homing_retract                         1000               #
-beta_homing_retract                          1000               #
-gamma_homing_retract                         1000               #
+alpha_homing_retract                         500               #
+beta_homing_retract                          500               #
+gamma_homing_retract                         500               #
 
 # Pause button
 pause_button_enable                          true             #
