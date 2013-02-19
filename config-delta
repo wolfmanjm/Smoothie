@@ -54,7 +54,7 @@ uart0.baud_rate                              115200           # Baud rate for th
 second_usb_serial_enable                     true             # This enables a second usb serial port (to have both pronterface and a terminal connected)
 
 # Extruder module configuration
-extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder_module_enable                       false             # Whether to activate the extruder module at all. All configuration is ignored if false
 extruder_steps_per_mm                        140              # Steps per mm for extruder stepper
 extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
 extruder_acceleration                        50               # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
@@ -116,9 +116,9 @@ gamma_homing_direction                       0                #
 gamma_min                                    0                #
 gamma_max                                    400              #
 
-alpha_fast_homing_rate                       25000              # rates in steps/second 
-beta_fast_homing_rate                        25000              #
-gamma_fast_homing_rate                       25000              #
+alpha_fast_homing_rate                       20000              # rates in steps/second 
+beta_fast_homing_rate                        20000              #
+gamma_fast_homing_rate                       20000              #
 alpha_slow_homing_rate                       2000              # 
 beta_slow_homing_rate                        2000              #
 gamma_slow_homing_rate                       2000              
