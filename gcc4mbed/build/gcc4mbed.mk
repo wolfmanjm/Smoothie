@@ -77,6 +77,9 @@ SRC ?= .
 GCC4MBED_TYPE ?= Release
 MRI_BREAK_ON_INIT ?= 1
 MRI_UART ?= MRI_UART_MBED_USB
+HEAP_TAGS ?= 0
+WRITE_BUFFER_DISABLE ?= 0
+STACK_SIZE ?= 0
 
 
 # Configure MRI variables based on GCC4MBED_TYPE build type variable.
@@ -135,6 +138,7 @@ INCDIRS += $(PROJINCS) $(GCC4MBED_DIR)/mri $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/
 DEFINES += -DTARGET_LPC1768 -D__LPC17XX__
 DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"'
 DEFINES += -DMRI_BREAK_ON_INIT=$(MRI_BREAK_ON_INIT) -DMRI_SEMIHOST_STDIO=$(MRI_SEMIHOST_STDIO)
+DEFINES += -DWRITE_BUFFER_DISABLE=$(WRITE_BUFFER_DISABLE) -DSTACK_SIZE=$(STACK_SIZE)
 
 ifeq "$(OPTIMIZATION)" "0"
 DEFINES += -DDEBUG
@@ -160,6 +164,20 @@ LIBS += $(LIBS_SUFFIX)
 # Compiler flags used to enable creation of header dependencies.
 DEPFLAGS = -MMD -MP
 
+# Setup wraps for newlib read/writes to redirect to MRI debugger.
+ifeq "$(MRI_ENABLE)" "1"
+MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
+else
+MRI_WRAPS=
+endif
+
+# Setup wraps to memory allocations routines if we want to tag heap allocations.
+HEAP_WRAPS=
+ifeq "$(HEAP_TAGS)" "1"
+HEAP_WRAPS=,--wrap=malloc,--wrap=realloc,--wrap=free
+DEFINES += -DHEAP_TAGS
+endif
+
 # Compiler Options
 
 # C/C++ flags
@@ -173,17 +191,11 @@ GCFLAGS += -Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wre
 # C++ only flags
 GPFLAGS = $(GCFLAGS)
 GPFLAGS += -std=gnu++0x
-# GPFLAGS += ...
-
-# Setup wraps for newlib read/writes to redirect to MRI debugger.
-ifeq "$(MRI_ENABLE)" "1"
-MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
-else
-MRI_WRAP=
-endif
 
 # Linker Options.
-LDFLAGS = -mcpu=cortex-m3 -mthumb -O$(OPTIMIZATION) -specs=$(GCC4MBED_DIR)/build/startfile.spec -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty$(MRI_WRAPS) -T$(LSCRIPT)  -L $(EXTERNAL_DIR)/gcc/LPC1768
+LDFLAGS = -mcpu=cortex-m3 -mthumb -O$(OPTIMIZATION) -specs=$(GCC4MBED_DIR)/build/startfile.spec 
+LDFLAGS += -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty$(MRI_WRAPS)$(HEAP_WRAPS)
+LDFLAGS += -T$(LSCRIPT)  -L $(EXTERNAL_DIR)/gcc/LPC1768
 
 ASFLAGS = $(LISTING) -mcpu=cortex-m3 -mthumb -x assembler-with-cpp
 ASFLAGS += $(patsubst %,-I%,$(INCDIRS))
@@ -276,7 +288,7 @@ endif
 #  Default rules to compile .c and .cpp file to .o
 #  and assemble .s files to .o
 
-$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.c makefile
+$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.cpp makefile
 	@echo "  CC      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	@$(GPP) $(GPFLAGS) -c $< -o $@
