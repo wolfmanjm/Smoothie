@@ -84,7 +84,7 @@ inline void StepTicker::tick(){
 void StepTicker::signal_moves_finished(){
     _isr_context = true;
 
-    uint16_t bitmask= 1;
+    uint16_t bitmask = 1;
     for ( uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
         if (this->active_motor_bm & bitmask){
             if(this->active_motors[motor]->is_move_finished){
@@ -144,7 +144,8 @@ extern "C" void TIMER0_IRQHandler (void){
     // Step pins
     //global_step_ticker->tick();
     _isr_context = true;
-    uint16_t bitmask= 1;
+
+    uint16_t bitmask = 1;
     for (uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
         if (global_step_ticker->active_motor_bm & bitmask){
             global_step_ticker->active_motors[motor]->tick();
