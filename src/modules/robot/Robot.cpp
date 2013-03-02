@@ -115,7 +115,9 @@ void Robot::on_gcode_received(void * argument){
 
 void Robot::reset_axis_position(double position, int axis) {
     this->last_milestone[axis] = this->current_position[axis] = position;
-    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+	this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+	clear_vector_double(this->kernel->planner->previous_unit_vec);
+	this->kernel->planner->previous_nominal_speed = 0.0;
 }
 
 
@@ -173,10 +175,11 @@ void Robot::execute_gcode(Gcode* gcode){
                 gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", steps[0], steps[1], steps[2], seconds_per_minute);
                 gcode->add_nl = true;
                 return;
-            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
+            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f Count X:%d Y:%d Z:%d ",
                                                  this->current_position[0],
                                                  this->current_position[1],
-                                                 this->current_position[2]);
+											     this->current_position[2],
+												 this->kernel->planner->position[0], this->kernel->planner->position[1],this->kernel->planner->position[2] );
                 gcode->add_nl = true;
                 return;
             case 220: // M220 - speed override percentage
