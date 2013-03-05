@@ -11,7 +11,8 @@ arm_radius                                   202.1019         # this is the hori
 default_feed_rate                            20000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            25000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5               # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
-mm_per_line_segment                          0.5               # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
+mm_per_line_segment                          0.0               # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
+delta_segments_per_second                    100               # for deltas only same as in Marlin/Delta, set to 0 to disable and use mm_per_line_segment
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 alpha_steps_per_mm                           110.033797               # Steps per mm for alpha stepper
@@ -126,6 +127,8 @@ gamma_slow_homing_rate                       2000
 alpha_homing_retract                         500               #
 beta_homing_retract                          500               #
 gamma_homing_retract                         500               #
+
+endstop_debounce_count                       0                #
 
 # Pause button
 pause_button_enable                          true             #
