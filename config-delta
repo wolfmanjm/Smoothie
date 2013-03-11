@@ -11,8 +11,8 @@ arm_radius                                   202.1019         # this is the hori
 default_feed_rate                            20000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            25000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5               # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
-mm_per_line_segment                          0.0               # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
-delta_segments_per_second                    100               # for deltas only same as in Marlin/Delta, set to 0 to disable and use mm_per_line_segment
+mm_per_line_segment                          0.5               # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
+delta_segments_per_second                    0 #100               # for deltas only same as in Marlin/Delta, set to 0 to disable and use mm_per_line_segment
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 alpha_steps_per_mm                           110.033797               # Steps per mm for alpha stepper
@@ -55,11 +55,11 @@ uart0.baud_rate                              115200           # Baud rate for th
 second_usb_serial_enable                     true             # This enables a second usb serial port (to have both pronterface and a terminal connected)
 
 # Extruder module configuration
-extruder_module_enable                       false            # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder_steps_per_mm                        740              # Steps per mm for extruder stepper
-extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder_acceleration                        3000             # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
-extruder_max_speed                           3000             # mm^3/s
+extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder_steps_per_mm                        761.328          # Steps per mm for extruder stepper
+extruder_default_feed_rate                   100              # Default rate ( mm/minute ) for moves where only the extruder moves
+extruder_acceleration                        500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+extruder_max_speed                           14               # mm^3/s
 
 extruder_step_pin                            2.3              # Pin for extruder step signal
 extruder_dir_pin                             0.22             # Pin for extruder dir signal
@@ -115,7 +115,7 @@ gamma_min_endstop                            1.28             #
 gamma_max_endstop                            1.29             #
 gamma_homing_direction                       0                #
 gamma_min                                    0                #
-gamma_max                                    355              #
+gamma_max                                    325              #
 
 alpha_fast_homing_rate                       15000              # rates in steps/second 
 beta_fast_homing_rate                        15000              #
