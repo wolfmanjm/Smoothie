@@ -9,8 +9,12 @@ all:
 	@echo Building Smoothie
 	@ $(MAKE) -C src
 
-clean: $(DIRSCLEAN)
+realclean: $(DIRSCLEAN)
 
+clean: 
+	@echo Cleaning $*
+	@ $(MAKE) -C src clean
+	
 $(DIRSCLEAN): %.clean:
 	@echo Cleaning $*
 	@ $(MAKE) -C $*  clean
