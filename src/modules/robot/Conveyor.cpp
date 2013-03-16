@@ -24,23 +24,15 @@ Conveyor::Conveyor(){
     flush_blocks = 0;
 }
 
-void Conveyor::on_module_loaded()
-{
+void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
 }
 
-void Conveyor::on_idle(void* argument)
-{
-    if (flush_blocks)
-    {
-        Block* block = queue.get_ref(0);
-//         printf("Block: clean %p\n", block);
-        while (block->gcodes.size())
-        {
-            Gcode* g = block->gcodes.back();
-            block->gcodes.pop_back();
-            delete g;
-        }
+void Conveyor::on_idle(void* argument){
+    if (flush_blocks){
+
+        Block* block = queue.get_tail_ref();
+        block->gcodes.clear(); 
         queue.delete_first();
 
         __disable_irq();
@@ -60,11 +52,7 @@ Block* Conveyor::new_block(){
     Block* block = this->queue.get_tail_ref();
     // Then clean it up
     if( block->conveyor == this ){
-        for(; block->gcodes.size(); ){
-            Gcode* g = block->gcodes.back();
-            block->gcodes.pop_back();
-            delete g;
-        }
+        block->gcodes.clear();
     }
 
     // Create a new virgin Block in the queue
