@@ -17,7 +17,7 @@
 #define play_command_checksum           CHECKSUM("play")
 #define progress_command_checksum       CHECKSUM("progress")
 #define abort_command_checksum          CHECKSUM("abort")
-#define cd_command_checksum       CHECKSUM("cd")
+#define cd_command_checksum             CHECKSUM("cd")
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
 
@@ -38,9 +38,9 @@ class Player : public Module {
     private:
         string current_path;
 
-        bool on_boot_enable;
+        bool on_boot_gcode_enable;
         bool booted;
-        string on_boot_file_name;
+        string on_boot_gcode;
         bool playing_file;
         StreamOutput* current_stream;
         FILE* current_file_handler;
