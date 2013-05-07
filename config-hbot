@@ -84,10 +84,10 @@ switch.fan.on_m_code                         106              #
 switch.fan.off_m_code                        107              #
 switch.fan.output_pin                        2.6              #
 
-switch.misc.enable                           true             #
-switch.misc.on_m_code                        42               #
-switch.misc.off_m_code                       43               #
-switch.misc.output_pin                       2.4              #
+switch.psu.enable                            true             # turn atx on/off
+switch.psu.on_m_code                         80               #
+switch.psu.off_m_code                        81               #
+switch.psu.output_pin                        2.4o!            # open drain, inverted
 
 # Switch module for spindle control
 switch.spindle.enable                        false            #

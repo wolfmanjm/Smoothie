@@ -78,13 +78,29 @@ Pin* Pin::from_string(std::string value){
 
 // Configure this pin as OD
 Pin* Pin::as_open_drain(){
-    if (this->pin >= 32) return this;
-    if( this->port_number == 0 ){ LPC_PINCON->PINMODE_OD0 |= (1<<this->pin); }
-    if( this->port_number == 1 ){ LPC_PINCON->PINMODE_OD1 |= (1<<this->pin); }
-    if( this->port_number == 2 ){ LPC_PINCON->PINMODE_OD2 |= (1<<this->pin); }
-    if( this->port_number == 3 ){ LPC_PINCON->PINMODE_OD3 |= (1<<this->pin); }
-    if( this->port_number == 4 ){ LPC_PINCON->PINMODE_OD4 |= (1<<this->pin); }
+	if (this->pin >= 32) return this;
+	// Note MBED clears all bits then sets
+    if( this->port_number == 0 ){ LPC_PINCON->PINMODE_OD0 &= ~(1<<this->pin); LPC_PINCON->PINMODE_OD0 |= (1<<this->pin); }
+    if( this->port_number == 1 ){ LPC_PINCON->PINMODE_OD1 &= ~(1<<this->pin); LPC_PINCON->PINMODE_OD1 |= (1<<this->pin); }
+    if( this->port_number == 2 ){ LPC_PINCON->PINMODE_OD2 &= ~(1<<this->pin); LPC_PINCON->PINMODE_OD2 |= (1<<this->pin); }
+    if( this->port_number == 3 ){ LPC_PINCON->PINMODE_OD3 &= ~(1<<this->pin); LPC_PINCON->PINMODE_OD3 |= (1<<this->pin); }
+	if( this->port_number == 4 ){ LPC_PINCON->PINMODE_OD4 &= ~(1<<this->pin); LPC_PINCON->PINMODE_OD4 |= (1<<this->pin); }
+	pull_none(); // no pull up by default
     return this;
+}
+
+// Configure this pin as no pullup or pulldown
+Pin* Pin::pull_none(){
+	if (this->pin >= 32) return this;
+	// Set the two bits for this pin as 10
+	if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE0 &= ~(1<<( this->pin    *2)); }
+	if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE1 &= ~(1<<((this->pin-16)*2)); }
+	if( this->port_number == 1 && this->pin < 16  ){ LPC_PINCON->PINMODE2 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE2 &= ~(1<<( this->pin    *2)); }
+	if( this->port_number == 1 && this->pin >= 16 ){ LPC_PINCON->PINMODE3 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE3 &= ~(1<<((this->pin-16)*2)); }
+	if( this->port_number == 2 && this->pin < 16  ){ LPC_PINCON->PINMODE4 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE4 &= ~(1<<( this->pin    *2)); }
+	if( this->port_number == 3 && this->pin >= 16 ){ LPC_PINCON->PINMODE7 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE7 &= ~(1<<((this->pin-16)*2)); }
+	if( this->port_number == 4 && this->pin >= 16 ){ LPC_PINCON->PINMODE9 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE9 &= ~(1<<((this->pin-16)*2)); }
+	return this;
 }
 
 // Configure this pin as a pullup
