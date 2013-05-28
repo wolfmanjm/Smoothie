@@ -22,6 +22,7 @@ using std::string;
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
 #include "arm_solutions/HBotSolution.h"
+#include "arm_solutions/HBotScissorZSolution.h"
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
@@ -77,7 +78,10 @@ void Robot::on_config_reload(void* argument){
     }else if(solution_checksum == cartesian_checksum) {
         this->arm_solution = new CartesianSolution(this->kernel->config);
 
-    }else{
+	}else if(solution_checksum == hbotscissorz_checksum) {
+		this->arm_solution = new HBotScissorZSolution(this->kernel->config);
+
+	}else{
         this->arm_solution = new CartesianSolution(this->kernel->config);
     }
 
