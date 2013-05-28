@@ -292,6 +292,8 @@
   @{
  */
 
+
+
 #define CLOCK_SETUP           1
 #define SCS_Val               0x00000020
 #define CLKSRCSEL_Val         0x00000001
@@ -304,6 +306,10 @@
 #    define CCLKCFG_Val           0x00000003
 #    define USBCLKCFG_Val         0x00000000
 #else
+/* 120MHz
+#define PLL0CFG_Val           0x001f01df
+#define CCLKCFG_Val           0x00000002
+*/
 #    define PLL0CFG_Val           0x0000000B
 #    define PLL1_SETUP            0
 #    define PLL1CFG_Val           0x00000000
