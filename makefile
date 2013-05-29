@@ -39,4 +39,3 @@ console:
 	@ $(MAKE) -C src console
 
 .PHONY: all $(DIRS) $(DIRSCLEAN) debug-store flash upload debug console dfu
-
