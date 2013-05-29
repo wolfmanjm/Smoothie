@@ -38,7 +38,7 @@
 
 #include "libs/Watchdog.h"
 
-#include "build_version.h"
+#include "version.h"
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 
@@ -78,13 +78,8 @@ int main() {
     Kernel* kernel = new Kernel();
 
 	kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%ldMHz\r\n", SystemCoreClock / 1000000);
-	
-#ifdef BUILD_VERSION_STRING
-	kernel->streams->printf("  Build version %s, Build date %s\r\n", BUILD_VERSION_STRING, BUILD_DATE_STRING);
-	kernel->build_version= BUILD_VERSION_STRING;
-#else
-	kernel->build_version= "Unknown";	
-#endif
+	Version version;
+	kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
 
     // Create and add main modules
     kernel->add_module( new Laser() );

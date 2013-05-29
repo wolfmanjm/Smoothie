@@ -15,7 +15,7 @@
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
-#include "build_version.h"
+#include "version.h"
 
 
 void SimpleShell::on_module_loaded(){
@@ -148,8 +148,8 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 // print out build version
 void SimpleShell::version_command( string parameters, StreamOutput* stream){
-	stream->printf("Build version: %s, Build date: %s\r\n", this->kernel->build_version, BUILD_DATE_STRING);
-	stream->printf(" System Clock: %ldMHz\r\n", SystemCoreClock / 1000000);
+	Version vers;
+	stream->printf("Build version: %s, Build date: %s,  System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000);
 }
 
 // Reset the system

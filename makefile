@@ -4,8 +4,7 @@ DIRS = mbed src
 DIRSCLEAN = $(addsuffix .clean,$(DIRS))
 
 all:
-	@echo "#define BUILD_VERSION_STRING \"`git symbolic-ref HEAD 2> /dev/null | cut -b 12-`-`git log --pretty=format:\"%h\" -1`\"" > src/build_version.h
-	@echo "#define BUILD_DATE_STRING __DATE__ \" \" __TIME__" >> src/build_version.h
+	@generate-version.sh
 	@echo Building mbed SDK
 	@ $(MAKE) -C mbed
 	@echo Building Smoothie
