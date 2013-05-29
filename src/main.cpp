@@ -80,7 +80,7 @@ int main() {
 	kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%ldMHz\r\n", SystemCoreClock / 1000000);
 	
 #ifdef BUILD_VERSION_STRING
-	kernel->streams->printf("  Build Version %s\r\n", BUILD_VERSION_STRING);
+	kernel->streams->printf("  Build version %s, Build date %s\r\n", BUILD_VERSION_STRING, BUILD_DATE_STRING);
 	kernel->build_version= BUILD_VERSION_STRING;
 #else
 	kernel->build_version= "Unknown";	
