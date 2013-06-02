@@ -1,5 +1,6 @@
 arm_solution                                 hbotscissorz      # 
-arm_length                                   340               # this is the length of an arm from hinge to hinge
+arm_length                                   240               # this is the length of an arm from hinge to hinge
+z_offset                                     -50               # difference in height from z == 0 to scissor lift height
 
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            20000             # Default rate ( mm/minute ) for G1/G2/G3 moves

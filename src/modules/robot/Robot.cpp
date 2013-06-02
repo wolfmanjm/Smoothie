@@ -171,7 +171,26 @@ void Robot::on_gcode_received(void * argument){
                                                  from_millimeters(this->current_position[2]));
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
-                return;
+				return;
+
+			case 206: // M206 - set homeing offset, handled in arm_solution for now
+				double mm[3];
+				mm[0]= mm[1]= mm[2]= 0.0;
+				
+				if(gcode->has_letter('X'))
+					mm[0]= gcode->get_value('X');
+				if(gcode->has_letter('Y'))
+					mm[1]= gcode->get_value('Y');
+				if(gcode->has_letter('Z'))
+					mm[2]= gcode->get_value('Z');
+
+				this->arm_solution->set_offset(mm);
+				
+				gcode->stream->printf("ok X:%1.3f Y:%1.3f Z:%1.3f ", mm[0], mm[1], mm[2]);
+				gcode->add_nl= true;
+				gcode->mark_as_taken();
+				return;
+				 
             case 220: // M220 - speed override percentage
                 gcode->mark_as_taken();
                 if (gcode->has_letter('S'))
