@@ -185,10 +185,9 @@ void Robot::on_gcode_received(void * argument){
 					mm[2]= gcode->get_value('Z');
 
 				this->arm_solution->set_offset(mm);
-				
-				gcode->stream->printf("ok X:%1.3f Y:%1.3f Z:%1.3f ", mm[0], mm[1], mm[2]);
-				gcode->add_nl= true;
 				gcode->mark_as_taken();
+//				gcode->stream->printf("ok X:%1.3f Y:%1.3f Z:%1.3f ", mm[0], mm[1], mm[2]);
+//				gcode->add_nl= true;
 				return;
 				 
             case 220: // M220 - speed override percentage

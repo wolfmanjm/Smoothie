@@ -9,9 +9,9 @@ mm_per_arc_segment                           0.5               # Arcs are cut in
 mm_per_line_segment                          5                 # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-alpha_steps_per_mm                           50               # Steps per mm for alpha stepper
-beta_steps_per_mm                            50               # Steps per mm for beta stepper
-gamma_steps_per_mm                           1167.79528       # Steps per mm for gamma stepper
+alpha_steps_per_mm                           110               # Steps per mm for alpha stepper
+beta_steps_per_mm                            110               # Steps per mm for beta stepper
+gamma_steps_per_mm                           1167.79528        # Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
@@ -21,7 +21,7 @@ junction_deviation                           0.05             # Similar to the o
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8 . Lower values mean being more careful, higher values means being faster and have more jerk
 
 # Stepper module configuration
-microseconds_per_step_pulse                  1                # Duration of step pulses to stepper drivers, in microseconds
+microseconds_per_step_pulse                  3                # Duration of step pulses to stepper drivers, in microseconds
 minimum_steps_per_minute                     1200             # Never step slower than this
 base_stepping_frequency                      100000           # Base frequency for stepping, higher gives smoother movement
 
