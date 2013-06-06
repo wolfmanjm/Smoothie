@@ -4,18 +4,16 @@ DIRS = mbed src
 DIRSCLEAN = $(addsuffix .clean,$(DIRS))
 
 all:
-	@generate-version.sh
+ifneq "$(OS)" "Windows_NT"
+	@./generate-version.sh
+endif
 	@echo Building mbed SDK
 	@ $(MAKE) -C mbed
 	@echo Building Smoothie
 	@ $(MAKE) -C src
 
-realclean: $(DIRSCLEAN)
+clean: $(DIRSCLEAN)
 
-clean: 
-	@echo Cleaning $*
-	@ $(MAKE) -C src clean
-	
 $(DIRSCLEAN): %.clean:
 	@echo Cleaning $*
 	@ $(MAKE) -C $*  clean
@@ -39,3 +37,4 @@ console:
 	@ $(MAKE) -C src console
 
 .PHONY: all $(DIRS) $(DIRSCLEAN) debug-store flash upload debug console dfu
+

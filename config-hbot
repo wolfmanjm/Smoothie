@@ -11,7 +11,7 @@ mm_per_line_segment                          5                 # Lines can be cu
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 alpha_steps_per_mm                           110               # Steps per mm for alpha stepper
 beta_steps_per_mm                            110               # Steps per mm for beta stepper
-gamma_steps_per_mm                           1167.79528        # Steps per mm for gamma stepper
+gamma_steps_per_mm                           2335.59056        # Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
