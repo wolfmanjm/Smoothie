@@ -22,4 +22,5 @@ debug
 /win_install.log
 /linux_install.log
 /src/config.default
-/src/version.cpp
+
+
