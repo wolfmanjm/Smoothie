@@ -13,7 +13,6 @@
 #include "modules/tools/touchprobe/Touchprobe.h"
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/robot/Conveyor.h"
-#include "modules/utils/button/ButtonPool.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
 #include "modules/utils/currentcontrol/CurrentControl.h"
@@ -37,6 +36,8 @@
 #include "libs/SDFAT.h"
 
 #include "libs/Watchdog.h"
+
+#include "version.h"
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 
@@ -76,6 +77,8 @@ int main() {
     Kernel* kernel = new Kernel();
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%ldMHz\r\n", SystemCoreClock / 1000000);
+    Version version;
+    kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
 
     // Create and add main modules
     kernel->add_module( new Laser() );
@@ -85,7 +88,6 @@ int main() {
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new TemperatureControlPool() );
     kernel->add_module( new SwitchPool() );
-    kernel->add_module( new ButtonPool() );
     kernel->add_module( new PauseButton() );
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
