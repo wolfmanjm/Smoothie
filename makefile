@@ -4,16 +4,17 @@ DIRS = mbed src
 DIRSCLEAN = $(addsuffix .clean,$(DIRS))
 
 all:
-ifneq "$(OS)" "Windows_NT"
-	@./generate-version.sh
-endif
 	@echo Building mbed SDK
 	@ $(MAKE) -C mbed
 	@echo Building Smoothie
 	@ $(MAKE) -C src
 
-clean: $(DIRSCLEAN)
+realclean: $(DIRSCLEAN)
 
+clean: 
+	@echo Cleaning $*
+	@ $(MAKE) -C src clean
+	
 $(DIRSCLEAN): %.clean:
 	@echo Cleaning $*
 	@ $(MAKE) -C $*  clean
