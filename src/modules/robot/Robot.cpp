@@ -22,6 +22,7 @@ using std::string;
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
+#include "arm_solutions/JohannKosselSolution.h"
 #include "arm_solutions/HBotSolution.h"
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
@@ -70,6 +71,9 @@ void Robot::on_config_reload(void* argument){
     }else if(solution_checksum == rostock_checksum) {
         this->arm_solution = new RostockSolution(this->kernel->config);
 
+    }else if(solution_checksum == kossel_checksum) {
+        this->arm_solution = new JohannKosselSolution(this->kernel->config);
+
     }else if(solution_checksum ==  delta_checksum) {
         // place holder for now
         this->arm_solution = new RostockSolution(this->kernel->config);
@@ -112,7 +116,8 @@ void Robot::on_get_public_data(void* argument){
     if(!pdr->starts_with(robot_checksum)) return;
 
     if(pdr->second_element_is(speed_override_percent_checksum)) {
-        static double return_data= 100*60/seconds_per_minute;
+        static double return_data;
+        return_data= 100*this->seconds_per_minute/60;
         pdr->set_data_ptr(&return_data);
         pdr->set_taken();
         
@@ -134,7 +139,7 @@ void Robot::on_set_public_data(void* argument){
 
     if(pdr->second_element_is(speed_override_percent_checksum)) {
         double t= *static_cast<double*>(pdr->get_data_ptr());
-        seconds_per_minute= t * 0.6;
+        this->seconds_per_minute= t * 0.6;
         pdr->set_taken();
     }
 }
@@ -204,6 +209,18 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
+            case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
+                gcode->mark_as_taken();
+                if (gcode->has_letter('S'))
+                {
+                    double acc= gcode->get_value('S');
+                    // enforce minimum 
+                    if (acc < 1.0)
+                        acc = 1.0;
+                    this->kernel->planner->acceleration= acc;
+                }
+                break;
+                
             case 220: // M220 - speed override percentage
                 gcode->mark_as_taken();
                 if (gcode->has_letter('S'))
@@ -214,6 +231,7 @@ void Robot::on_gcode_received(void * argument){
                         factor = 1.0;
                     seconds_per_minute = factor * 0.6;
                 }
+                break;
         }
    }
     if( this->motion_mode < 0)
