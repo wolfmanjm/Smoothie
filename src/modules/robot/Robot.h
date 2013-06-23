@@ -35,6 +35,7 @@ using std::string;
 #define delta_checksum                         CHECKSUM("delta")
 #define hbot_checksum                          CHECKSUM("hbot")
 #define hbotscissorz_checksum                  CHECKSUM("hbotscissorz")
+#define kossel_checksum                        CHECKSUM("kossel")
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
