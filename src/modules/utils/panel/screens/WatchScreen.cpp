@@ -161,3 +161,5 @@ const char* WatchScreen::get_status(){
 
     return "Smoothie ready";
 }
+
+
