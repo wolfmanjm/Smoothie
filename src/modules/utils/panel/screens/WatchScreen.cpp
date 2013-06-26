@@ -71,6 +71,10 @@ void WatchScreen::get_temp_data() {
         this->bedtemp= round(temp.current_temperature);
         this->bedtarget= round(temp.target_temperature);
         //this->bedpwm= temp.pwm;
+    }else{
+        // temp probably disabled
+        this->bedtemp= 0;
+        this->bedtarget= 0;
     }
 
     ok= THEKERNEL->public_data->get_value( temperature_control_checksum, hotend_checksum, current_temperature_checksum, &returned_data );
@@ -79,6 +83,10 @@ void WatchScreen::get_temp_data() {
         this->hotendtemp= round(temp.current_temperature);
         this->hotendtarget= round(temp.target_temperature);
         //this->hotendpwm= temp.pwm;
+    }else{
+        // temp probably disabled
+        this->hotendtemp= 0;
+        this->hotendtarget= 0;
     }
 }
 
@@ -131,7 +139,16 @@ void WatchScreen::display_menu_line(uint16_t line){
         case 0: this->panel->lcd->printf("H%03d/%03dc B%03d/%03dc", this->hotendtemp, this->hotendtarget, this->bedtemp, this->bedtarget); break;
         case 1: this->panel->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
         case 2: this->panel->lcd->printf("%3d%% %2d:%02d %3d%% sd", (int)round(this->current_speed), this->elapsed_time/60, this->elapsed_time%60, this->sd_pcnt_played); break;
-        case 3: this->panel->lcd->printf("%19s", panel->is_playing() ? panel->get_playing_file().substr(4, 19).c_str() : "Smoothie ready"); break;
+        case 3: this->panel->lcd->printf("%19s", this->get_status()); break;
     }
+}
 
+const char* WatchScreen::get_status(){
+    if(THEKERNEL->pauser->paused())
+        return "Paused";
+    
+    if(panel->is_playing())
+        return panel->get_playing_file();
+
+    return "Smoothie ready";
 }
