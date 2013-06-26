@@ -58,13 +58,11 @@ void WatchScreen::on_refresh(){
         this->current_speed= get_current_speed();
         this->refresh_screen(false);
 
-        // for LCDs with leds or backlight colors set them according to heater status
+        // for LCDs with leds set them according to heater status
         // TODO should be enabled and disabled and settable from config
-        uint8_t l= 0;
-        if( this->bedtarget > 0) l |= LED_BLUE;
-        if( this->hotendtarget > 0) l |= LED_GREEN;
-        //if( this->fanon > 0) l |= LED_RED; // TBD
-        this->panel->lcd->setBacklight(l);
+        this->panel->lcd->setLed(LED_BED_ON, this->bedtarget > 0);
+        this->panel->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
+        //this->panel->lcd->setLed(LED_FAN_ON, this->fanon);
     }
 }
 
