@@ -129,7 +129,7 @@ void VikiLCD::init(){
 
     displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
     // set the entry mode
-	command(LCD_ENTRYMODESET | displaymode);
+    command(LCD_ENTRYMODESET | displaymode);
 }
 
 // we use this to burst bits to the GPIO chip whenever we need to. avoids repetitive code.
