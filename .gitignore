@@ -22,3 +22,8 @@ debug
 /win_install.log
 /linux_install.log
 /src/config.default
+smoothie.sublime-*
+.cproject
+.project
+.todo
+TAGS
