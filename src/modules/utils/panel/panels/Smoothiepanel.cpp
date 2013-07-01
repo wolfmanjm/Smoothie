@@ -7,6 +7,8 @@ You should have received a copy of the GNU General Public License along with Smo
 #include "Smoothiepanel.h"
 #include "smoothiepanel/LCDBang.h"
 
+#include "smoothiepanel/Colors.h"
+
 #define LCD_WRITE       0x00
 #define LCD_READ        0x01
 #define LCD_ACK         0x01
@@ -39,10 +41,17 @@ Smoothiepanel::Smoothiepanel() {
     this->i2c_frequency = THEKERNEL->config->value(panel_checksum, i2c_frequency_checksum)->by_default(20000)->as_number();
     i2c->frequency(this->i2c_frequency);
     this->lcd_contrast  = THEKERNEL->config->value(panel_checksum, lcd_contrast_checksum)->by_default(0)->as_number();
+    this->backlight_red   = THEKERNEL->config->value(panel_checksum, lcd_led_checksum)->by_default(255)->as_number();
+    this->backlight_red   = THEKERNEL->config->value(panel_checksum, lcd_led_red_checksum)->by_default(this->backlight_red)->as_number();
+    this->backlight_green = THEKERNEL->config->value(panel_checksum, lcd_led_green_checksum)->by_default(255)->as_number();
+    this->backlight_blue  = THEKERNEL->config->value(panel_checksum, lcd_led_blue_checksum)->by_default(255)->as_number();
+    this->playledval      = THEKERNEL->config->value(panel_checksum, play_led_brightness_checksum)->by_default(255)->as_number();
+    this->backledval      = THEKERNEL->config->value(panel_checksum, back_led_brightness_checksum)->by_default(255)->as_number();
 
 //  this->interrupt_pin.from_string(THEKERNEL->config->value(panel_checksum, i2c_interrupt_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
+    this->encoder_hue   = THEKERNEL->config->value(panel_checksum, encoder_led_hue_checksum)->by_default(220)->as_number();
 
     paused= false;
 }
@@ -52,7 +61,7 @@ Smoothiepanel::~Smoothiepanel() {
     delete this->i2c;
 }
 
-void ledbang_init(I2C i2c, int address){
+void pca9634_init(I2C i2c, int address){
     const int leds = PCA9634_ADDRESS | (address & 0x0E);
     char cmd[2];
 
@@ -68,32 +77,15 @@ void ledbang_init(I2C i2c, int address){
     i2c.write(leds, cmd, 2);
     cmd[0] = 0x0D;
     i2c.write(leds, cmd, 2);
+}
 
-    // set leds
-    cmd[0] = 0x02; // play
-    cmd[1] = 0x10;
-    i2c.write(leds, cmd, 2);
-    cmd[0] = 0x03; // back
-    cmd[1] = 0xC0;
-    i2c.write(leds, cmd, 2);
-    cmd[0] = 0x04; // encoder red
-    cmd[1] = 0x00;
-    i2c.write(leds, cmd, 2);
-    cmd[0] = 0x05; // encoder green
-    cmd[1] = 0x00;
-    i2c.write(leds, cmd, 2);
-    cmd[0] = 0x06; // encoder blue
-    cmd[1] = 0x20;
-    i2c.write(leds, cmd, 2);
-    cmd[0] = 0x07; // lcd blue
-    cmd[1] = 0xA0;
-    i2c.write(leds, cmd, 2);
-    cmd[0] = 0x08; // lcd green
-    cmd[1] = 0xFF;
-    i2c.write(leds, cmd, 2);
-    cmd[0] = 0x09; // lcd red
-    cmd[1] = 0xC0;
-    i2c.write(leds, cmd, 2);
+void pca9634_setLed(I2C *i2c, int address, char led, char val){
+    const int leds = PCA9634_ADDRESS | (address & 0x0E);
+    char cmd[2];
+
+    cmd[0] = led; // lcd blue
+    cmd[1] = val;
+    i2c->write(leds, cmd, 2);
 }
 
 void Smoothiepanel::init(){
@@ -102,9 +94,38 @@ void Smoothiepanel::init(){
 //    lcdbang_print(*this->i2c, " Smoothiepanel Beta - design by Logxen -");
     lcdbang_contrast(*this->i2c, this->lcd_contrast);
 
-    ledbang_init(*this->i2c, this->i2c_address);
+    pca9634_init(*this->i2c, this->i2c_address);
+    setEncoderByHue(this->encoder_hue);
+    setBacklightColor(this->backlight_red, this->backlight_green, this->backlight_blue);
+    setPlayLED(this->playledval);
+    setBackLED(this->backledval);
 //    wait_us(3000);
 //    this->clear();
+}
+
+void Smoothiepanel::setLed(int led, bool on){
+    // LED turns on when bit is cleared
+    if(on) {
+        switch(led) {
+//            case LED_FAN_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x09, this->backlight_red); break; // on
+//            case LED_HOTEND_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x08, this->backlight_green); break; // on
+//            case LED_BED_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x07, this->backlight_blue); break; // on
+        }
+    }else{
+        switch(led) {
+//            case LED_FAN_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x09, 0); break; // off
+//            case LED_HOTEND_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x08, 0); break; // off
+//            case LED_BED_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x07, 0); break; // off
+        }
+    }
+}
+
+void Smoothiepanel::setLedBrightness(int led, int val){
+    switch(led){
+//        case LED_FAN_ON: this->backlight_green = val; break; // on
+        case LED_HOTEND_ON: this->backlight_red = val; break; // on
+        case LED_BED_ON: this->backlight_blue = val; break; // on
+    }
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms) 
@@ -178,16 +199,31 @@ uint8_t Smoothiepanel::readButtons(void) {
 //	button_pause.check_signal();
 //    this->setCursor(6, 4);
 //    this->printf("Buttons:  0x%02X", button_bits);
-	
+
+    // update the encoder color
+    if(this->encoder_changed){
+        if(this->encoder_hue > 360) this->encoder_hue -= 360;
+        else if(this->encoder_hue < 0) this->encoder_hue += 360;
+        this->encoder_changed = false;
+
+        setEncoderByHue(this->encoder_hue);
+    }
+
 	return button_bits;
 }
 
 int Smoothiepanel::readEncoderDelta() {
 	static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
 	static uint8_t old_AB = 0;
+    int8_t state;
 	old_AB <<= 2;                   //remember previous state
 	old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state 
-	return  enc_states[(old_AB&0x0f)];
+    state = enc_states[(old_AB&0x0f)];
+    if(state != 0){
+        this->encoder_hue += state;
+        this->encoder_changed = true;
+    }
+	return state;
 }
 
 void Smoothiepanel::clear()
@@ -296,6 +332,67 @@ void Smoothiepanel::setBacklight(uint8_t status) {
 	burstBits16(_backlightBits);
 */
 }
+
+void Smoothiepanel::setBacklightColor(uint8_t r, uint8_t g, uint8_t b) {
+    const int leds = PCA9634_ADDRESS | this->i2c_address;
+    char cmd[2];
+
+    cmd[0] = 0x07; // lcd blue
+    cmd[1] = b;
+    this->i2c->write(leds, cmd, 2);
+    cmd[0] = 0x08; // lcd green
+    cmd[1] = g;
+    this->i2c->write(leds, cmd, 2);
+    cmd[0] = 0x09; // lcd red
+    cmd[1] = r;
+    this->i2c->write(leds, cmd, 2);
+}
+
+void Smoothiepanel::setBacklightByHue(int h) {
+    float r, g, b;
+    HSVtoRGB(&r, &g, &b, h, 1.0, 1.0);
+    setBacklightColor(r*0xFF, g*0xFF, b*0xFF);
+}
+
+void Smoothiepanel::setEncoderLED(uint8_t r, uint8_t g, uint8_t b) {
+    const int leds = PCA9634_ADDRESS | this->i2c_address;
+    char cmd[2];
+
+    cmd[0] = 0x04; // encoder red
+    cmd[1] = r;
+    this->i2c->write(leds, cmd, 2);
+    cmd[0] = 0x05; // encoder green
+    cmd[1] = g;
+    this->i2c->write(leds, cmd, 2);
+    cmd[0] = 0x06; // encoder blue
+    cmd[1] = b;
+    this->i2c->write(leds, cmd, 2);
+}
+
+void Smoothiepanel::setEncoderByHue(int h) {
+    float r, g, b;
+    HSVtoRGB(&r, &g, &b, h, 1.0, 1.0);
+    setEncoderLED(r*0xFF, g*0xFF, b*0xFF);
+}
+
+void Smoothiepanel::setPlayLED(uint8_t v) {
+    const int leds = PCA9634_ADDRESS | this->i2c_address;
+    char cmd[2];
+
+    cmd[0] = 0x02; // play
+    cmd[1] = v;
+    this->i2c->write(leds, cmd, 2);
+}
+
+void Smoothiepanel::setBackLED(uint8_t v) {
+    const int leds = PCA9634_ADDRESS | this->i2c_address;
+    char cmd[2];
+
+    cmd[0] = 0x03; // back
+    cmd[1] = v;
+    this->i2c->write(leds, cmd, 2);
+}
+
 /*
 // write either command or data, burst it to the expander over I2C.
 void Smoothiepanel::send(uint8_t value, uint8_t mode) {
