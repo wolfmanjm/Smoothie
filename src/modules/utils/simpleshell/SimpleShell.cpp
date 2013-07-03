@@ -25,7 +25,8 @@ void SimpleShell::on_module_loaded(){
     this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->reset_delay_secs= 0;
-    
+    this->last_command= "";
+
     register_for_event(ON_SECOND_TICK);
 }
 
@@ -38,6 +39,15 @@ void SimpleShell::on_second_tick(void*) {
     }
 }
 
+// handle backspace or delete in command by removing preceding character
+string SimpleShell::handle_bs(string cmd) {
+    unsigned int n;
+    while((n=cmd.find_first_of("\008\177")) != string::npos) {
+        cmd= cmd.substr(0, n) + cmd.substr(n+1);
+    }
+    return cmd;
+}
+
 // When a new line is received, check if it is a command, and if it is, act upon it
 void SimpleShell::on_console_line_received( void* argument ){
     SerialMessage new_message = *static_cast<SerialMessage*>(argument);
@@ -45,9 +55,18 @@ void SimpleShell::on_console_line_received( void* argument ){
 
     //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
 
+    if(possible_command.compare("r") == 0 && last_command.size() > 0){
+        // repeat last command
+        possible_command= last_command;
+    }
+
+    // delete previous character if backspace or delete found in line
+    possible_command= handle_bs(possible_command);
+    
     // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
 
+    bool handled= true;
     // Act depending on command
     if (check_sum == ls_command_checksum)
         this->ls_command(  get_arguments(possible_command), new_message.stream );
@@ -71,6 +90,11 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->get_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == set_temp_command_checksum)
         this->set_temp_command(get_arguments(possible_command),new_message.stream );
+    else
+        handled= false;
+
+    if(handled)
+        last_command= possible_command;
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -223,6 +247,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput* stream){
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("Commands:\r\n");
     stream->printf("version\r\n");
+    stream->printf("r - repeat last command\r\n");
     stream->printf("ls [folder]\r\n");
     stream->printf("cd folder\r\n");
     stream->printf("pwd\r\n");  

@@ -50,6 +50,9 @@ class SimpleShell : public Module {
         void set_temp_command(string parameters, StreamOutput* stream );
         
     private:
+        string handle_bs(string cmd);
+
+        string last_command;
         string current_path;
         int reset_delay_secs;
 };

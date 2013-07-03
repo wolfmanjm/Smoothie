@@ -47,7 +47,7 @@ uart0.baud_rate                              115200           # Baud rate for th
 second_usb_serial_enable                     true             # This enables a second usb serial port (to have both pronterface and a terminal connected)
 
 # Extruder module configuration
-extruder_module_enable                       false             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
 extruder_steps_per_mm                        761.328          # Steps per mm for extruder stepper
 extruder_default_feed_rate                   100              # Default rate ( mm/minute ) for moves where only the extruder moves
 extruder_acceleration                        500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
@@ -79,7 +79,7 @@ temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
 
 # Switch module for fan control
-switch.fan.enable                            true             #
+switch.fan.enable                            false             #
 switch.fan.on_m_code                         106              #
 switch.fan.off_m_code                        107              #
 switch.fan.output_pin                        2.6              #
