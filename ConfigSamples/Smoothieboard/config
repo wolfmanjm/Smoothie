@@ -95,7 +95,7 @@ switch.fan.output_pin                        2.6              #
 
 # Endstops
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
-alpha_min_endstop                            1.24^            #
+alpha_min_endstop                            1.24^            # add a ! to invert if endstop is NO connected to ground
 alpha_max_endstop                            1.25^            #
 alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
 alpha_min                                    0                # this gets loaded after homing when home_to_min is set
@@ -128,14 +128,27 @@ pause_button_enable                          true             #
 # Panel
 panel.enable                                 false             # set to true to enable the panel code
 panel.lcd                                    smoothiepanel     # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2 
-panel.encoder_a_pin                          0.15!^            # encoder pin if used
-panel.encoder_b_pin                          0.17!^            # encoder pin if used
-panel.menu_offset                            0                 # some panels will need 1 here
+panel.encoder_a_pin                          1.22!^            # encoder pin
+panel.encoder_b_pin                          1.23!^            # encoder pin
 
-#panel.button_pause_pin                      0.18^             # pin used for pause button on VikiLcd
+# Example for reprap discount GLCD
+# on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc. 
+# +5v is EXP1 pin 10, Gnd is EXP1 pin 9
+#panel.lcd                                   reprap_discount_glcd     #
+#panel.spi_channel                           0                 # spi channel to use  ; GLCD EXP1 Pins 3,5 (MOSI, SCLK)
+#panel.spi_cs_pin                            0.16              # spi chip select     ; GLCD EXP1 Pin 4
+#panel.encoder_a_pin                         1.22!^            # encoder pin         ; GLCD EXP2 Pin 3
+#panel.encoder_b_pin                         1.23!^            # encoder pin         ; GLCD EXP2 Pin 5
+#panel.click_button_pin                      1.30!^            # click button        ; GLCD EXP1 Pin 2 
+#panel.buzz_pin                              1.31              # pin for buzzer      ; GLCD EXP1 Pin 1
+#panel.button_pause_pin                      2.11^             # kill/pause          ; GLCD EXP2 Pin 8
+
+# pins used with other panels
 #panel.up_button_pin                         0.1!              # up button if used
 #panel.down_button_pin                       0.0!              # down button if used
 #panel.click_button_pin                      0.18!             # click button if used
+
+panel.menu_offset                            0                 # some panels will need 1 here
 
 panel.alpha_jog_feedrate                     6000              # x jogging feedrate in mm/min
 panel.beta_jog_feedrate                      6000              # y jogging feedrate in mm/min

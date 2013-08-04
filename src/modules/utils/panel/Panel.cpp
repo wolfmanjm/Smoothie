@@ -19,6 +19,8 @@ using namespace std;
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
 #include "panels/Smoothiepanel.h"
+#include "panels/ReprapDiscountGLCD.h"
+#include "version.h"
 
 Panel::Panel(){
     this->counter_changed = false;
@@ -28,6 +30,8 @@ Panel::Panel(){
     this->lcd= NULL;
     this->do_buttons = false;
     this->idle_time= 0;
+    this->start_up= true;
+    this->current_screen= NULL;
     strcpy(this->playing_file, "Playing file");
 }
 
@@ -42,7 +46,6 @@ void Panel::on_module_loaded(){
         return;
     } 
 
-  
     // Initialise the LCD, see which LCD to use
     if (this->lcd != NULL) delete this->lcd;
     int lcd_cksm = get_checksum(this->kernel->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
@@ -58,6 +61,8 @@ void Panel::on_module_loaded(){
         this->lcd->set_variant(1);
     }else if(lcd_cksm == smoothiepanel_checksum) {
         this->lcd = new Smoothiepanel();
+    }else if(lcd_cksm == rrd_glcd_checksum) {
+        this->lcd = new ReprapDiscountGLCD();
     }else{
         // no lcd type defined
         return;
@@ -83,8 +88,6 @@ void Panel::on_module_loaded(){
     default_bed_temperature= this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
 
     this->encoder_click_resolution= this->lcd->getEncoderResolution();
-    this->lcd->init();
-    this->lcd->printf("Starting...");
     
     this->up_button.up_attach(    this, &Panel::on_up );
     this->down_button.up_attach(  this, &Panel::on_down );
@@ -94,12 +97,7 @@ void Panel::on_module_loaded(){
 
     this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
     this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
-
-    // Default top screen
-    this->top_screen = new MainMenuScreen();
-    this->top_screen->set_panel(this);
-    this->enter_screen(this->top_screen->watch_screen); // default first screen is watch screen even though its parent is Mainmenu
-    
+   
     // Register for events
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_MAIN_LOOP);
@@ -154,13 +152,55 @@ uint32_t Panel::button_tick(uint32_t dummy){
 
 // on main loop, we can send gcodes or do anything that waits in this loop
 void Panel::on_main_loop(void* argument){
-    this->current_screen->on_main_loop();
-    this->lcd->on_main_loop();
+    if(this->current_screen != NULL) {
+        this->current_screen->on_main_loop();
+        this->lcd->on_main_loop();
+    }
 }
+
+
+#define ohw_logo_antipixel_width 80
+#define ohw_logo_antipixel_height 15
+static const uint8_t ohw_logo_antipixel_bits[] = {
+    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF, 0xFF,0xFF,0x80,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x01,0x80,0x0C,0x00,0x33, 0x18,0xBB,0xFF,0xFF,0xFF,0xFD,0x80,0x5E,
+    0x80,0x2D,0x6B,0x9B,0xFF,0xFF,0xFF,0xFD, 0x80,0xFF,0xC0,0x2D,0x18,0xAB,0xFF,0xFF,
+    0xFF,0xFD,0x80,0xFF,0xC0,0x2D,0x7B,0xB3, 0xFF,0xFF,0xFF,0xFD,0x80,0x7F,0x80,0x33,
+    0x78,0xBB,0xFF,0xFF,0xFF,0xFD,0x81,0xF3, 0xE0,0x3F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFD,
+    0x81,0xF3,0xE0,0x3F,0xFD,0xB3,0x18,0xDD, 0x98,0xC5,0x81,0xF3,0xE0,0x3F,0xFD,0xAD,
+    0x6B,0x5D,0x6B,0x5D,0x80,0x73,0x80,0x3F, 0xFC,0x21,0x1B,0x55,0x08,0xC5,0x80,0xF3,
+    0xC0,0x3F,0xFD,0xAD,0x5B,0x49,0x6A,0xDD, 0x80,0xE1,0xC0,0x3F,0xFD,0xAD,0x68,0xDD,
+    0x6B,0x45,0x80,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x01,0xFF,0xFF,0xFF,0xFF,
+    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
+};
 
 // On idle things, we don't want to do shit in interrupts
 // don't queue gcodes in this
 void Panel::on_idle(void* argument){
+    if(this->start_up) {
+        this->lcd->init();
+
+        Version v;
+        string build(v.get_build());
+        string date(v.get_build_date());
+        this->lcd->clear();
+        this->lcd->setCursor(0,0); this->lcd->printf("Welcome to Smoothie");
+        this->lcd->setCursor(0,1); this->lcd->printf("%s", build.substr(0, 20).c_str());
+        this->lcd->setCursor(0,2); this->lcd->printf("%s", date.substr(0, 20).c_str());
+        this->lcd->setCursor(0,3); this->lcd->printf("Please wait....");
+
+        if(this->lcd->hasGraphics()) {
+            this->lcd->bltGlyph(24, 40, ohw_logo_antipixel_width, ohw_logo_antipixel_height, ohw_logo_antipixel_bits);
+        }
+
+        this->lcd->on_refresh(true); // tell lcd to display now
+
+        // Default top screen
+        this->top_screen = new MainMenuScreen();
+        this->top_screen->set_panel(this);
+        this->start_up= false;
+        //this->idle_time= 20*3; // only show for 2 seconds
+    }
 
     // after being idle for a while switch to Watch screen
     if(this->idle_time > 20*5) { // 5 seconds
@@ -179,20 +219,17 @@ void Panel::on_idle(void* argument){
 
         // read the actual buttons
         int but= lcd->readButtons();
-        if(but != 0) this->idle_time= 0;
-        
+        if(but != 0){
+            this->idle_time= 0;
+        }
+
         // fire events if the buttons are active and debounce is satisfied
         this->up_button.check_signal(but&BUTTON_UP);
         this->down_button.check_signal(but&BUTTON_DOWN);
         this->back_button.check_signal(but&BUTTON_LEFT);
         this->click_button.check_signal(but&BUTTON_SELECT);
         this->pause_button.check_signal(but&BUTTON_PAUSE);
-
-        // for debugging
-        if(but&BUTTON_RIGHT) {
-            lcd->init();    
-        }
-    }
+     }
     
     // If we are in menu mode and the position has changed
     if( this->mode == MENU_MODE && this->counter_change() ){
@@ -207,8 +244,10 @@ void Panel::on_idle(void* argument){
     // If we must refresh
     if( this->refresh_flag ){
         this->refresh_flag = false;
-        this->current_screen->on_refresh();
-        this->lcd->on_refresh();
+        if(this->current_screen != NULL) {
+            this->current_screen->on_refresh();
+            this->lcd->on_refresh();
+        }
     }
 }
 
@@ -230,7 +269,7 @@ uint32_t Panel::on_down(uint32_t dummy){
 
 // on most menu screens will go back to previous higher menu
 uint32_t Panel::on_back(uint32_t dummy){
-    if(this->mode == MENU_MODE && this->current_screen->parent != NULL) {
+    if(this->mode == MENU_MODE && this->current_screen != NULL && this->current_screen->parent != NULL) {
         this->enter_screen(this->current_screen->parent);
     }
     return 0;
