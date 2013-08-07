@@ -129,4 +129,3 @@ void ReprapDiscountGLCD::on_refresh(bool now){
     // 10Hz refresh rate
     if(now || refresh_counts % 2 == 0 ) this->glcd->refresh();
 }
-

@@ -24,6 +24,7 @@
 #define MOVING_TO_ORIGIN_SLOW 3
 
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
+#define corexy_homing_checksum                  CHECKSUM("corexy_homing")
 
 #define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
 #define beta_min_endstop_checksum        CHECKSUM("beta_min_endstop")
@@ -37,6 +38,7 @@
 #define beta_trim_checksum               CHECKSUM("beta_trim")
 #define gamma_trim_checksum              CHECKSUM("gamma_trim")
 
+// these values are in steps and should be deprecated
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
 #define beta_fast_homing_rate_checksum   CHECKSUM("beta_fast_homing_rate")
 #define gamma_fast_homing_rate_checksum  CHECKSUM("gamma_fast_homing_rate")
@@ -48,6 +50,21 @@
 #define alpha_homing_retract_checksum    CHECKSUM("alpha_homing_retract")
 #define beta_homing_retract_checksum     CHECKSUM("beta_homing_retract")
 #define gamma_homing_retract_checksum    CHECKSUM("gamma_homing_retract")
+#define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
+
+// same as above but in user friendly mm/s and mm
+#define alpha_fast_homing_rate_mm_checksum  CHECKSUM("alpha_fast_homing_rate_mm_s")
+#define beta_fast_homing_rate_mm_checksum   CHECKSUM("beta_fast_homing_rate_mm_s")
+#define gamma_fast_homing_rate_mm_checksum  CHECKSUM("gamma_fast_homing_rate_mm_s")
+
+#define alpha_slow_homing_rate_mm_checksum  CHECKSUM("alpha_slow_homing_rate_mm_s")
+#define beta_slow_homing_rate_mm_checksum   CHECKSUM("beta_slow_homing_rate_mm_s")
+#define gamma_slow_homing_rate_mm_checksum  CHECKSUM("gamma_slow_homing_rate_mm_s")
+
+#define alpha_homing_retract_mm_checksum    CHECKSUM("alpha_homing_retract_mm")
+#define beta_homing_retract_mm_checksum     CHECKSUM("beta_homing_retract_mm")
+#define gamma_homing_retract_mm_checksum    CHECKSUM("gamma_homing_retract_mm")
+
 #define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
 
 #define alpha_homing_direction_checksum  CHECKSUM("alpha_homing_direction")
@@ -75,7 +92,10 @@ class Endstops : public Module{
         void on_config_reload(void* argument);
 
     private:
+        void do_homing(char axes_to_move);
+        void do_homing_corexy(char axes_to_move);
         void wait_for_homed(char axes_to_move);
+        void wait_for_homed_corexy(int axis);
         double steps_per_mm[3];
         double homing_position[3];
         bool home_direction[3];
@@ -87,22 +107,7 @@ class Endstops : public Module{
         Pin           pins[6];
         StepperMotor* steppers[3];
         char status;
+        bool is_corexy;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

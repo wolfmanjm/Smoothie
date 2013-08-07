@@ -44,24 +44,35 @@ void Endstops::on_config_reload(void* argument){
     this->pins[3].from_string(         this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
     this->pins[4].from_string(         this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
     this->pins[5].from_string(         this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default(500  )->as_number();
-    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default(500  )->as_number();
-    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default(5    )->as_number();
-    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default(100  )->as_number();
-    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default(100  )->as_number();
-    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default(5    )->as_number();
-    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default(30   )->as_number();
-    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(30   )->as_number();
-    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(10   )->as_number();
-    this->trim[0]                   =  this->kernel->config->value(alpha_trim_checksum                 )->by_default(0   )->as_number();
-    this->trim[1]                   =  this->kernel->config->value(beta_trim_checksum                  )->by_default(0   )->as_number();
-    this->trim[2]                   =  this->kernel->config->value(gamma_trim_checksum                 )->by_default(0   )->as_number();
-    this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default(100  )->as_number();
 
-    // we need to know steps per mm for M206, TODO should probably use them for all settings
+    // we need to know steps per mm for M206, also use them for all settings
     this->steps_per_mm[0]           =  this->kernel->config->value(alpha_steps_per_mm_checksum         )->as_number();
     this->steps_per_mm[1]           =  this->kernel->config->value(beta_steps_per_mm_checksum          )->as_number();
     this->steps_per_mm[2]           =  this->kernel->config->value(gamma_steps_per_mm_checksum         )->as_number();
+
+    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default(4000 )->as_number();
+    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default(4000 )->as_number();
+    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default(6400 )->as_number();
+    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default(2000 )->as_number();
+    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default(2000 )->as_number();
+    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default(3200 )->as_number();
+    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default(400  )->as_number();
+    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(400  )->as_number();
+    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(1600 )->as_number();
+
+    // newer mm based config values override the old ones, convert to steps/mm and steps, defaults to what was set in the older config settings above
+    this->fast_rates[0]=    this->kernel->config->value(alpha_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->fast_rates[1]=    this->kernel->config->value(beta_fast_homing_rate_mm_checksum  )->by_default(this->fast_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->fast_rates[2]=    this->kernel->config->value(gamma_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->slow_rates[0]=    this->kernel->config->value(alpha_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->slow_rates[1]=    this->kernel->config->value(beta_slow_homing_rate_mm_checksum  )->by_default(this->slow_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->slow_rates[2]=    this->kernel->config->value(gamma_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->retract_steps[0]= this->kernel->config->value(alpha_homing_retract_mm_checksum   )->by_default(this->retract_steps[0]/steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->retract_steps[1]= this->kernel->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1]/steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->retract_steps[2]= this->kernel->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2]/steps_per_mm[2])->as_number() * steps_per_mm[2];
+
+    this->debounce_count  = this->kernel->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
+
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(this->kernel->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
@@ -76,6 +87,17 @@ void Endstops::on_config_reload(void* argument){
     this->homing_position[0]        =  this->home_direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number():this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
     this->homing_position[1]        =  this->home_direction[1]?this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number():this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
     this->homing_position[2]        =  this->home_direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number():this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
+
+    this->is_corexy                 =  this->kernel->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
+
+    // endstop trim used by deltas to do soft adjusting, in mm, convert to steps, and negate depending on homing direction
+    // eg on a delta homing to max, a negative trim value will move the carriage down, and a positive will move it up
+    int dirx= (this->home_direction[0] ? 1 : -1);
+    int diry= (this->home_direction[1] ? 1 : -1);
+    int dirz= (this->home_direction[2] ? 1 : -1);
+    this->trim[0]= this->kernel->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[0] * dirx;
+    this->trim[1]= this->kernel->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm[1] * diry;
+    this->trim[2]= this->kernel->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
 }
 
 void Endstops::wait_for_homed(char axes_to_move){
@@ -92,7 +114,6 @@ void Endstops::wait_for_homed(char axes_to_move){
                         running = true;
                     } else if ( this->steppers[c - 'X']->moving ){
                         this->steppers[c - 'X']->move(0,0);
-                        //this->kernel->streams->printf("move done %c\r\n", c);
                     }
                 }else{
                     // The endstop was not hit yet
@@ -102,6 +123,180 @@ void Endstops::wait_for_homed(char axes_to_move){
             }
         }
     }
+}
+
+// this homing works for cartesian and delta printers, not for HBots/CoreXY
+void Endstops::do_homing(char axes_to_move) {
+    // Start moving the axes to the origin
+    this->status = MOVING_TO_ORIGIN_FAST;
+    for( char c = 'X'; c <= 'Z'; c++ ){
+        if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+            this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
+            this->steppers[c - 'X']->move(this->home_direction[c - 'X'],10000000);
+        }
+    }
+
+    // Wait for all axes to have homed
+    this->wait_for_homed(axes_to_move);
+
+    // Move back a small distance
+    this->status = MOVING_BACK;
+    bool inverted_dir;
+    for( char c = 'X'; c <= 'Z'; c++ ){
+        if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+            inverted_dir = !this->home_direction[c - 'X'];
+            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+            this->steppers[c - 'X']->move(inverted_dir,this->retract_steps[c - 'X']);
+        }
+    }
+
+     // Wait for moves to be done
+    for( char c = 'X'; c <= 'Z'; c++ ){
+        if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+            while( this->steppers[c - 'X']->moving ){
+                this->kernel->call_event(ON_IDLE);
+            }
+        }
+    }
+
+    // Start moving the axes to the origin slowly
+    this->status = MOVING_TO_ORIGIN_SLOW;
+    for( char c = 'X'; c <= 'Z'; c++ ){
+        if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+            this->steppers[c - 'X']->set_speed(this->slow_rates[c -'X']);
+            this->steppers[c - 'X']->move(this->home_direction[c - 'X'],10000000);
+        }
+    }
+
+    // Wait for all axes to have homed
+    this->wait_for_homed(axes_to_move);
+
+    // move for soft trim
+    this->status = MOVING_BACK;
+    for( char c = 'X'; c <= 'Z'; c++ ){
+        if( this->trim[c - 'X'] != 0 && ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+            inverted_dir = !this->home_direction[c - 'X'];
+            // move up or down depending on sign of trim
+            if(this->trim[c - 'X'] < 0) inverted_dir= !inverted_dir;
+            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+            this->steppers[c - 'X']->move(inverted_dir,this->trim[c - 'X']);
+        }
+    }
+
+    // Wait for moves to be done
+    for( char c = 'X'; c <= 'Z'; c++ ){
+        if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+            //this->kernel->streams->printf("axis %c \r\n", c );
+            while( this->steppers[c - 'X']->moving ){
+                this->kernel->call_event(ON_IDLE);
+            }
+        }
+    }
+
+    // Homing is done
+    this->status = NOT_HOMING;
+}
+
+#define X_AXIS 0
+#define Y_AXIS 1
+#define Z_AXIS 2
+
+void Endstops::wait_for_homed_corexy(int axis){
+    bool running = true;
+    unsigned int debounce[3] = {0,0,0};
+    while(running){
+        running = false;
+        this->kernel->call_event(ON_IDLE);
+        if( this->pins[axis + (this->home_direction[axis]?0:3)].get() ){
+            if( debounce[axis] < debounce_count ) {
+                debounce[axis] ++;
+                running = true;
+            } else {
+                // turn both off if running
+                if(this->steppers[X_AXIS]->moving) this->steppers[X_AXIS]->move(0,0);
+                if(this->steppers[Y_AXIS]->moving) this->steppers[Y_AXIS]->move(0,0);
+            }
+        }else{
+            // The endstop was not hit yet
+            running = true;
+            debounce[axis] = 0;
+        }
+    }
+}
+
+// this homing works for HBots/CoreXY
+void Endstops::do_homing_corexy(char axes_to_move) {
+    // Start moving the axes to the origin
+    if(axes_to_move & 0x01) { // Home X, which means both X and Y in same direction
+        this->status = MOVING_TO_ORIGIN_FAST;
+        this->steppers[X_AXIS]->set_speed(this->fast_rates[X_AXIS]);
+        this->steppers[X_AXIS]->move(this->home_direction[X_AXIS], 10000000);
+        this->steppers[Y_AXIS]->set_speed(this->fast_rates[X_AXIS]);
+        this->steppers[Y_AXIS]->move(this->home_direction[X_AXIS], 10000000);
+
+        // wait for X
+        this->wait_for_homed_corexy(X_AXIS);
+
+        // Move back a small distance
+        this->status = MOVING_BACK;
+        this->steppers[X_AXIS]->set_speed(this->slow_rates[X_AXIS]);
+        this->steppers[X_AXIS]->move(!this->home_direction[X_AXIS], this->retract_steps[X_AXIS]);
+        this->steppers[Y_AXIS]->set_speed(this->slow_rates[X_AXIS]);
+        this->steppers[Y_AXIS]->move(!this->home_direction[X_AXIS], this->retract_steps[X_AXIS]);
+
+        // wait until done
+        while( this->steppers[X_AXIS]->moving ){ this->kernel->call_event(ON_IDLE); }
+        while( this->steppers[Y_AXIS]->moving ){ this->kernel->call_event(ON_IDLE); }
+
+        // Start moving the axes to the origin slowly
+        this->status = MOVING_TO_ORIGIN_SLOW;
+        this->steppers[X_AXIS]->set_speed(this->slow_rates[X_AXIS]);
+        this->steppers[X_AXIS]->move(this->home_direction[X_AXIS], 10000000);
+        this->steppers[Y_AXIS]->set_speed(this->slow_rates[X_AXIS]);
+        this->steppers[Y_AXIS]->move(this->home_direction[X_AXIS], 10000000);
+
+        // wait for X
+        this->wait_for_homed_corexy(X_AXIS);
+    }
+
+    if(axes_to_move & 0x02) { // Home Y, which means both X and Y in different directions
+        this->status = MOVING_TO_ORIGIN_FAST;
+        this->steppers[X_AXIS]->set_speed(this->fast_rates[Y_AXIS]);
+        this->steppers[X_AXIS]->move(this->home_direction[Y_AXIS], 10000000);
+        this->steppers[Y_AXIS]->set_speed(this->fast_rates[Y_AXIS]); // yes I use X_axis speed as they need to go at the same speed
+        this->steppers[Y_AXIS]->move(!this->home_direction[Y_AXIS], 10000000);
+
+        // wait for Y
+        this->wait_for_homed_corexy(Y_AXIS);
+
+        // Move back a small distance
+        this->status = MOVING_BACK;
+        this->steppers[X_AXIS]->set_speed(this->slow_rates[Y_AXIS]);
+        this->steppers[X_AXIS]->move(!this->home_direction[Y_AXIS], this->retract_steps[Y_AXIS]);
+        this->steppers[Y_AXIS]->set_speed(this->slow_rates[Y_AXIS]);
+        this->steppers[Y_AXIS]->move(this->home_direction[Y_AXIS], this->retract_steps[Y_AXIS]);
+
+        // wait until done
+        while( this->steppers[X_AXIS]->moving ){ this->kernel->call_event(ON_IDLE); }
+        while( this->steppers[Y_AXIS]->moving ){ this->kernel->call_event(ON_IDLE); }
+
+        // Start moving the axes to the origin slowly
+        this->status = MOVING_TO_ORIGIN_SLOW;
+        this->steppers[X_AXIS]->set_speed(this->slow_rates[Y_AXIS]);
+        this->steppers[X_AXIS]->move(this->home_direction[Y_AXIS], 10000000);
+        this->steppers[Y_AXIS]->set_speed(this->slow_rates[Y_AXIS]);
+        this->steppers[Y_AXIS]->move(!this->home_direction[Y_AXIS], 10000000);
+
+        // wait for Y
+        this->wait_for_homed_corexy(Y_AXIS);
+    }
+
+    if(axes_to_move & 0x04) { // move Z
+        do_homing(0x04); // just home normally for Z
+    }
+
+    // Homing is done
+    this->status = NOT_HOMING;
 }
 
 // Start homing sequences by response to GCode commands
@@ -130,80 +325,11 @@ void Endstops::on_gcode_received(void* argument)
             // Enable the motors
             this->kernel->stepper->turn_enable_pins_on();
 
-            // Start moving the axes to the origin
-            this->status = MOVING_TO_ORIGIN_FAST;
-            for( char c = 'X'; c <= 'Z'; c++ ){
-                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    gcode->stream->printf("homing axis %c\r\n", c);
-                    this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
-                    this->steppers[c - 'X']->move(this->home_direction[c - 'X'],10000000);
-                }
-            }
-
-            // Wait for all axes to have homed
-            this->wait_for_homed(axes_to_move);
-
-            gcode->stream->printf("test a\r\n");
-            // Move back a small distance
-            this->status = MOVING_BACK;
-            bool inverted_dir;
-            for( char c = 'X'; c <= 'Z'; c++ ){
-                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    inverted_dir = !this->home_direction[c - 'X'];
-                    this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-                    this->steppers[c - 'X']->move(inverted_dir,this->retract_steps[c - 'X']);
-                }
-            }
-
-            gcode->stream->printf("test b\r\n");
-            // Wait for moves to be done
-            for( char c = 'X'; c <= 'Z'; c++ ){
-                if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->kernel->streams->printf("axis %c \r\n", c );
-                    while( this->steppers[c - 'X']->moving ){
-                        this->kernel->call_event(ON_IDLE);
-                    }
-                }
-            }
-
-            gcode->stream->printf("test c\r\n");
-
-            // Start moving the axes to the origin slowly
-            this->status = MOVING_TO_ORIGIN_SLOW;
-            for( char c = 'X'; c <= 'Z'; c++ ){
-                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->set_speed(this->slow_rates[c -'X']);
-                    this->steppers[c - 'X']->move(this->home_direction[c - 'X'],10000000);
-                }
-            }
-
-            // Wait for all axes to have homed
-            this->wait_for_homed(axes_to_move);
-
-            // move for soft trim
-            this->status = MOVING_BACK;
-            for( char c = 'X'; c <= 'Z'; c++ ){
-                if( this->trim[c - 'X'] != 0 && ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    inverted_dir = !this->home_direction[c - 'X'];
-                    // move up or down depending on sign of trim
-                    if(this->trim[c - 'X'] < 0) inverted_dir= !inverted_dir;
-                    this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-                    this->steppers[c - 'X']->move(inverted_dir,this->trim[c - 'X']);
-                }
-            }
-
-            // Wait for moves to be done
-            for( char c = 'X'; c <= 'Z'; c++ ){
-                if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->kernel->streams->printf("axis %c \r\n", c );
-                    while( this->steppers[c - 'X']->moving ){
-                        this->kernel->call_event(ON_IDLE);
-                    }
-                }
-            }
-
-            // Homing is done
-            this->status = NOT_HOMING;
+            // do the actual homing
+            if(is_corexy)
+                do_homing_corexy(axes_to_move);
+            else
+                do_homing(axes_to_move);
 
             // Zero the ax(i/e)s position
             for( char c = 'X'; c <= 'Z'; c++ ){
