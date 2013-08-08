@@ -58,6 +58,27 @@ void WatchScreen::on_enter(){
     this->panel->set_control_value(this->current_speed);
 }
 
+#if 0
+#include "mbed.h"
+static int tmin= 1000000;
+static int tmax=0;
+void time_idle() {
+    Timer timer;
+    timer.start();
+    int begin, end;
+    for (int i = 0; i < 1000; ++i) {
+         begin= timer.read_us();
+         THEKERNEL->call_event(ON_IDLE);
+         end= timer.read_us();
+         int d= end-begin;
+         if(d < tmin) tmin= d;
+         if(d > tmax) tmax= d;
+    }
+}
+static Timer timer;
+static int lastt= 0;
+#endif
+
 void WatchScreen::on_refresh(){
     // Exit if the button is clicked
     if( this->panel->click() ){
@@ -113,6 +134,13 @@ void WatchScreen::on_refresh(){
             // fan appears always on for now
             this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
         }
+
+        #if 0
+        int t= timer.read_us()-lastt;
+        lastt= timer.read_us();
+        panel->lcd->setCursor(0, 5);
+        panel->lcd->printf("%8d", t);
+        #endif
     }
 }
 
@@ -121,6 +149,7 @@ void WatchScreen::on_main_loop() {
     if(!this->speed_changed) return;
     this->speed_changed= false;
     set_speed();
+    //time_idle();
 }
 
 // fetch the data we are displaying
