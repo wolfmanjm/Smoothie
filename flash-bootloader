@@ -1,0 +1,1 @@
+./lpc21isp -wipe DFU-Bootloader.hex /dev/ttyUSB0 230400 12000
