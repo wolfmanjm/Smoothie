@@ -109,6 +109,7 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->set_temp_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == mem_command_checksum)
         this->mem_command(get_arguments(possible_command),new_message.stream );
+
     else
         handled= false;
 
