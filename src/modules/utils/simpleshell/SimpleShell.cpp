@@ -33,6 +33,7 @@ extern "C" uint32_t  __end__;
 extern "C" uint32_t  __malloc_free_list;
 extern "C" uint32_t  _sbrk(int size);
 
+// Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
 static void heapWalk(StreamOutput* stream, bool verbose)
 {
     uint32_t chunkNumber = 1;
@@ -343,7 +344,6 @@ void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("Commands:\r\n");
     stream->printf("version\r\n");
     stream->printf("mem [-v]\r\n");
-    stream->printf("r - repeat last command\r\n");
     stream->printf("ls [folder]\r\n");
     stream->printf("cd folder\r\n");
     stream->printf("pwd\r\n");
@@ -360,5 +360,7 @@ void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");
+
+	stream->printf("r - repeat last command\r\n");
 }
 
