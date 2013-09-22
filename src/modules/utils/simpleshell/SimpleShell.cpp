@@ -21,6 +21,9 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
 
+extern "C" caddr_t _sbrk(int incr);
+extern unsigned int g_maximumHeapAddress;
+
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
@@ -104,6 +107,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->get_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == set_temp_command_checksum)
         this->set_temp_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == mem_command_checksum)
+        this->mem_command(get_arguments(possible_command),new_message.stream );
     else
         handled= false;
 
@@ -191,6 +196,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 }
 
+// show free memory
+void SimpleShell::mem_command( string parameters, StreamOutput* stream){
+    unsigned long heap= (unsigned long)_sbrk(0);
+    unsigned long m= g_maximumHeapAddress - heap;
+    stream->printf("Memory available: %lu bytes\r\n", m);
+}
+
 // print out build version
 void SimpleShell::version_command( string parameters, StreamOutput* stream){
     Version vers;
@@ -261,6 +273,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput* stream){
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("Commands:\r\n");
     stream->printf("version\r\n");
+    stream->printf("mem\r\n");
     stream->printf("r - repeat last command\r\n");
     stream->printf("ls [folder]\r\n");
     stream->printf("cd folder\r\n");
