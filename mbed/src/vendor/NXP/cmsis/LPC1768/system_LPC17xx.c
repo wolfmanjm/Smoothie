@@ -292,6 +292,7 @@
   @{
  */
 
+#define USE120MHZ
 
 
 #define CLOCK_SETUP           1
@@ -306,11 +307,13 @@
 #    define CCLKCFG_Val           0x00000003
 #    define USBCLKCFG_Val         0x00000000
 #else
-/* 120MHz
-#define PLL0CFG_Val           0x001f01df
-#define CCLKCFG_Val           0x00000002
-*/
-#    define PLL0CFG_Val           0x0000000B
+
+#ifdef USE120MHZ
+#    define PLL0CFG_Val           0x001f01df // 120MHz 
+#else
+#    define PLL0CFG_Val           0x0000000B // 90MHz
+#endif
+
 #    define PLL1_SETUP            0
 #    define PLL1CFG_Val           0x00000000
 #    define CCLKCFG_Val           0x00000002
