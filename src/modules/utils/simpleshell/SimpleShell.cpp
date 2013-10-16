@@ -273,10 +273,37 @@ void SimpleShell::mem_command( string parameters, StreamOutput* stream){
     heapWalk(stream, verbose);
 }
 
+#if 0
+#include "mbed.h"
+#include "BaseSolution.h"
+#include "RostockSolution.h"
+#include "JohannKosselSolution.h"
+#endif
+
 // print out build version
 void SimpleShell::version_command( string parameters, StreamOutput* stream){
     Version vers;
     stream->printf("Build version: %s, Build date: %s,  System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000);
+
+#if 0
+    double millimeters[3]= {100.0, 200.0, 300.0};
+    int steps[3];
+    BaseSolution* r= new RostockSolution(THEKERNEL->config);
+    BaseSolution* k= new JohannKosselSolution(THEKERNEL->config);
+    Timer timer;
+    timer.start();
+    for(int i=0;i<10;i++) r->millimeters_to_steps(millimeters, steps);
+    timer.stop();
+    float tr= timer.read();
+    timer.reset();
+    timer.start();
+    for(int i=0;i<10;i++) k->millimeters_to_steps(millimeters, steps);
+    timer.stop();
+    float tk= timer.read();
+    stream->printf("time RostockSolution: %f, time JohannKosselSolution: %f\n", tr, tk);
+    delete kr;
+    delete tk;
+#endif
 }
 
 // Reset the system

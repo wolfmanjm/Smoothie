@@ -292,7 +292,7 @@
   @{
  */
 
-#define USE120MHZ
+//#define USE120MHZ
 
 
 #define CLOCK_SETUP           1
@@ -311,6 +311,7 @@
 #ifdef USE120MHZ
 #    define PLL0CFG_Val           0x001f01df // 120MHz 
 #else
+#    warning "building for 96MHz, beta smoothie board"
 #    define PLL0CFG_Val           0x0000000B // 90MHz
 #endif
 
