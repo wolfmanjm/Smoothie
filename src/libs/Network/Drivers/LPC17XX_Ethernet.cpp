@@ -1,4 +1,4 @@
-#if 0
+#if 1
 #include "LPC17XX_Ethernet.h"
 
 #include <cstring>
@@ -160,6 +160,7 @@ LPC17XX_Ethernet* LPC17XX_Ethernet::instance;
 
 LPC17XX_Ethernet::LPC17XX_Ethernet()
 {
+    // TODO these need to be configurable
     mac_address[0] = 0xAE;
     mac_address[1] = 0xF0;
     mac_address[2] = 0x28;
@@ -167,7 +168,7 @@ LPC17XX_Ethernet::LPC17XX_Ethernet()
     mac_address[4] = 0x66;
     mac_address[5] = 0x41;
 
-    ip_address = IPA(192,168,1,27);
+    ip_address = IPA(192,168,3,222);
     ip_mask = 0xFFFFFF00;
 
     for (int i = 0; i < 5; i++)
@@ -202,13 +203,13 @@ void LPC17XX_Ethernet::on_module_loaded()
     emac_init();
     printf("INIT OK\n");
 
-    register_for_event(ON_IDLE);
+    //register_for_event(ON_IDLE);
     register_for_event(ON_SECOND_TICK);
 }
 
 void LPC17XX_Ethernet::on_idle(void*)
 {
-    _receive_frame();
+    //_receive_frame();
 }
 
 void LPC17XX_Ethernet::on_second_tick(void*)
@@ -337,11 +338,11 @@ void LPC17XX_Ethernet::emac_init()
     /* Initialize Tx and Rx DMA Descriptors */
     LPC_EMAC->RxDescriptor       = (uint32_t) rxbuf.rxdesc;
     LPC_EMAC->RxStatus           = (uint32_t) rxbuf.rxstat;
-    LPC_EMAC->RxDescriptorNumber = 4;
+    LPC_EMAC->RxDescriptorNumber = LPC17XX_RXBUFS-1;
 
     LPC_EMAC->TxDescriptor       = (uint32_t) txbuf.txdesc;
     LPC_EMAC->TxStatus           = (uint32_t) txbuf.txstat;
-    LPC_EMAC->TxDescriptorNumber = 4;
+    LPC_EMAC->TxDescriptorNumber = LPC17XX_TXBUFS-1;
 
     // Set Receive Filter register: enable broadcast and multicast
     LPC_EMAC->RxFilterCtrl = EMAC_RFC_BCAST_EN | EMAC_RFC_PERFECT_EN;
@@ -364,16 +365,17 @@ void LPC17XX_Ethernet::set_mac(uint8_t* newmac)
     memcpy(mac_address, newmac, 6);
 }
 
-void LPC17XX_Ethernet::_receive_frame()
+bool LPC17XX_Ethernet::_receive_frame(void *packet, int *size)
 {
     if (can_read_packet() && can_write_packet())
     {
         int i = LPC_EMAC->RxConsumeIndex;
         RX_Stat* stat = &(rxbuf.rxstat[i]);
-        NET_PACKET packet = (NET_PACKET) rxbuf.buf[i];
+        *size = stat->Info & EMAC_RINFO_SIZE;
+        memcpy(packet, rxbuf.buf[i], *size);
 
-        int size = stat->Info & EMAC_RINFO_SIZE;
-        printf("Received %d byte Ethernet frame %lu/%lu\n", size, LPC_EMAC->RxProduceIndex, LPC_EMAC->RxConsumeIndex);
+        printf("Received %d byte Ethernet frame %lu/%lu\n", *size, LPC_EMAC->RxProduceIndex, LPC_EMAC->RxConsumeIndex);
+
 
 //      TODO: feed received packet to network stack here
 //         int s = net->receive_packet(this, packet, size);
@@ -387,14 +389,18 @@ void LPC17XX_Ethernet::_receive_frame()
         if (r > LPC_EMAC->RxDescriptorNumber)
             r = 0;
         LPC_EMAC->RxConsumeIndex = r;
+
+        return true;
     }
+
+    return false;
 }
 
 void LPC17XX_Ethernet::irq()
 {
     if (EMAC_IntGetStatus(EMAC_INT_RX_DONE))
     {
-        _receive_frame();
+        //_receive_frame();
     }
 
     if (EMAC_IntGetStatus(EMAC_INT_TX_DONE))

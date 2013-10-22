@@ -301,7 +301,6 @@ static uint32_t getDeviceType() {
 #include "JohannKosselSolution.h"
 #endif
 
-
 // print out build version
 void SimpleShell::version_command( string parameters, StreamOutput* stream){
     Version vers;

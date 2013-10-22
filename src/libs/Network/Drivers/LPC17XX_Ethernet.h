@@ -49,7 +49,7 @@ public:
 
     void irq(void);
 
-    void _receive_frame(void);
+    bool _receive_frame(void *packet, int* size);
 
     // NetworkInterface methods
 //     void provide_net(netcore* n);
