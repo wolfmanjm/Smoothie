@@ -124,7 +124,7 @@
 #define _MCPWM
 
 /* CAN--------------------------------*/
-#define _CAN
+//#define _CAN
 
 /* RIT ------------------------------- */
 #define _RIT
