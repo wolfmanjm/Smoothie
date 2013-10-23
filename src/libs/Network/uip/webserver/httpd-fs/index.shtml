@@ -1,0 +1,55 @@
+%! port-toggle
+<html>
+<meta http-equiv="X-UA-Compatible" content="IE=9" />
+<head>
+<link rel="stylesheet" type="text/css" href="main.css" />
+</head>
+
+<body>
+<div id="container">
+
+		<div id="footer">
+			Demo webpage for the ethernet tutorial for the Simplecortex
+		</div>
+
+	<div id="content-container">
+		<div id="content">
+        <p class="first">
+        Welcome at the demo site of the Simplecortex ethernet tutorial. This website is made to demonstrate some of the possibilities of the uIP ethernet library. If you have any questions or found a bug, please post it in our forum or email us at: <A HREF="mailto:admin@simplecortex.com">Webmaster</A>
+        </p>
+			<p>
+				On this site you can change a LED on the Simplecortex, read out the 2 buttons and read out an ADC pin. Every 3 seconds the page refreshes to read new values in. Showing a picture on the website is also no problem but the speed of the uIP library is not very fast, it is recomennded to keep pictures smaller then 50Kbyte
+			</p>
+            
+            <p>
+            This website was the first design for the Simplecortex website. It uses HTML5 for the rounded edges. Some older browsers don't support this function. It is recommended to update your browser but the demo website functions on older browsers too.
+This website and HTML code can be freely used for other projects.A Creative Commons Attribution 3.0 Unported License applies to this website  </p>
+		</div>
+        
+		<div id="aside">
+       <p> Here are some examples to control the Simplecortex with ethernet</p>
+        		Buttons:<br>
+                Button one: %! port-number1
+				<br>
+				Button two: %! port-number2
+				<br><br>
+                ADC channel three:<br>
+				ADC Value: %! port-adc1
+                <br><br>
+                LED:<br>
+                Port status: %! port-status   				
+				<a href="index.shtml">Change</a>
+        		</p>        
+		</div>
+        
+                <div id="picture">
+        <img src="simplecortex.jpg" width="400" height="282"/>
+        </div>
+        
+		<div id="footer">
+			Demo webpage for the ethernet tutorial for the Simplecortex
+		</div>
+	</div>
+</div>
+</body>
+</html>

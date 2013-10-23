@@ -130,7 +130,7 @@
 #define _RIT
 
 /* EMAC ------------------------------ */
-#define _EMAC
+//#define _EMAC
 
 /************************** GLOBAL/PUBLIC MACRO DEFINITIONS *********************************/
 

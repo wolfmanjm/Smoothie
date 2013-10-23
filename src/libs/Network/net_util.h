@@ -75,6 +75,8 @@ public:
     virtual void set_ip(uint32_t new_ip)     { ip_address = new_ip; };
     virtual void set_mac(uint8_t new_mac[6]) { memcpy(mac_address, new_mac, 6); };
 
+    bool isUp() { return up; }
+
 //     netcore* net;
     uint8_t* interface_name;
 

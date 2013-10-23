@@ -1,8 +1,5 @@
 #define DEBUG_PRINTF(...) printf(__VA_ARGS__)
 
-extern void app_call();
-#define UIP_APPCALL app_call
-
 /**
  * \defgroup uip The uIP TCP/IP stack
  * @{
@@ -139,7 +136,7 @@ struct uip_eth_addr uip_ethaddr = {{0,0,0,0,0,0}};
 #endif
 
 #ifndef UIP_CONF_EXTERNAL_BUFFER
-u8_t uip_buf[UIP_BUFSIZE + 2];   /* The packet buffer that contains
+u8_t uip_buf[UIP_BUFSIZE + 2] __attribute__ ((section ("AHBSRAM1")));   /* The packet buffer that contains
 				    incoming packets. */
 #endif /* UIP_CONF_EXTERNAL_BUFFER */
 
@@ -166,7 +163,7 @@ u8_t uip_flags;     /* The uip_flags variable is used for
 struct uip_conn *uip_conn;   /* uip_conn always points to the current
 				connection. */
 
-struct uip_conn uip_conns[UIP_CONNS];
+struct uip_conn uip_conns[UIP_CONNS]  __attribute__ ((section ("AHBSRAM1")));
                              /* The uip_conns array holds all TCP
 				connections. */
 u16_t uip_listenports[UIP_LISTENPORTS];

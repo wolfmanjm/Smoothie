@@ -12,8 +12,8 @@
 #define EMAC_PHY_REG_SCSR 0x1F
 
 #define LPC17XX_MAX_PACKET 1536
-#define LPC17XX_TXBUFS     5
-#define LPC17XX_RXBUFS     5
+#define LPC17XX_TXBUFS     2
+#define LPC17XX_RXBUFS     4
 
 typedef struct {
     void* packet;
@@ -41,7 +41,7 @@ public:
 
     void on_module_loaded();
     void on_idle(void*);
-    void on_second_tick(void*);
+    uint32_t second_tick(uint32_t dummy);
 
     void emac_init(void) __attribute__ ((optimize("O0")));
 
@@ -72,8 +72,12 @@ public:
 
     static LPC17XX_Ethernet* instance;
 
+private:
     static _rxbuf_t rxbuf;
     static _txbuf_t txbuf;
+
+    void check_interface();
+    bool sec_tick;
 };
 
 #endif /* _LPC17XX_ETHERNET_H */

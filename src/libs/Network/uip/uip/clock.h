@@ -54,6 +54,10 @@
 
 #include "clock-arch.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Initialize the clock library.
  *
@@ -72,6 +76,9 @@ void clock_init(void);
  */
 clock_time_t clock_time(void);
 
+#ifdef __cplusplus
+}
+#endif
 /**
  * A second, measured in system clock time.
  *

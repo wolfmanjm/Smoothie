@@ -29,8 +29,8 @@ private:
     LPC17XX_Ethernet *ethernet;
 
     struct timer periodic_timer, arp_timer;
-    char ipstring [20];
     uip_ipaddr_t ipaddr;  /* local IP address */
+    uint8_t mac_address[6];
 };
 
 #endif

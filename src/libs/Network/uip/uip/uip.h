@@ -427,7 +427,12 @@ void uip_setipid(u16_t id);
  }
  \endcode
  */
+
+#ifdef __cplusplus
+extern "C" u8_t uip_buf[UIP_BUFSIZE+2];
+#else
 extern u8_t uip_buf[UIP_BUFSIZE+2];
+#endif
 
 /** @} */
 
@@ -1185,7 +1190,7 @@ struct uip_conn {
 			 segment sent. */
 
   /** The application state. */
-  //uip_tcp_appstate_t appstate;
+  uip_tcp_appstate_t appstate;
 };
 
 

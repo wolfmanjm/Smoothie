@@ -1,0 +1,10 @@
+%! port-toggle
+
+%!: /header.html
+<h1>GPIO</h1>
+
+Port status: %! port-status
+<a href="portchange.shtml">Change</a>
+
+%!: /footer.html
+
