@@ -95,12 +95,11 @@ MEMB(connections, sizeof(struct connection), 16);
  * \param num The total number of memory chunks in the block.
  *
  */
-#define MEMB(name, structure, num) \
-        static char MEMB_CONCAT(name,_memb_count)[num]; \
-        static structure MEMB_CONCAT(name,_memb_mem)[num]; \
-        static struct memb_blocks name = {sizeof(structure), num, \
-                                          MEMB_CONCAT(name,_memb_count), \
-                                          (void *)MEMB_CONCAT(name,_memb_mem)}
+#define MEMB(name, structure, num)  static char MEMB_CONCAT(name,_memb_count)[num]; \
+                                    static structure MEMB_CONCAT(name,_memb_mem)[num]; \
+                                    static struct memb_blocks name = {sizeof(structure), num, MEMB_CONCAT(name,_memb_count), (void *)MEMB_CONCAT(name,_memb_mem) }
+
+
 
 struct memb_blocks {
   unsigned short size;
