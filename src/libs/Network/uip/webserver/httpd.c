@@ -310,10 +310,17 @@ handle_connection(struct httpd_state *s)
 void
 httpd_appcall(void)
 {
-  struct httpd_state *s = (struct httpd_state *)&(uip_conn->appstate);
+  struct httpd_state *s = (struct httpd_state *)(uip_conn->appstate);
 
   if(uip_closed() || uip_aborted() || uip_timedout()) {
+    if(s != NULL){
+      free(s);
+      uip_conn->appstate= NULL;
+    }
+
   } else if(uip_connected()) {
+    s= malloc(sizeof(struct httpd_state));
+    uip_conn->appstate= s;
     PSOCK_INIT(&s->sin, s->inputbuf, sizeof(s->inputbuf) - 1);
     PSOCK_INIT(&s->sout, s->inputbuf, sizeof(s->inputbuf) - 1);
     PT_INIT(&s->outputpt);

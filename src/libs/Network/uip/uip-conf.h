@@ -141,6 +141,15 @@ typedef unsigned short uip_stats_t;
  */
 #define UIP_CONF_STATISTICS      0
 
+#ifdef __cplusplus
+extern "C" void app_select_appcall(void);
+#else
+extern void app_select_appcall(void);
+#endif
+
+#define UIP_APPCALL app_select_appcall
+typedef void* uip_tcp_appstate_t;
+
 /* Here we include the header file for the application(s) we use in
    our project. */
 /*#include "smtp.h"*/

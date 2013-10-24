@@ -206,7 +206,7 @@ void LPC17XX_Ethernet::on_module_loaded()
     emac_init();
     printf("INIT OK\n");
 
-    register_for_event(ON_IDLE);
+    //register_for_event(ON_IDLE);
     register_for_event(ON_SECOND_TICK);
 }
 

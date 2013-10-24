@@ -434,6 +434,9 @@ extern "C" u8_t uip_buf[UIP_BUFSIZE+2];
 extern u8_t uip_buf[UIP_BUFSIZE+2];
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /** @} */
 
 /*---------------------------------------------------------------------------*/
@@ -475,6 +478,10 @@ void uip_listen(u16_t port);
  * \param port A 16-bit port number in network byte order.
  */
 void uip_unlisten(u16_t port);
+
+#ifdef __cplusplus
+}
+#endif
 
 /**
  * Connect to a remote host using TCP.

@@ -101,11 +101,6 @@ void WebServer::tapdev_send(void *pPacket, unsigned int size) {
     ethernet->write_packet((uint8_t*) pPacket, size);
 }
 
-void WebServer::on_main_loop(void* argument){
-    // issue commands here
-
-}
-
 void WebServer::init(void)
 {
     // two timers for tcp/ip
@@ -127,6 +122,72 @@ void WebServer::init(void)
 
     // Initialize the HTTP server, listen to port 80.
     httpd_init();
+
+    // Initialize the command server
+    uip_listen(HTONS(23));
+}
+
+void WebServer::on_main_loop(void* argument){
+    // issue commands here
+
+}
+
+// TODO move into file
+typedef struct console_state {
+    struct psock p;
+    char inputbuffer[80];
+} console_state_t;
+
+extern "C" {
+    void handle_connection(console_state_t *, char **);
+    void console_connected(console_state_t *);
+}
+
+void console_appcall() {
+    printf("In console\n");
+    console_state_t *s = (console_state_t*)(uip_conn->appstate);
+
+    if(uip_closed()){
+        printf("Closed: %p\n", s);
+        if(s != NULL) {
+            handle_connection(s, NULL);
+            free(s);
+            uip_conn->appstate= NULL;
+        }
+        return;
+    }
+    if(uip_aborted()){
+        printf("aborted: %p\n", s);
+        return;
+    }
+    if(uip_timedout()) {
+        printf("timedout: %p\n", s);
+        return;
+    }
+
+    if(uip_connected()) {
+        s= (console_state_t*)malloc(sizeof(console_state_t));
+        uip_conn->appstate= s;
+        printf("Connected: %p\n", s);
+        console_connected(s);
+    }
+    char *cmd= NULL;
+    handle_connection(s, &cmd);
+    if(cmd != NULL) {
+        printf("Got command: %s\n", cmd);
+    }
+}
+
+// select between webserver and console server
+extern "C" void app_select_appcall(void) {
+    switch(uip_conn->lport) {
+        case HTONS(80):
+            httpd_appcall();
+            break;
+        case HTONS(23):
+            console_appcall();
+            break;
+      }
 }
 
 void WebServer::handlePacket(void)
