@@ -1,6 +1,8 @@
 #include "Kernel.h"
 
 #include "WebServer.h"
+#include "EthernetStream.h"
+#include "libs/SerialMessage.h"
 
 #include "uip_arp.h"
 #include "clock-arch.h"
@@ -127,20 +129,42 @@ void WebServer::init(void)
     uip_listen(HTONS(23));
 }
 
+static bool got_command= false;
+static bool got_response= false;
+static std::string command;
+
 void WebServer::on_main_loop(void* argument){
     // issue commands here
+    if(got_command) {
+        got_command= false;
+        EthernetStream *ethernet_stream = new EthernetStream();
 
+        struct SerialMessage message;
+        message.message= command;
+        message.stream= ethernet_stream;
+        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+
+        if( ethernet_stream->to_send.size() > 0 ){
+            got_response= true;
+            command= ethernet_stream->to_send;
+        }else{
+            got_response= true;
+            command= "no return data";
+        }
+    }
 }
 
 // TODO move into file
 typedef struct console_state {
     struct psock p;
     char inputbuffer[80];
+    bool waiting;
 } console_state_t;
 
 extern "C" {
     void handle_connection(console_state_t *, char **);
     void console_connected(console_state_t *);
+    void console_send_data(console_state_t *, const char*);
 }
 
 void console_appcall() {
@@ -167,14 +191,32 @@ void console_appcall() {
 
     if(uip_connected()) {
         s= (console_state_t*)malloc(sizeof(console_state_t));
+        s->waiting= false;
         uip_conn->appstate= s;
         printf("Connected: %p\n", s);
         console_connected(s);
+        got_command= false;
+        got_response= false;
     }
-    char *cmd= NULL;
-    handle_connection(s, &cmd);
-    if(cmd != NULL) {
-        printf("Got command: %s\n", cmd);
+
+    if(s->waiting) {
+        // waiting for response from previous command, only handle one at a time
+        if(got_response) {
+            console_send_data(s, command.c_str());
+            got_response= false;
+            s->waiting= false;
+        }
+    }else{
+        // prompt for next command
+        char *cmd= NULL;
+        handle_connection(s, &cmd);
+        if(cmd != NULL) {
+            printf("Got command: <%s> %d\n", cmd, strlen(cmd));
+            // handoff command to main_loop
+            command= cmd;
+            s->waiting= true;
+            got_command= true;
+        }
     }
 }
 
