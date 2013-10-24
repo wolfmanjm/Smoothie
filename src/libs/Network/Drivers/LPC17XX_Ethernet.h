@@ -41,7 +41,7 @@ public:
 
     void on_module_loaded();
     void on_idle(void*);
-    uint32_t second_tick(uint32_t dummy);
+    void on_second_tick(void*);
 
     void emac_init(void) __attribute__ ((optimize("O0")));
 
@@ -77,7 +77,6 @@ private:
     static _txbuf_t txbuf;
 
     void check_interface();
-    bool sec_tick;
 };
 
 #endif /* _LPC17XX_ETHERNET_H */

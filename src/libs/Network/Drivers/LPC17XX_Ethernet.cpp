@@ -194,7 +194,6 @@ LPC17XX_Ethernet::LPC17XX_Ethernet()
     instance = this;
 
     up = false;
-    sec_tick= false;
 }
 
 void LPC17XX_Ethernet::on_module_loaded()
@@ -208,24 +207,16 @@ void LPC17XX_Ethernet::on_module_loaded()
     printf("INIT OK\n");
 
     register_for_event(ON_IDLE);
-    //register_for_event(ON_SECOND_TICK);
-
-    //for some reason the on_second_tick is flaky
-    THEKERNEL->slow_ticker->attach( 1, this, &LPC17XX_Ethernet::second_tick );
+    register_for_event(ON_SECOND_TICK);
 }
 
 void LPC17XX_Ethernet::on_idle(void*)
 {
     //_receive_frame();
-    if(sec_tick) {
-        sec_tick= false;
-        check_interface();
-    }
 }
 
-uint32_t LPC17XX_Ethernet::second_tick(uint32_t dunny) {
-    sec_tick= true;
-    return 0;
+void LPC17XX_Ethernet::on_second_tick(void *) {
+    check_interface();
 }
 
 void LPC17XX_Ethernet::check_interface()
