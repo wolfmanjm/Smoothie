@@ -83,7 +83,7 @@ shell_quit(char *str)
 static void
 sendline(char *line)
 {
-    static unsigned int i;
+    unsigned int i;
 
     for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
         if (s.lines[i] == NULL) {
@@ -111,7 +111,7 @@ shell_prompt(char *str)
 void
 shell_output(char *str1, char *str2)
 {
-    static unsigned len;
+    unsigned len;
     char *line;
 
     line = alloc_line();
@@ -142,7 +142,7 @@ telnetd_init(void)
 static void
 acked(void)
 {
-    static unsigned int i;
+    unsigned int i;
 
     while (s.numsent > 0) {
         dealloc_line(s.lines[0]);
@@ -157,8 +157,8 @@ acked(void)
 static void
 senddata(void)
 {
-    static char *bufptr, *lineptr;
-    static int buflen, linelen;
+    char *bufptr, *lineptr;
+    int buflen, linelen;
 
     bufptr = uip_appdata;
     buflen = 0;
@@ -183,7 +183,7 @@ senddata(void)
 static void
 closed(void)
 {
-    static unsigned int i;
+    unsigned int i;
 
     for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
         if (s.lines[i] != NULL) {
@@ -305,7 +305,7 @@ newdata(void)
 void
 telnetd_appcall(void)
 {
-    static unsigned int i;
+    unsigned int i;
     if (uip_connected()) {
         /*    tcp_markconn(uip_conn, &s);*/
         for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {

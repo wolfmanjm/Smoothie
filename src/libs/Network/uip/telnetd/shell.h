@@ -45,6 +45,10 @@
 #ifndef __SHELL_H__
 #define __SHELL_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Initialize the shell.
  *
@@ -100,5 +104,9 @@ void shell_output(char *str1, char *str2);
  *
  */
 void shell_prompt(char *prompt);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __SHELL_H__ */

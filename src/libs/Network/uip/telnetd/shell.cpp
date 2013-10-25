@@ -41,7 +41,7 @@ struct ptentry {
     void (* pfunc)(char *str);
 };
 
-#define SHELL_PROMPT "uIP 1.0> "
+#define SHELL_PROMPT "> "
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -110,8 +110,7 @@ shell_init(void)
 void
 shell_start(void)
 {
-    shell_output("uIP command shell", "");
-    shell_output("Type '?' and return for help", "");
+    shell_output("Smoothie command shell", "");
     shell_prompt(SHELL_PROMPT);
 }
 /*---------------------------------------------------------------------------*/

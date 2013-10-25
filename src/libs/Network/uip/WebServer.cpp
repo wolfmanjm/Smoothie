@@ -17,6 +17,8 @@ extern "C" void uip_log(char *m)
     printf("uIP log message: %s\n", m);
 }
 
+static bool webserver_enabled, telnet_enabled;
+
 WebServer::WebServer()
 {
     ethernet = new LPC17XX_Ethernet();
@@ -43,13 +45,13 @@ static uint32_t getSerialNumberHash()
     return crc32((uint8_t *)&result[1], 4 * 4);
 }
 
-static bool parse_ip_str(const string &s, uint8_t *a, int len)
+static bool parse_ip_str(const string &s, uint8_t *a, int len, char sep = '.')
 {
     int p = 0;
     const char *n;
     for (int i = 0; i < len; i++) {
         if (i < len - 1) {
-            size_t o = s.find('.', p);
+            size_t o = s.find(sep, p);
             if (o == string::npos) return false;
             n = s.substr(p, o - p).c_str();
             p = o + 1;
@@ -63,15 +65,22 @@ static bool parse_ip_str(const string &s, uint8_t *a, int len)
 
 void WebServer::on_module_loaded()
 {
-    if ( !THEKERNEL->config->value( webserver_module_enable_checksum )->by_default(true)->as_bool() ) {
+    if ( !THEKERNEL->config->value( network_checksum, network_enable_checksum )->by_default(false)->as_bool() ) {
         // as not needed free up resource
         delete this;
         return;
     }
 
-    string mac = THEKERNEL->config->value( webserver_mac_override_checksum )->by_default("")->as_string();
-    if (mac.size() == 12 ) { // parse mac address
-        // TODO
+    webserver_enabled = THEKERNEL->config->value( network_checksum, network_webserver_checksum, network_enable_checksum )->by_default(false)->as_bool();
+    telnet_enabled = THEKERNEL->config->value( network_checksum, network_telnet_checksum, network_enable_checksum )->by_default(false)->as_bool();
+
+    string mac = THEKERNEL->config->value( network_checksum, network_mac_override_checksum )->by_default("")->as_string();
+    if (mac.size() == 17 ) { // parse mac address
+        if (!parse_ip_str(mac, mac_address, 6, ':')) {
+            printf("Invalid MAC address: %s\n", mac.c_str());
+            printf("Network not started due to errors in config");
+            return;
+        }
 
     } else {   // autogenerate
         uint32_t h = getSerialNumberHash();
@@ -87,23 +96,24 @@ void WebServer::on_module_loaded()
 
     // get IP address, mask and gateway address here....
     bool bad = false;
-    string s = THEKERNEL->config->value( webserver_ip_address_checksum )->by_default("192.168.3.222")->as_string();
+    string s = THEKERNEL->config->value( network_checksum, network_ip_address_checksum )->by_default("192.168.3.222")->as_string();
     if (!parse_ip_str(s, ipaddr, 4)) {
         printf("Invalid IP address: %s\n", s.c_str());
         bad = true;
     }
-    s = THEKERNEL->config->value( webserver_ip_mask_checksum )->by_default("255.255.255.0")->as_string();
+    s = THEKERNEL->config->value( network_checksum, network_ip_mask_checksum )->by_default("255.255.255.0")->as_string();
     if (!parse_ip_str(s, ipmask, 4)) {
         printf("Invalid IP Mask: %s\n", s.c_str());
         bad = true;
     }
-    s = THEKERNEL->config->value( webserver_ip_gateway_checksum )->by_default("192.168.3.1")->as_string();
+    s = THEKERNEL->config->value( network_checksum, network_ip_gateway_checksum )->by_default("192.168.3.1")->as_string();
     if (!parse_ip_str(s, ipgw, 4)) {
         printf("Invalid IP gateway: %s\n", s.c_str());
         bad = true;
     }
+
     if (bad) {
-        printf("Webserver not started due to errors");
+        printf("Network not started due to errors in config");
         return;
     }
 
@@ -188,11 +198,17 @@ void WebServer::init(void)
     uip_setnetmask(tip); /* mask */
     printf("IP mask: %d.%d.%d.%d\n", ipmask[0], ipmask[1], ipmask[2], ipmask[3]);
 
-    // Initialize the HTTP server, listen to port 80.
-    httpd_init();
+    if (webserver_enabled) {
+        // Initialize the HTTP server, listen to port 80.
+        httpd_init();
+        printf("Webserver initialized\n");
+    }
 
-    // Initialize the command server
-    telnetd_init();
+    if (telnet_enabled) {
+        // Initialize the telnet server
+        telnetd_init();
+        printf("Telnetd initialized\n");
+    }
 }
 
 void WebServer::on_main_loop(void *argument)
@@ -219,12 +235,12 @@ void WebServer::on_main_loop(void *argument)
 extern "C" void app_select_appcall(void)
 {
     switch (uip_conn->lport) {
-    case HTONS(80):
-        httpd_appcall();
-        break;
-    case HTONS(23):
-        telnetd_appcall();
-        break;
+        case HTONS(80):
+            if (webserver_enabled) httpd_appcall();
+            break;
+        case HTONS(23):
+            if (telnet_enabled) telnetd_appcall();
+            break;
     }
 }
 
