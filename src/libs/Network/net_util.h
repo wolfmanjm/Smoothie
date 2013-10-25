@@ -94,5 +94,6 @@ bool compare_mac(const uint8_t*, const uint8_t*, const uint8_t*);
 int format_mac(uint8_t*, uint8_t*);
 int format_ip(uint32_t, uint8_t*);
 int checksum16(uint8_t*, int, int);
+uint32_t crc32(uint8_t* buf, int length);
 
 #endif /* _NET_UTIL_H */

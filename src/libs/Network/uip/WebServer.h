@@ -8,6 +8,10 @@
 #include "uip.h"
 
 #define webserver_module_enable_checksum CHECKSUM("webserver_enable")
+#define webserver_mac_override_checksum CHECKSUM("webserver_mac")
+#define webserver_ip_address_checksum CHECKSUM("webserver_ipaddr")
+#define webserver_ip_gateway_checksum CHECKSUM("webserver_ipgateway")
+#define webserver_ip_mask_checksum CHECKSUM("webserver_ipmask")
 
 class WebServer : public Module
 {
@@ -29,8 +33,10 @@ private:
     LPC17XX_Ethernet *ethernet;
 
     struct timer periodic_timer, arp_timer;
-    uip_ipaddr_t ipaddr;  /* local IP address */
     uint8_t mac_address[6];
+    uint8_t ipaddr[4];
+    uint8_t ipmask[4];
+    uint8_t ipgw[4];
 };
 
 #endif
