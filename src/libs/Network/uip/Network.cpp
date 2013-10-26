@@ -213,21 +213,17 @@ void Network::init(void)
 
 void Network::on_main_loop(void *argument)
 {
+    static EthernetStream ethernet_stream;
     // issue commands here if any available
     const char *cmd= shell_get_command();
     if (cmd != NULL) {
-        EthernetStream ethernet_stream;
         struct SerialMessage message;
         message.message = cmd;
         message.stream = &ethernet_stream;
+        shell_got_command(); // clear the command q
+
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-
-        if ( ethernet_stream.to_send.size() > 0 ) {
-            shell_response(ethernet_stream.to_send.c_str());
-
-        } else {
-            shell_response(NULL);
-        }
+        shell_response(NULL); // tells shell we are done with the command
     }
 }
 

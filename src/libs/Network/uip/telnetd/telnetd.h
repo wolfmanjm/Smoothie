@@ -50,7 +50,7 @@ void telnetd_init(void);
 
 #define TELNETD_CONF_MAXCOMMANDLENGTH 80
 #ifndef TELNETD_CONF_NUMLINES
-#define TELNETD_CONF_NUMLINES 16
+#define TELNETD_CONF_NUMLINES 32
 #endif
 
 struct telnetd_state {

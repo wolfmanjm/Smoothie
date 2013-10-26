@@ -67,11 +67,11 @@ static bool parse(register char *str, struct ptentry *t)
 static void
 help(char *str)
 {
-    shell_output("Available commands: All others are passed on");
-    shell_output("conn    - show TCP connections");
-    shell_output("?       - show network help");
-    shell_output("help    - show command help");
-    shell_output("exit    - exit shell");
+    shell_output("Available commands: All others are passed on\n");
+    shell_output("conn        - show TCP connections\n");
+    shell_output("?           - show network help\n");
+    shell_output("help        - show command help\n");
+    shell_output("exit, quit  - exit shell\n");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -79,7 +79,7 @@ static void connections(char *str)
 {
     char istr[5];
     struct uip_conn* uip_connr;
-    shell_output("Current TCP connections: ");
+    shell_output("Current TCP connections: \n");
     for(uip_connr = &uip_conns[0]; uip_connr <= &uip_conns[UIP_CONNS - 1]; ++uip_connr) {
         if(uip_connr->tcpstateflags != UIP_CLOSED) {
             snprintf(istr, sizeof(istr), "%d", HTONS(uip_connr->lport));
@@ -95,15 +95,13 @@ unknown(char *str)
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
         command_q= str;
-        // need to quieten play
-        if(strncmp(str, "play", 4) == 0)
-            command_q.append(" -q");
     }
 }
 /*---------------------------------------------------------------------------*/
 static struct ptentry parsetab[] = {
     {CHECKSUM("conn"), connections},
     {CHECKSUM("exit"), shell_quit},
+    {CHECKSUM("quit"), shell_quit},
     {CHECKSUM("?"), help},
 
     /* Default action */
@@ -119,7 +117,7 @@ void
 shell_start(void)
 {
     command_q.clear();
-    shell_output("Smoothie command shell");
+    shell_output("Smoothie command shell\n");
     shell_prompt(SHELL_PROMPT);
 }
 /*---------------------------------------------------------------------------*/
@@ -139,12 +137,17 @@ const char *shell_get_command()
     return NULL;
 }
 
-void shell_response(const char *resp)
+void shell_got_command()
 {
     command_q.clear();
-    if(resp != NULL) {
+}
+
+void shell_response(const char *resp)
+{
+    if(resp == NULL) {
+        // only prompt when command is completed (except for play without -q)
+        shell_prompt(SHELL_PROMPT);
+    }else{
         shell_output(resp);
     }
-
-    shell_prompt(SHELL_PROMPT);
 }

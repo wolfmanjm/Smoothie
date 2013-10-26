@@ -96,7 +96,7 @@ void
 shell_prompt(const char *str)
 {
     char *line;
-    line = alloc_line(strlen(str+1));
+    line = alloc_line(strlen(str)+1);
     if (line != NULL) {
         strcpy(line, str);
         sendline(line);
@@ -110,13 +110,10 @@ shell_output(const char *str)
     unsigned len= strlen(str);
     char *line;
     if(len < chunk) {
-        //can be sent in one tcp buffer
-        line = alloc_line(len+3);
+        // can be sent in one tcp buffer
+        line = alloc_line(len+1);
         if (line != NULL) {
             strcpy(line, str);
-            if (line[len-1] != ISO_nl) {
-                strcat(line, "\r\n");
-            }
             sendline(line);
         }
     }else{
@@ -143,6 +140,17 @@ shell_output(const char *str)
         }
     }
 }
+// check if we can queue or if queue is full
+int shell_has_space()
+{
+    int i;
+    int cnt= 0;
+    for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
+        if (s.lines[i] == NULL) cnt++;
+    }
+    return cnt;
+}
+
 /*---------------------------------------------------------------------------*/
 void
 telnetd_init(void)

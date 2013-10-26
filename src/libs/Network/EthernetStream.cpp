@@ -2,14 +2,23 @@
 //
 
 #include "EthernetStream.h"
+#include "Kernel.h"
+#include "shell.h"
 
-EthernetStream::EthernetStream(){
-	to_send= "";
+EthernetStream::EthernetStream()
+{
 }
 
-int EthernetStream::puts(const char* s){
-    int len= strlen(s);
-	this->to_send.append(s, len);
+int EthernetStream::puts(const char *s)
+{
+    // check if full and idle_loop until not
+    while(shell_has_space() < 4){
+        // call idle until we can output more
+        THEKERNEL->call_event(ON_IDLE);
+    }
+
+    int len = strlen(s);
+    shell_response(s);
     return len;
 }
 
@@ -31,6 +40,6 @@ this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 // And then you have to periodically check if you have something to send back
 
 if( this->ethernet_stream->to_send.size() > 0 ){
-	this->send_string_back( this->ethernet_stream->to_send );
+    this->send_string_back( this->ethernet_stream->to_send );
 }
 */

@@ -105,8 +105,9 @@ void shell_output(const char *str);
  */
 void shell_prompt(const char *prompt);
 void shell_response(const char *str);
-
+void shell_got_command();
 const char *shell_get_command();
+int shell_has_space();
 
 #ifdef __cplusplus
 }
