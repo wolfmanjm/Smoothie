@@ -106,7 +106,7 @@ shell_prompt(const char *str)
 void
 shell_output(const char *str)
 {
-    unsigned chunk= 64;
+    unsigned chunk= 256; // small chunk size so we don't allocate huge blocks, and must be less than mss
     unsigned len= strlen(str);
     char *line;
     if(len < chunk) {
@@ -169,6 +169,8 @@ acked(void)
 static void
 senddata(void)
 {
+    // NOTE this sends as many lines as it can fit in one tcp frame
+    // we need to keep the lines under the size of the tcp frame
     char *bufptr, *lineptr;
     int buflen, linelen;
 

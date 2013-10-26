@@ -95,6 +95,9 @@ unknown(char *str)
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
         command_q= str;
+        // need to quieten play
+        if(strncmp(str, "play", 4) == 0)
+            command_q.append(" -q");
     }
 }
 /*---------------------------------------------------------------------------*/
