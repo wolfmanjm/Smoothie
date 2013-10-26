@@ -48,16 +48,14 @@ void telnetd_init(void);
 }
 #endif
 
-#ifndef TELNETD_CONF_LINELEN
-#define TELNETD_CONF_LINELEN 40
-#endif
+#define TELNETD_CONF_MAXCOMMANDLENGTH 80
 #ifndef TELNETD_CONF_NUMLINES
 #define TELNETD_CONF_NUMLINES 16
 #endif
 
 struct telnetd_state {
     char *lines[TELNETD_CONF_NUMLINES];
-    char buf[TELNETD_CONF_LINELEN];
+    char buf[TELNETD_CONF_MAXCOMMANDLENGTH];
     char bufptr;
     u8_t numsent;
     u8_t state;

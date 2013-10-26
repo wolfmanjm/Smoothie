@@ -42,10 +42,6 @@
 #define ISO_nl       0x0a
 #define ISO_cr       0x0d
 
-struct telnetd_line {
-    char line[TELNETD_CONF_LINELEN];
-};
-
 #define STATE_NORMAL 0
 #define STATE_IAC    1
 #define STATE_WILL   2
@@ -63,9 +59,9 @@ static struct telnetd_state s;
 #define TELNET_DONT  254
 /*---------------------------------------------------------------------------*/
 static char *
-alloc_line(void)
+alloc_line(int size)
 {
-    return malloc(sizeof(struct telnetd_line));
+    return malloc(size);
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -100,35 +96,51 @@ void
 shell_prompt(const char *str)
 {
     char *line;
-    line = alloc_line();
+    line = alloc_line(strlen(str+1));
     if (line != NULL) {
-        strncpy(line, str, TELNETD_CONF_LINELEN);
-        /*    petsciiconv_toascii(line, TELNETD_CONF_LINELEN);*/
+        strcpy(line, str);
         sendline(line);
     }
 }
 /*---------------------------------------------------------------------------*/
 void
-shell_output(const char *str1, const char *str2)
+shell_output(const char *str)
 {
-    unsigned len;
+    unsigned chunk= 64;
+    unsigned len= strlen(str);
     char *line;
-
-    line = alloc_line();
-    if (line != NULL) {
-        len = strlen(str1);
-        strncpy(line, str1, TELNETD_CONF_LINELEN);
-        if (len < TELNETD_CONF_LINELEN) {
-            strncpy(line + len, str2, TELNETD_CONF_LINELEN - len);
+    if(len < chunk) {
+        //can be sent in one tcp buffer
+        line = alloc_line(len+3);
+        if (line != NULL) {
+            strcpy(line, str);
+            if (line[len-1] != ISO_nl) {
+                strcat(line, "\r\n");
+            }
+            sendline(line);
         }
-        len = strlen(line);
-        if (len < TELNETD_CONF_LINELEN - 2) {
-            line[len] = ISO_cr;
-            line[len + 1] = ISO_nl;
-            line[len + 2] = 0;
+    }else{
+        // need to split line over multiple send lines
+        int size= chunk; // size to copy
+        int off= 0;
+        while(len >= chunk) {
+            line = alloc_line(chunk+1);
+            if (line != NULL) {
+                memcpy(line, str+off, size);
+                line[size]= 0;
+                sendline(line);
+                len -= size;
+                off += size;
+            }
         }
-        /*    petsciiconv_toascii(line, TELNETD_CONF_LINELEN);*/
-        sendline(line);
+        if(len > 0) {
+            // send rest
+            line = alloc_line(len+1);
+            if (line != NULL) {
+                strcpy(line, str+off);
+                sendline(line);
+            }
+        }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -162,13 +174,9 @@ senddata(void)
 
     bufptr = uip_appdata;
     buflen = 0;
-    for (s.numsent = 0; s.numsent < TELNETD_CONF_NUMLINES &&
-         s.lines[s.numsent] != NULL ; ++s.numsent) {
+    for (s.numsent = 0; s.numsent < TELNETD_CONF_NUMLINES && s.lines[s.numsent] != NULL ; ++s.numsent) {
         lineptr = s.lines[s.numsent];
         linelen = strlen(lineptr);
-        if (linelen > TELNETD_CONF_LINELEN) {
-            linelen = TELNETD_CONF_LINELEN;
-        }
         if (buflen + linelen < uip_mss()) {
             memcpy(bufptr, lineptr, linelen);
             bufptr += linelen;
@@ -204,7 +212,6 @@ get_char(u8_t c)
         s.bufptr == sizeof(s.buf) - 1) {
         if (s.bufptr > 0) {
             s.buf[(int)s.bufptr] = 0;
-            /*      petsciiconv_topetscii(s.buf, TELNETD_CONF_LINELEN);*/
         }
         shell_input(s.buf);
         s.bufptr = 0;
@@ -217,7 +224,7 @@ static void
 sendopt(u8_t option, u8_t value)
 {
     char *line;
-    line = alloc_line();
+    line = alloc_line(4);
     if (line != NULL) {
         line[0] = TELNET_IAC;
         line[1] = option;

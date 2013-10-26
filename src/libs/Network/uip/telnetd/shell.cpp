@@ -37,17 +37,20 @@
 #include <string.h>
 #include "checksumm.h"
 #include "utils.h"
+#include "stdio.h"
+#include "string"
 
 struct ptentry {
     uint16_t command_cs;
     void (* pfunc)(char *str);
 };
 
+static std::string command_q;
+
 #define SHELL_PROMPT "> "
 
 /*---------------------------------------------------------------------------*/
-static void
-parse(register char *str, struct ptentry *t)
+static bool parse(register char *str, struct ptentry *t)
 {
     struct ptentry *p;
     for (p = t; p->command_cs != 0; ++p) {
@@ -57,32 +60,18 @@ parse(register char *str, struct ptentry *t)
     }
 
     p->pfunc(str);
-}
-/*---------------------------------------------------------------------------*/
-static void
-inttostr(register char *str, unsigned int i)
-{
-    str[0] = '0' + i / 100;
-    if (str[0] == '0') {
-        str[0] = ' ';
-    }
-    str[1] = '0' + (i / 10) % 10;
-    if (str[0] == ' ' && str[1] == '0') {
-        str[1] = ' ';
-    }
-    str[2] = '0' + i % 10;
-    str[3] = ' ';
-    str[4] = 0;
+
+    return p->command_cs != 0;
 }
 /*---------------------------------------------------------------------------*/
 static void
 help(char *str)
 {
-    shell_output("Available commands:", "");
-    shell_output("stats   - show network statistics", "");
-    shell_output("conn    - show TCP connections", "");
-    shell_output("help, ? - show help", "");
-    shell_output("exit    - exit shell", "");
+    shell_output("Available commands: All others are passed on");
+    shell_output("conn    - show TCP connections");
+    shell_output("?       - show network help");
+    shell_output("help    - show command help");
+    shell_output("exit    - exit shell");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -90,11 +79,11 @@ static void connections(char *str)
 {
     char istr[5];
     struct uip_conn* uip_connr;
-    shell_output("Current TCP connections: ", "");
+    shell_output("Current TCP connections: ");
     for(uip_connr = &uip_conns[0]; uip_connr <= &uip_conns[UIP_CONNS - 1]; ++uip_connr) {
         if(uip_connr->tcpstateflags != UIP_CLOSED) {
-            inttostr(istr, HTONS(uip_connr->lport));
-            shell_output(istr, "");
+            snprintf(istr, sizeof(istr), "%d", HTONS(uip_connr->lport));
+            shell_output(istr);
         }
     }
 }
@@ -103,15 +92,14 @@ static void connections(char *str)
 static void
 unknown(char *str)
 {
+    // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
-        shell_output("Unknown command: ", str);
+        command_q= str;
     }
 }
 /*---------------------------------------------------------------------------*/
 static struct ptentry parsetab[] = {
-    {CHECKSUM("stats"), help},
     {CHECKSUM("conn"), connections},
-    {CHECKSUM("help"), help},
     {CHECKSUM("exit"), shell_quit},
     {CHECKSUM("?"), help},
 
@@ -127,14 +115,33 @@ shell_init(void)
 void
 shell_start(void)
 {
-    shell_output("Smoothie command shell", "");
+    command_q.clear();
+    shell_output("Smoothie command shell");
     shell_prompt(SHELL_PROMPT);
 }
 /*---------------------------------------------------------------------------*/
 void
 shell_input(char *cmd)
 {
-    parse(cmd, parsetab);
-    shell_prompt(SHELL_PROMPT);
+    if(parse(cmd, parsetab)) {
+        shell_prompt(SHELL_PROMPT);
+    }
 }
 /*---------------------------------------------------------------------------*/
+const char *shell_get_command()
+{
+    if(!command_q.empty()) {
+        return command_q.c_str();
+    }
+    return NULL;
+}
+
+void shell_response(const char *resp)
+{
+    command_q.clear();
+    if(resp != NULL) {
+        shell_output(resp);
+    }
+
+    shell_prompt(SHELL_PROMPT);
+}

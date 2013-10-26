@@ -4,7 +4,7 @@
 #include "EthernetStream.h"
 #include "libs/SerialMessage.h"
 #include "net_util.h"
-
+#include "shell.h"
 #include "uip_arp.h"
 #include "clock-arch.h"
 
@@ -213,20 +213,20 @@ void Network::init(void)
 
 void Network::on_main_loop(void *argument)
 {
-    // issue commands here
-    if (got_command.size() > 0) {
+    // issue commands here if any available
+    const char *cmd= shell_get_command();
+    if (cmd != NULL) {
         EthernetStream ethernet_stream;
-
         struct SerialMessage message;
-        message.message = got_command;
-        got_command = "";
+        message.message = cmd;
         message.stream = &ethernet_stream;
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
         if ( ethernet_stream.to_send.size() > 0 ) {
-            //command= ethernet_stream.to_send;
+            shell_response(ethernet_stream.to_send.c_str());
+
         } else {
-            //command= "no return data";
+            shell_response(NULL);
         }
     }
 }
