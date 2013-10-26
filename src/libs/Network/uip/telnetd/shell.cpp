@@ -33,11 +33,13 @@
 */
 
 #include "shell.h"
-
+#include "uip.h"
 #include <string.h>
+#include "checksumm.h"
+#include "utils.h"
 
 struct ptentry {
-    char *commandstr;
+    uint16_t command_cs;
     void (* pfunc)(char *str);
 };
 
@@ -48,8 +50,8 @@ static void
 parse(register char *str, struct ptentry *t)
 {
     struct ptentry *p;
-    for (p = t; p->commandstr != NULL; ++p) {
-        if (strncmp(p->commandstr, str, strlen(p->commandstr)) == 0) {
+    for (p = t; p->command_cs != 0; ++p) {
+        if (get_checksum(str) == p->command_cs) {
             break;
         }
     }
@@ -82,6 +84,21 @@ help(char *str)
     shell_output("help, ? - show help", "");
     shell_output("exit    - exit shell", "");
 }
+
+/*---------------------------------------------------------------------------*/
+static void connections(char *str)
+{
+    char istr[5];
+    struct uip_conn* uip_connr;
+    shell_output("Current TCP connections: ", "");
+    for(uip_connr = &uip_conns[0]; uip_connr <= &uip_conns[UIP_CONNS - 1]; ++uip_connr) {
+        if(uip_connr->tcpstateflags != UIP_CLOSED) {
+            inttostr(istr, HTONS(uip_connr->lport));
+            shell_output(istr, "");
+        }
+    }
+}
+
 /*---------------------------------------------------------------------------*/
 static void
 unknown(char *str)
@@ -92,14 +109,14 @@ unknown(char *str)
 }
 /*---------------------------------------------------------------------------*/
 static struct ptentry parsetab[] = {
-    {"stats", help},
-    {"conn", help},
-    {"help", help},
-    {"exit", shell_quit},
-    {"?", help},
+    {CHECKSUM("stats"), help},
+    {CHECKSUM("conn"), connections},
+    {CHECKSUM("help"), help},
+    {CHECKSUM("exit"), shell_quit},
+    {CHECKSUM("?"), help},
 
     /* Default action */
-    {NULL, unknown}
+    {0, unknown}
 };
 /*---------------------------------------------------------------------------*/
 void

@@ -383,7 +383,7 @@ bool LPC17XX_Ethernet::_receive_frame(void *packet, int *size)
         *size = stat->Info & EMAC_RINFO_SIZE;
         memcpy(packet, rxbuf.buf[i], *size);
 
-        printf("Received %d byte Ethernet frame %lu/%lu\n", *size, LPC_EMAC->RxProduceIndex, LPC_EMAC->RxConsumeIndex);
+        //printf("Received %d byte Ethernet frame %lu/%lu\n", *size, LPC_EMAC->RxProduceIndex, LPC_EMAC->RxConsumeIndex);
 
         uint32_t r = LPC_EMAC->RxConsumeIndex + 1;
         if (r > LPC_EMAC->RxDescriptorNumber)

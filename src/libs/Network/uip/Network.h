@@ -1,5 +1,5 @@
-#ifndef _WEBSERVER_H
-#define _WEBSERVER_H
+#ifndef _NETWORK_H
+#define _NETWORK_H
 
 #include "timer.h"
 #include "LPC17XX_Ethernet.h"
@@ -16,11 +16,11 @@
 #define network_ip_gateway_checksum CHECKSUM("ip_gateway")
 #define network_ip_mask_checksum CHECKSUM("ip_mask")
 
-class WebServer : public Module
+class Network : public Module
 {
 public:
-    WebServer();
-    virtual ~WebServer();
+    Network();
+    virtual ~Network();
 
     void on_module_loaded();
     void on_idle(void* argument);

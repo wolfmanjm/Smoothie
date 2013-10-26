@@ -1,6 +1,6 @@
 #include "Kernel.h"
 
-#include "WebServer.h"
+#include "Network.h"
 #include "EthernetStream.h"
 #include "libs/SerialMessage.h"
 #include "net_util.h"
@@ -19,12 +19,12 @@ extern "C" void uip_log(char *m)
 
 static bool webserver_enabled, telnet_enabled;
 
-WebServer::WebServer()
+Network::Network()
 {
     ethernet = new LPC17XX_Ethernet();
 }
 
-WebServer::~WebServer()
+Network::~Network()
 {
     delete ethernet;
 }
@@ -63,7 +63,7 @@ static bool parse_ip_str(const string &s, uint8_t *a, int len, char sep = '.')
     return true;
 }
 
-void WebServer::on_module_loaded()
+void Network::on_module_loaded()
 {
     if ( !THEKERNEL->config->value( network_checksum, network_enable_checksum )->by_default(false)->as_bool() ) {
         // as not needed free up resource
@@ -118,7 +118,7 @@ void WebServer::on_module_loaded()
     }
 
     THEKERNEL->add_module( ethernet );
-    THEKERNEL->slow_ticker->attach( 100, this, &WebServer::tick );
+    THEKERNEL->slow_ticker->attach( 100, this, &Network::tick );
 
     // Register for events
     this->register_for_event(ON_IDLE);
@@ -127,13 +127,13 @@ void WebServer::on_module_loaded()
     this->init();
 }
 
-uint32_t WebServer::tick(uint32_t dummy)
+uint32_t Network::tick(uint32_t dummy)
 {
     do_tick();
     return 0;
 }
 
-void WebServer::on_idle(void *argument)
+void Network::on_idle(void *argument)
 {
     if (!ethernet->isUp()) return;
 
@@ -167,13 +167,13 @@ void WebServer::on_idle(void *argument)
     }
 }
 
-void WebServer::tapdev_send(void *pPacket, unsigned int size)
+void Network::tapdev_send(void *pPacket, unsigned int size)
 {
     memcpy(ethernet->request_packet_buffer(), pPacket, size);
     ethernet->write_packet((uint8_t *) pPacket, size);
 }
 
-void WebServer::init(void)
+void Network::init(void)
 {
     // two timers for tcp/ip
     timer_set(&periodic_timer, CLOCK_SECOND / 2); /* 0.5s */
@@ -211,7 +211,7 @@ void WebServer::init(void)
     }
 }
 
-void WebServer::on_main_loop(void *argument)
+void Network::on_main_loop(void *argument)
 {
     // issue commands here
     if (got_command.size() > 0) {
@@ -244,7 +244,7 @@ extern "C" void app_select_appcall(void)
     }
 }
 
-void WebServer::handlePacket(void)
+void Network::handlePacket(void)
 {
     if (uip_len > 0) {  /* received packet */
         //printf("handlePacket: %d\n", uip_len);

@@ -1,4 +1,5 @@
-#define DEBUG_PRINTF(...) printf(__VA_ARGS__)
+#define DEBUG_PRINTF(...)
+//printf(__VA_ARGS__)
 
 /**
  * \defgroup uip The uIP TCP/IP stack
