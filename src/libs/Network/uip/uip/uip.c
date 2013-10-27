@@ -177,7 +177,7 @@ struct uip_conn *uip_conn;   /* uip_conn always points to the current
 struct uip_conn uip_conns[UIP_CONNS]  __attribute__ ((section ("AHBSRAM1")));
 /* The uip_conns array holds all TCP
 connections. */
-u16_t uip_listenports[UIP_LISTENPORTS];
+u16_t uip_listenports[UIP_LISTENPORTS] __attribute__ ((section ("AHBSRAM1")));
 /* The uip_listenports list all currently
 listning ports. */
 #if UIP_UDP

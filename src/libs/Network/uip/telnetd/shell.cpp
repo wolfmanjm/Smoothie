@@ -77,13 +77,15 @@ help(char *str)
 /*---------------------------------------------------------------------------*/
 static void connections(char *str)
 {
-    char istr[5];
+    char istr[16];
     struct uip_conn* uip_connr;
+    snprintf(istr, sizeof(istr), "MSS: %d\n", uip_mss());
+    shell_output(istr);
     shell_output("Current TCP connections: \n");
     for(uip_connr = &uip_conns[0]; uip_connr <= &uip_conns[UIP_CONNS - 1]; ++uip_connr) {
         if(uip_connr->tcpstateflags != UIP_CLOSED) {
             snprintf(istr, sizeof(istr), "%d", HTONS(uip_connr->lport));
-            shell_output(istr);
+            shell_output(istr); shell_output("\n");
         }
     }
 }
