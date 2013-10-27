@@ -144,7 +144,7 @@ void Network::on_idle(void *argument)
 
     } else {
 
-        if (timer_expired(&periodic_timer)) { /* no packet but periodic_timer time out (0.5s)*/
+        if (timer_expired(&periodic_timer)) { /* no packet but periodic_timer time out (0.1s)*/
             timer_reset(&periodic_timer);
 
             for (int i = 0; i < UIP_CONNS; i++) {
@@ -176,7 +176,7 @@ void Network::tapdev_send(void *pPacket, unsigned int size)
 void Network::init(void)
 {
     // two timers for tcp/ip
-    timer_set(&periodic_timer, CLOCK_SECOND / 10); /* 0.5s */
+    timer_set(&periodic_timer, CLOCK_SECOND / 10); /* 0.1s */
     timer_set(&arp_timer, CLOCK_SECOND * 10);   /* 10s */
 
     // Initialize the uIP TCP/IP stack.
@@ -264,7 +264,9 @@ void Network::handlePacket(void)
             if (uip_len > 0) {
                 tapdev_send(uip_buf, uip_len);  /* ARP ack*/
             }
+        } else {
+            printf("Unknown ethernet packet type %04X\n", BUF->type);
+            uip_len= 0;
         }
-
     }
 }
