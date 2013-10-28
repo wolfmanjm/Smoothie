@@ -20,8 +20,8 @@
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
+#include "NetworkPublicAccess.h"
 
-//extern "C" caddr_t _sbrk(int incr);
 extern unsigned int g_maximumHeapAddress;
 
 #include <malloc.h>
@@ -307,6 +307,15 @@ void SimpleShell::version_command( string parameters, StreamOutput* stream){
     uint32_t dev= getDeviceType();
     const char* mcu= (dev&0x00100000)?"LPC1769":"LPC1768";
     stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), mcu, SystemCoreClock / 1000000);
+
+    // get network config
+    void *returned_data;
+    bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ipconfig_checksum, &returned_data );
+    if(ok) {
+        char *str= (char *)returned_data;
+        stream->printf("%s\n", str);
+        free(str);
+    }
 
 #if 0
     double millimeters[3]= {100.0, 200.0, 300.0};

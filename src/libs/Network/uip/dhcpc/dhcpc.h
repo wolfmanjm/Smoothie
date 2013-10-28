@@ -47,11 +47,11 @@ struct dhcpc_state {
 
   u8_t serverid[4];
 
-  u16_t lease_time[2];
-  u16_t ipaddr[2];
-  u16_t netmask[2];
-  u16_t dnsaddr[2];
-  u16_t default_router[2];
+  uint32_t lease_time;
+  uint32_t ipaddr;
+  uint32_t netmask;
+  uint32_t dnsaddr;
+  uint32_t default_router;
 };
 
 #ifdef __cplusplus

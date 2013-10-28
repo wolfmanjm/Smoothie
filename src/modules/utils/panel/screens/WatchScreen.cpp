@@ -15,6 +15,7 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
+#include "NetworkPublicAccess.h"
 
 #include <string>
 using namespace std;
@@ -45,6 +46,7 @@ static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, f
 WatchScreen::WatchScreen(){
     speed_changed= false;
     issue_change_speed= false;
+    ipstr= NULL;
 }
 
 void WatchScreen::on_enter(){
@@ -233,6 +235,24 @@ void WatchScreen::get_sd_play_info(){
     }
 }
 
+const char* WatchScreen::get_network(){
+    void *returned_data;
+
+    bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ip_checksum, &returned_data );
+    if(ok) {
+        uint8_t *ipaddr= (uint8_t *)returned_data;
+        char buf[20];
+        int n= snprintf(buf, sizeof(buf), "%d.%d.%d.%d\n", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+        if(this->ipstr == NULL) {
+            this->ipstr= (char*)malloc(n+1);
+        }
+        strncpy(this->ipstr, buf, n);
+        return this->ipstr;
+    }
+
+    return NULL;
+}
+
 void WatchScreen::display_menu_line(uint16_t line){
     // in menu mode
     switch( line ){
@@ -254,7 +274,12 @@ const char* WatchScreen::get_status(){
     if(panel->is_playing())
         return panel->get_playing_file();
 
-    return "Smoothie ready";
+    const char *ip= get_network();
+    if(ip == NULL) {
+        return "Smoothie ready";
+    }else{
+        return ip;
+    }
 }
 
 void WatchScreen::set_speed(){

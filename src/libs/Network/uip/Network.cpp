@@ -1,6 +1,8 @@
 #include "Kernel.h"
 
 #include "Network.h"
+#include "PublicDataRequest.h"
+#include "PlayerPublicAccess.h"
 #include "libs/SerialMessage.h"
 #include "net_util.h"
 #include "shell.h"
@@ -17,11 +19,13 @@ extern "C" void uip_log(char *m)
 }
 
 static bool webserver_enabled, telnet_enabled, use_dhcp;
+static Network *theNetwork;
 
 Network::Network()
 {
     ethernet = new LPC17XX_Ethernet();
     tickcnt= 0;
+    theNetwork= this;
 }
 
 Network::~Network()
@@ -129,8 +133,33 @@ void Network::on_module_loaded()
     // Register for events
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_MAIN_LOOP);
+    this->register_for_event(ON_GET_PUBLIC_DATA);
 
     this->init();
+}
+
+void Network::on_get_public_data(void* argument) {
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(network_checksum)) return;
+
+    if(pdr->second_element_is(get_ip_checksum)) {
+        pdr->set_data_ptr(this->ipaddr);
+        pdr->set_taken();
+
+    }else if(pdr->second_element_is(get_ipconfig_checksum)) {
+        char buf[200];
+        int n1= snprintf(buf,             sizeof(buf),         "IP Addr: %d.%d.%d.%d\n", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+        int n2= snprintf(&buf[n1],       sizeof(buf)-n1,       "IP GW: %d.%d.%d.%d\n", ipgw[0], ipgw[1], ipgw[2], ipgw[3]);
+        int n3= snprintf(&buf[n1+n2],    sizeof(buf)-n1-n2,    "IP mask: %d.%d.%d.%d\n", ipmask[0], ipmask[1], ipmask[2], ipmask[3]);
+        int n4= snprintf(&buf[n1+n2+n3], sizeof(buf)-n1-n2-n3, "MAC Address: %02lX:%02lX:%02lX:%02lX:%02lX:%02lX\n",
+            mac_address[0], mac_address[1], mac_address[2], mac_address[3], mac_address[4], mac_address[5]);
+        char *str = (char *)malloc(n1+n2+n3+n4+1);
+        memcpy(str, buf, n1+n2+n3+n4);
+        str[n1+n2+n3+n4]= '\0';
+        pdr->set_data_ptr(str);
+        pdr->set_taken();
+    }
 }
 
 uint32_t Network::tick(uint32_t dummy)
@@ -211,23 +240,31 @@ static void setup_servers()
 extern "C" void dhcpc_configured(const struct dhcpc_state *s)
 {
     printf("Got IP address %d.%d.%d.%d\n",
-           uip_ipaddr1(s->ipaddr), uip_ipaddr2(s->ipaddr),
-           uip_ipaddr3(s->ipaddr), uip_ipaddr4(s->ipaddr));
+           uip_ipaddr1(&s->ipaddr), uip_ipaddr2(&s->ipaddr),
+           uip_ipaddr3(&s->ipaddr), uip_ipaddr4(&s->ipaddr));
     printf("Got netmask %d.%d.%d.%d\n",
-           uip_ipaddr1(s->netmask), uip_ipaddr2(s->netmask),
-           uip_ipaddr3(s->netmask), uip_ipaddr4(s->netmask));
+           uip_ipaddr1(&s->netmask), uip_ipaddr2(&s->netmask),
+           uip_ipaddr3(&s->netmask), uip_ipaddr4(&s->netmask));
     printf("Got DNS server %d.%d.%d.%d\n",
-           uip_ipaddr1(s->dnsaddr), uip_ipaddr2(s->dnsaddr),
-           uip_ipaddr3(s->dnsaddr), uip_ipaddr4(s->dnsaddr));
+           uip_ipaddr1(&s->dnsaddr), uip_ipaddr2(&s->dnsaddr),
+           uip_ipaddr3(&s->dnsaddr), uip_ipaddr4(&s->dnsaddr));
     printf("Got default router %d.%d.%d.%d\n",
-           uip_ipaddr1(s->default_router), uip_ipaddr2(s->default_router),
-           uip_ipaddr3(s->default_router), uip_ipaddr4(s->default_router));
-    printf("Lease expires in %ld seconds\n",
-           ntohs(s->lease_time[0]) * 65536ul + ntohs(s->lease_time[1]));
+           uip_ipaddr1(&s->default_router), uip_ipaddr2(&s->default_router),
+           uip_ipaddr3(&s->default_router), uip_ipaddr4(&s->default_router));
+    printf("Lease expires in %ld seconds\n", ntohl(s->lease_time));
 
-    uip_sethostaddr(s->ipaddr);
-    uip_setnetmask(s->netmask);
-    uip_setdraddr(s->default_router);
+    theNetwork->dhcpc_configured(s->ipaddr, s->netmask, s->default_router);
+}
+
+void Network::dhcpc_configured(uint32_t ipaddr, uint32_t ipmask, uint32_t ipgw)
+{
+    memcpy(this->ipaddr, &ipaddr, 4);
+    memcpy(this->ipmask, &ipmask, 4);
+    memcpy(this->ipgw, &ipgw, 4);
+
+    uip_sethostaddr(this->ipaddr);
+    uip_setnetmask(this->ipmask);
+    uip_setdraddr(this->ipgw);
 
     setup_servers();
 }

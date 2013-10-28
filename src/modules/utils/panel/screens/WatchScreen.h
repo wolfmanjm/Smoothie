@@ -30,6 +30,7 @@ class WatchScreen : public PanelScreen {
         void set_speed();
         void get_current_pos(double *cp);
         void get_sd_play_info();
+        const char* get_network();
         const char* get_status();
 
         bool speed_changed;
@@ -42,6 +43,7 @@ class WatchScreen : public PanelScreen {
         double pos[3];
         unsigned long elapsed_time;
         unsigned int sd_pcnt_played;
+        char *ipstr;
 };
 
 

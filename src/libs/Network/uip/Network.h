@@ -7,8 +7,8 @@
 #include "EthernetStream.h"
 
 #include "uip.h"
+#include "NetworkPublicAccess.h"
 
-#define network_checksum CHECKSUM("network")
 #define network_enable_checksum CHECKSUM("enable")
 #define network_webserver_checksum CHECKSUM("webserver")
 #define network_telnet_checksum CHECKSUM("telnet")
@@ -26,6 +26,8 @@ public:
     void on_module_loaded();
     void on_idle(void* argument);
     void on_main_loop(void* argument);
+    void on_get_public_data(void* argument);
+    void dhcpc_configured(uint32_t ipaddr, uint32_t ipmask, uint32_t ipgw);
 
 
 private:

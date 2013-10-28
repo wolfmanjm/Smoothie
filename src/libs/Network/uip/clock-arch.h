@@ -34,7 +34,7 @@
 #ifndef __CLOCK_ARCH_H__
 #define __CLOCK_ARCH_H__
 
-typedef int clock_time_t;
+typedef unsigned clock_time_t;
 #define CLOCK_CONF_SECOND 100
 
 #ifdef __cplusplus
