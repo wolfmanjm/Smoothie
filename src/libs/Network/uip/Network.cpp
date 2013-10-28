@@ -1,7 +1,6 @@
 #include "Kernel.h"
 
 #include "Network.h"
-#include "EthernetStream.h"
 #include "libs/SerialMessage.h"
 #include "net_util.h"
 #include "shell.h"
@@ -17,11 +16,12 @@ extern "C" void uip_log(char *m)
     printf("uIP log message: %s\n", m);
 }
 
-static bool webserver_enabled, telnet_enabled;
+static bool webserver_enabled, telnet_enabled, use_dhcp;
 
 Network::Network()
 {
     ethernet = new LPC17XX_Ethernet();
+    tickcnt= 0;
 }
 
 Network::~Network()
@@ -97,24 +97,30 @@ void Network::on_module_loaded()
     // get IP address, mask and gateway address here....
     bool bad = false;
     string s = THEKERNEL->config->value( network_checksum, network_ip_address_checksum )->by_default("192.168.3.222")->as_string();
-    if (!parse_ip_str(s, ipaddr, 4)) {
-        printf("Invalid IP address: %s\n", s.c_str());
-        bad = true;
-    }
-    s = THEKERNEL->config->value( network_checksum, network_ip_mask_checksum )->by_default("255.255.255.0")->as_string();
-    if (!parse_ip_str(s, ipmask, 4)) {
-        printf("Invalid IP Mask: %s\n", s.c_str());
-        bad = true;
-    }
-    s = THEKERNEL->config->value( network_checksum, network_ip_gateway_checksum )->by_default("192.168.3.1")->as_string();
-    if (!parse_ip_str(s, ipgw, 4)) {
-        printf("Invalid IP gateway: %s\n", s.c_str());
-        bad = true;
-    }
+    if (s == "auto") {
+        use_dhcp = true;
 
-    if (bad) {
-        printf("Network not started due to errors in config");
-        return;
+    } else {
+        use_dhcp = false;
+        if (!parse_ip_str(s, ipaddr, 4)) {
+            printf("Invalid IP address: %s\n", s.c_str());
+            bad = true;
+        }
+        s = THEKERNEL->config->value( network_checksum, network_ip_mask_checksum )->by_default("255.255.255.0")->as_string();
+        if (!parse_ip_str(s, ipmask, 4)) {
+            printf("Invalid IP Mask: %s\n", s.c_str());
+            bad = true;
+        }
+        s = THEKERNEL->config->value( network_checksum, network_ip_gateway_checksum )->by_default("192.168.3.1")->as_string();
+        if (!parse_ip_str(s, ipgw, 4)) {
+            printf("Invalid IP gateway: %s\n", s.c_str());
+            bad = true;
+        }
+
+        if (bad) {
+            printf("Network not started due to errors in config");
+            return;
+        }
     }
 
     THEKERNEL->add_module( ethernet );
@@ -130,6 +136,7 @@ void Network::on_module_loaded()
 uint32_t Network::tick(uint32_t dummy)
 {
     do_tick();
+    tickcnt++;
     return 0;
 }
 
@@ -157,6 +164,19 @@ void Network::on_idle(void *argument)
                     tapdev_send(uip_buf, uip_len);
                 }
             }
+
+#if UIP_CONF_UDP
+            for (int i = 0; i < UIP_UDP_CONNS; i++) {
+                uip_udp_periodic(i);
+                /* If the above function invocation resulted in data that
+                   should be sent out on the network, the global variable
+                   uip_len is set to a value > 0. */
+                if (uip_len > 0) {
+                    uip_arp_out();
+                    tapdev_send(uip_buf, uip_len);
+                }
+            }
+#endif
         }
 
         /* Call the ARP timer function every 10 seconds. */
@@ -173,31 +193,8 @@ void Network::tapdev_send(void *pPacket, unsigned int size)
     ethernet->write_packet((uint8_t *) pPacket, size);
 }
 
-void Network::init(void)
+static void setup_servers()
 {
-    // two timers for tcp/ip
-    timer_set(&periodic_timer, CLOCK_SECOND / 10); /* 0.1s */
-    timer_set(&arp_timer, CLOCK_SECOND * 10);   /* 10s */
-
-    // Initialize the uIP TCP/IP stack.
-    uip_init();
-
-    uip_setethaddr(mac_address);
-
-    uip_ipaddr_t tip;  /* local IP address */
-
-    uip_ipaddr(tip, ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
-    uip_sethostaddr(tip);    /* host IP address */
-    printf("IP Addr: %d.%d.%d.%d\n", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
-
-    uip_ipaddr(tip, ipgw[0], ipgw[1], ipgw[2], ipgw[3]);
-    uip_setdraddr(tip);  /* router IP address */
-    printf("IP GW: %d.%d.%d.%d\n", ipgw[0], ipgw[1], ipgw[2], ipgw[3]);
-
-    uip_ipaddr(tip, ipmask[0], ipmask[1], ipmask[2], ipmask[3]);
-    uip_setnetmask(tip); /* mask */
-    printf("IP mask: %d.%d.%d.%d\n", ipmask[0], ipmask[1], ipmask[2], ipmask[3]);
-
     if (webserver_enabled) {
         // Initialize the HTTP server, listen to port 80.
         httpd_init();
@@ -211,11 +208,69 @@ void Network::init(void)
     }
 }
 
+extern "C" void dhcpc_configured(const struct dhcpc_state *s)
+{
+    printf("Got IP address %d.%d.%d.%d\n",
+           uip_ipaddr1(s->ipaddr), uip_ipaddr2(s->ipaddr),
+           uip_ipaddr3(s->ipaddr), uip_ipaddr4(s->ipaddr));
+    printf("Got netmask %d.%d.%d.%d\n",
+           uip_ipaddr1(s->netmask), uip_ipaddr2(s->netmask),
+           uip_ipaddr3(s->netmask), uip_ipaddr4(s->netmask));
+    printf("Got DNS server %d.%d.%d.%d\n",
+           uip_ipaddr1(s->dnsaddr), uip_ipaddr2(s->dnsaddr),
+           uip_ipaddr3(s->dnsaddr), uip_ipaddr4(s->dnsaddr));
+    printf("Got default router %d.%d.%d.%d\n",
+           uip_ipaddr1(s->default_router), uip_ipaddr2(s->default_router),
+           uip_ipaddr3(s->default_router), uip_ipaddr4(s->default_router));
+    printf("Lease expires in %ld seconds\n",
+           ntohs(s->lease_time[0]) * 65536ul + ntohs(s->lease_time[1]));
+
+    uip_sethostaddr(s->ipaddr);
+    uip_setnetmask(s->netmask);
+    uip_setdraddr(s->default_router);
+
+    setup_servers();
+}
+
+void Network::init(void)
+{
+    // two timers for tcp/ip
+    timer_set(&periodic_timer, CLOCK_SECOND / 10); /* 0.1s */
+    timer_set(&arp_timer, CLOCK_SECOND * 10);   /* 10s */
+
+    // Initialize the uIP TCP/IP stack.
+    uip_init();
+
+    uip_setethaddr(mac_address);
+
+    if (!use_dhcp) { // manual setup of ip
+        uip_ipaddr_t tip;  /* local IP address */
+        uip_ipaddr(tip, ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+        uip_sethostaddr(tip);    /* host IP address */
+        printf("IP Addr: %d.%d.%d.%d\n", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+
+        uip_ipaddr(tip, ipgw[0], ipgw[1], ipgw[2], ipgw[3]);
+        uip_setdraddr(tip);  /* router IP address */
+        printf("IP GW: %d.%d.%d.%d\n", ipgw[0], ipgw[1], ipgw[2], ipgw[3]);
+
+        uip_ipaddr(tip, ipmask[0], ipmask[1], ipmask[2], ipmask[3]);
+        uip_setnetmask(tip); /* mask */
+        printf("IP mask: %d.%d.%d.%d\n", ipmask[0], ipmask[1], ipmask[2], ipmask[3]);
+        setup_servers();
+
+    }else{
+    #if UIP_CONF_UDP
+        dhcpc_init(mac_address, sizeof(mac_address));
+        dhcpc_request();
+        printf("Getting IP address....\n");
+    #endif
+    }
+}
+
 void Network::on_main_loop(void *argument)
 {
-    static EthernetStream ethernet_stream;
     // issue commands here if any available
-    const char *cmd= shell_get_command();
+    const char *cmd = shell_get_command();
     if (cmd != NULL) {
         struct SerialMessage message;
         message.message = cmd;
@@ -266,7 +321,7 @@ void Network::handlePacket(void)
             }
         } else {
             printf("Unknown ethernet packet type %04X\n", BUF->type);
-            uip_len= 0;
+            uip_len = 0;
         }
     }
 }

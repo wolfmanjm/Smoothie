@@ -90,6 +90,20 @@ static void connections(char *str)
     }
 }
 
+//#include "clock.h"
+static void shell_test(char *str)
+{
+    printf("In Test\n");
+    // struct timer t;
+    // u16_t ticks=  CLOCK_SECOND*5;
+    // timer_set(&t, ticks);
+    // printf("Wait....\n");
+    // while(!timer_expired(&t)) {
+
+    // }
+    // printf("Done\n");
+}
+
 /*---------------------------------------------------------------------------*/
 static void
 unknown(char *str)
@@ -104,6 +118,7 @@ static struct ptentry parsetab[] = {
     {CHECKSUM("conn"), connections},
     {CHECKSUM("exit"), shell_quit},
     {CHECKSUM("quit"), shell_quit},
+    {CHECKSUM("test"), shell_test},
     {CHECKSUM("?"), help},
 
     /* Default action */

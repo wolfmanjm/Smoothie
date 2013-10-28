@@ -182,7 +182,7 @@ u16_t uip_listenports[UIP_LISTENPORTS] __attribute__ ((section ("AHBSRAM1")));
 listning ports. */
 #if UIP_UDP
 struct uip_udp_conn *uip_udp_conn;
-struct uip_udp_conn uip_udp_conns[UIP_UDP_CONNS];
+struct uip_udp_conn uip_udp_conns[UIP_UDP_CONNS]  __attribute__ ((section ("AHBSRAM1")));
 #endif /* UIP_UDP */
 
 static u16_t ipid;           /* Ths ipid variable is an increasing

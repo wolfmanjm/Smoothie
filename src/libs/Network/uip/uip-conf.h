@@ -125,14 +125,14 @@ typedef unsigned short uip_stats_t;
  *
  * \hideinitializer
  */
-#define UIP_CONF_UDP             0
-
+#define UIP_CONF_UDP             1
+#define UIP_CONF_UDP_CONNS 2
 /**
  * UDP checksums on or off
  *
  * \hideinitializer
  */
-#define UIP_CONF_UDP_CHECKSUMS   1
+#define UIP_CONF_UDP_CHECKSUMS   0
 
 /**
  * uIP statistics on or off
@@ -156,7 +156,7 @@ typedef void* uip_tcp_appstate_t;
 //#include "hello-world.h"
 #include "telnetd.h"
 #include "webserver.h"
-/*#include "dhcpc.h"*/
+#include "dhcpc.h"
 /*#include "resolv.h"*/
 /*#include "webclient.h"*/
 

@@ -4,6 +4,7 @@
 #include "timer.h"
 #include "LPC17XX_Ethernet.h"
 #include "Module.h"
+#include "EthernetStream.h"
 
 #include "uip.h"
 
@@ -34,12 +35,14 @@ private:
     void tapdev_send(void *pPacket, unsigned int size);
 
     LPC17XX_Ethernet *ethernet;
+    EthernetStream ethernet_stream;
 
     struct timer periodic_timer, arp_timer;
     uint8_t mac_address[6];
     uint8_t ipaddr[4];
     uint8_t ipmask[4];
     uint8_t ipgw[4];
+    volatile uint32_t tickcnt;
 };
 
 #endif
