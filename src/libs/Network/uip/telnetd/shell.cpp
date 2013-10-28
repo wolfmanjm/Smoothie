@@ -131,7 +131,7 @@ shell_init(void)
 }
 /*---------------------------------------------------------------------------*/
 void
-shell_start(void)
+shell_start()
 {
     command_q.clear();
     shell_output("Smoothie command shell\n");
