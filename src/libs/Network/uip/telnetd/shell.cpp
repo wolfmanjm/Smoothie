@@ -32,20 +32,20 @@
 *
 */
 
+#include "stdlib.h"
 #include "shell.h"
 #include "uip.h"
 #include <string.h>
 #include "checksumm.h"
 #include "utils.h"
 #include "stdio.h"
-#include "string"
 
 struct ptentry {
     uint16_t command_cs;
     void (* pfunc)(char *str);
 };
 
-static std::string command_q;
+static char *command_q= NULL;
 
 #define SHELL_PROMPT "> "
 
@@ -110,7 +110,7 @@ unknown(char *str)
 {
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
-        command_q= str;
+        command_q= strdup(str);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -133,7 +133,8 @@ shell_init(void)
 void
 shell_start()
 {
-    command_q.clear();
+    if(command_q != NULL) free(command_q);
+    command_q= NULL;
     shell_output("Smoothie command shell\n");
     shell_prompt(SHELL_PROMPT);
 }
@@ -148,15 +149,13 @@ shell_input(char *cmd)
 /*---------------------------------------------------------------------------*/
 const char *shell_get_command()
 {
-    if(!command_q.empty()) {
-        return command_q.c_str();
-    }
-    return NULL;
+    return command_q;
 }
 
 void shell_got_command()
 {
-    command_q.clear();
+    if(command_q != NULL) free(command_q);
+    command_q= NULL;
 }
 
 void shell_response(const char *resp)

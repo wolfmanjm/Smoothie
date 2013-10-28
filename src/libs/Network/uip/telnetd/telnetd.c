@@ -50,6 +50,7 @@
 #define STATE_DONT   5
 #define STATE_CLOSE  6
 
+// FIXME this should be stored in uip_conn->appstate so more than one telnet session can happen
 static struct telnetd_state *s= NULL;
 
 #define TELNET_IAC   255
