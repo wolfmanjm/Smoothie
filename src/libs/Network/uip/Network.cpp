@@ -148,6 +148,7 @@ void Network::on_get_public_data(void* argument) {
         pdr->set_taken();
 
     }else if(pdr->second_element_is(get_ipconfig_checksum)) {
+        // NOTE caller must free the returned string when done
         char buf[200];
         int n1= snprintf(buf,             sizeof(buf),         "IP Addr: %d.%d.%d.%d\n", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
         int n2= snprintf(&buf[n1],       sizeof(buf)-n1,       "IP GW: %d.%d.%d.%d\n", ipgw[0], ipgw[1], ipgw[2], ipgw[3]);

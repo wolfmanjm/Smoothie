@@ -242,11 +242,13 @@ const char* WatchScreen::get_network(){
     if(ok) {
         uint8_t *ipaddr= (uint8_t *)returned_data;
         char buf[20];
-        int n= snprintf(buf, sizeof(buf), "%d.%d.%d.%d\n", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+        int n= snprintf(buf, sizeof(buf), "IP %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+        buf[n]= 0;
         if(this->ipstr == NULL) {
             this->ipstr= (char*)malloc(n+1);
         }
-        strncpy(this->ipstr, buf, n);
+        strcpy(this->ipstr, buf);
+
         return this->ipstr;
     }
 
