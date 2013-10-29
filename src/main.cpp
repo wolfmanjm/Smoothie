@@ -96,7 +96,9 @@ int main() {
     kernel->add_module( new Player() );
     kernel->add_module( new Panel() );
     kernel->add_module( new Touchprobe() );
+#ifndef NONETWORK
     kernel->add_module( new Network() );
+#endif
 
     // Create and initialize USB stuff
     u.init();
