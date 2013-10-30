@@ -63,6 +63,7 @@ void shell_init(void);
  * Called by the front-end when a new shell is started.
  */
 void shell_start(void);
+void shell_stop(void);
 
 /**
  * Process a shell command.
@@ -108,6 +109,7 @@ void shell_response(const char *str);
 void shell_got_command();
 const char *shell_get_command();
 int shell_has_space();
+int shell_queue_size();
 
 #ifdef __cplusplus
 }

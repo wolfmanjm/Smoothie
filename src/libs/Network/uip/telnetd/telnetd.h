@@ -48,7 +48,7 @@ void telnetd_init(void);
 }
 #endif
 
-#define TELNETD_CONF_MAXCOMMANDLENGTH 80
+#define TELNETD_CONF_MAXCOMMANDLENGTH 132
 #ifndef TELNETD_CONF_NUMLINES
 #define TELNETD_CONF_NUMLINES 32
 #endif

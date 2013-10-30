@@ -38,15 +38,26 @@ tn.read_until("> ")
 
 # turn off prompt
 write_raw_sequence(tn, telnetlib.IAC + telnetlib.DONT + "\x55")
-
+okcnt= 0
+linecnt= 0
 for line in f:
     tn.write(line)
-    tn.read_until("ok")
-    if verbose: print("SND: " + line, end="")
+    linecnt+=1
+    rep= tn.read_eager()
+    okcnt += rep.count("ok")
+    if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
+
+print("Waiting for complete...")
+
+while okcnt < linecnt:
+    rep= tn.read_some()
+    okcnt += rep.count("ok")
+    if verbose: print(str(linecnt) + " - " + str(okcnt) + "           ")
 
 # turn on prompt
 write_raw_sequence(tn, telnetlib.IAC + telnetlib.DO + "\x55")
 tn.write("exit\n")
+tn.read_all()
 
 print("Done")
 

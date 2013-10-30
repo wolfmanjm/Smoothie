@@ -214,6 +214,7 @@ closed(void)
             dealloc_line(s->lines[i]);
         }
     }
+    shell_stop();
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -325,10 +326,12 @@ newdata(void)
                 }
                 break;
         }
-
-
     }
 
+    // if the command queue is getting too big we stop TCP
+    if(shell_queue_size() > 10) {
+        uip_stop();
+    }
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -345,7 +348,6 @@ telnetd_appcall(void)
         s->state = STATE_NORMAL;
         prompt= 1;
         shell_start();
-
     }
 
     if (s->state == STATE_CLOSE) {
@@ -370,8 +372,13 @@ telnetd_appcall(void)
         newdata();
     }
 
+
     if (uip_rexmit() || uip_newdata() || uip_acked() || uip_connected() || uip_poll()) {
         senddata();
+    }
+
+    if(uip_poll() && uip_stopped(uip_conn) && shell_queue_size() < 5) {
+        uip_restart();
     }
 }
 /*---------------------------------------------------------------------------*/

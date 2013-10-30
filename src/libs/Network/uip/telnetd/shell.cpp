@@ -40,12 +40,14 @@
 #include "utils.h"
 #include "stdio.h"
 
+#include "deque"
+
 struct ptentry {
     uint16_t command_cs;
     void (* pfunc)(char *str);
 };
 
-static char *command_q= NULL;
+static std::deque<char*> *command_q= NULL;
 
 #define SHELL_PROMPT "> "
 
@@ -110,7 +112,7 @@ unknown(char *str)
 {
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
-        command_q= strdup(str);
+        command_q->push_back(strdup(str));
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -133,10 +135,34 @@ shell_init(void)
 void
 shell_start()
 {
-    if(command_q != NULL) free(command_q);
-    command_q= NULL;
+    if(command_q != NULL){
+        for (std::deque<char*>::iterator i = command_q->begin(); i != command_q->end(); ++i) {
+            free(*i);
+        }
+        command_q->clear();
+        delete command_q;
+    }
+
+    command_q= new std::deque<char*>();
+
     shell_output("Smoothie command shell\n");
     shell_prompt(SHELL_PROMPT);
+}
+void shell_stop()
+{
+    if(command_q != NULL){
+        for (std::deque<char*>::iterator i = command_q->begin(); i != command_q->end(); ++i) {
+            free(*i);
+        }
+        command_q->clear();
+        delete command_q;
+        command_q= NULL;
+    }
+}
+int shell_queue_size()
+{
+    if(command_q == NULL || command_q->empty()) return 0;
+    return command_q->size();
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -149,19 +175,22 @@ shell_input(char *cmd)
 /*---------------------------------------------------------------------------*/
 const char *shell_get_command()
 {
-    return command_q;
+    if(command_q == NULL || command_q->empty()) return NULL;
+    return command_q->front();
 }
 
 void shell_got_command()
 {
-    if(command_q != NULL) free(command_q);
-    command_q= NULL;
+    if(command_q != NULL && !command_q->empty()){
+        free(command_q->front());
+        command_q->pop_front();
+    }
 }
 
 void shell_response(const char *resp)
 {
     if(resp == NULL) {
-        // only prompt when command is completed (except for play without -q)
+        // only prompt when command is completed
         shell_prompt(SHELL_PROMPT);
     }else{
         shell_output(resp);
