@@ -11,13 +11,15 @@ EthernetStream::EthernetStream()
 
 int EthernetStream::puts(const char *s)
 {
+    int len = strlen(s);
     // check if full and idle_loop until not
+    if(shell_has_space() == -1) return len; // closed so act as null
+
     while(shell_has_space() < 4){
         // call idle until we can output more
         THEKERNEL->call_event(ON_IDLE);
     }
 
-    int len = strlen(s);
     shell_response(s);
     return len;
 }

@@ -97,8 +97,8 @@ sendline(char *line)
 void
 shell_prompt(const char *str)
 {
-    if(prompt == 0) return;
     char *line;
+    if(prompt == 0 || s == NULL) return;
     line = alloc_line(strlen(str) + 1);
     if (line != NULL) {
         strcpy(line, str);
@@ -109,6 +109,7 @@ shell_prompt(const char *str)
 void
 shell_output(const char *str)
 {
+    if(s == NULL) return;
     unsigned chunk = 256; // small chunk size so we don't allocate huge blocks, and must be less than mss
     unsigned len = strlen(str);
     char *line;
@@ -148,6 +149,7 @@ int shell_has_space()
 {
     int i;
     int cnt = 0;
+    if(s == NULL) return -1;
     for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
         if (s->lines[i] == NULL) cnt++;
     }
@@ -341,8 +343,9 @@ telnetd_appcall(void)
         }
         s->bufptr = 0;
         s->state = STATE_NORMAL;
-
+        prompt= 1;
         shell_start();
+
     }
 
     if (s->state == STATE_CLOSE) {
