@@ -1093,6 +1093,10 @@ struct uip_udp_conn *uip_udp_new(uip_ipaddr_t *ripaddr, u16_t rport);
 #error "HTONS already defined!"
 #endif /* HTONS */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Convert 16-bit quantity from host byte order to network byte order.
  *
@@ -1107,6 +1111,9 @@ u16_t htons(u16_t val);
 #define ntohs htons
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 /** @} */
 
 /**

@@ -11,7 +11,7 @@
 // SMSC 8720A special control/status register
 #define EMAC_PHY_REG_SCSR 0x1F
 
-#define LPC17XX_MAX_PACKET 1536
+#define LPC17XX_MAX_PACKET 600
 #define LPC17XX_TXBUFS     4
 #define LPC17XX_RXBUFS     4
 
