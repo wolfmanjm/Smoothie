@@ -362,7 +362,9 @@ telnetd_appcall(void)
             free(s);
             s = NULL;
         }
+        return;
     }
+
 
     if (uip_acked()) {
         acked();
