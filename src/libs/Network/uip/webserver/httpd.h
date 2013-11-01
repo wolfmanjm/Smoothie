@@ -39,18 +39,18 @@
 #include "httpd-fs.h"
 
 struct httpd_state {
-  unsigned char timer;
-  struct psock sin, sout;
-  struct pt outputpt, scriptpt;
-  char inputbuf[50];
-  char filename[20];
-  char state;
-  struct httpd_fs_file file;
-  int len;
-  char *scriptptr;
-  int scriptlen;
+    unsigned char timer;
+    struct psock sin, sout;
+    struct pt outputpt, scriptpt;
+    char inputbuf[50];
+    char filename[20];
+    char state;
+    struct httpd_fs_file file;
+    int len;
+    char *scriptptr;
+    int scriptlen;
 
-  unsigned short count;
+    unsigned short count;
 };
 #ifdef __cplusplus
 extern "C" {

@@ -59,6 +59,9 @@ static int prompt= 1;
 #define TELNET_WONT  252
 #define TELNET_DO    253
 #define TELNET_DONT  254
+
+#define TELNET_X_PROMPT 0x55
+
 /*---------------------------------------------------------------------------*/
 static char *
 alloc_line(int size)
@@ -301,7 +304,7 @@ newdata(void)
                 s->state = STATE_NORMAL;
                 break;
             case STATE_DO:
-               if (c == 0x55) {
+               if (c == TELNET_X_PROMPT) {
                     prompt= 1;
                 }else{
                      /* Reply with a WONT */
@@ -310,7 +313,7 @@ newdata(void)
                 s->state = STATE_NORMAL;
                 break;
             case STATE_DONT:
-                if (c == 0x55) {
+                if (c == TELNET_X_PROMPT) {
                     prompt= 0;
                 }else{
                     /* Reply with a WONT */

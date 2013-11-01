@@ -154,8 +154,8 @@ typedef void* uip_tcp_appstate_t;
    our project. */
 /*#include "smtp.h"*/
 //#include "hello-world.h"
-#include "telnetd.h"
-#include "webserver.h"
+// #include "telnetd.h"
+// #include "webserver.h"
 #include "dhcpc.h"
 /*#include "resolv.h"*/
 /*#include "webclient.h"*/

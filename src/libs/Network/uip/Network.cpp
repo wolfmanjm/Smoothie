@@ -9,6 +9,11 @@
 #include "uip_arp.h"
 #include "clock-arch.h"
 
+#include "telnetd.h"
+#include "webserver.h"
+#include "dhcpc.h"
+#include "sftpd.h"
+
 #include <mri.h>
 
 #define BUF ((struct uip_eth_hdr *)&uip_buf[0])
@@ -20,12 +25,14 @@ extern "C" void uip_log(char *m)
 
 static bool webserver_enabled, telnet_enabled, use_dhcp;
 static Network *theNetwork;
+static Sftpd *sftpd;
 
 Network::Network()
 {
     ethernet = new LPC17XX_Ethernet();
     tickcnt= 0;
     theNetwork= this;
+    sftpd= NULL;
 }
 
 Network::~Network()
@@ -236,6 +243,9 @@ static void setup_servers()
         telnetd_init();
         printf("Telnetd initialized\n");
     }
+
+    // sftpd service, which is lazily created on reciept of first packet
+    uip_listen(HTONS(115));
 }
 
 extern "C" void dhcpc_configured(const struct dhcpc_state *s)
@@ -329,6 +339,14 @@ extern "C" void app_select_appcall(void)
             break;
         case HTONS(23):
             if (telnet_enabled) telnetd_appcall();
+            break;
+        case HTONS(115):
+            if(sftpd == NULL) {
+                sftpd= new Sftpd();
+                sftpd->init();
+                printf("Created sftpd service\n");
+            }
+            sftpd->appcall();
             break;
     }
 }

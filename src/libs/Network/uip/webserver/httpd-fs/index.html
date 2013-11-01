@@ -1,6 +1,39 @@
-This is a test
-
-<p>line 1
-<p>line 2
-<p>line 3
-
+<!doctype html>
+<head>
+<meta charset="utf-8">
+<title>Single Command</title>
+<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+</head>
+<body>
+		   
+	<form action="/command" id="commandForm">
+		<input type="text" name="commandText" placeholder="Send Command...">
+		<input type="submit" value="Send">
+	</form>
+	
+	<!-- the result of the command will be rendered inside this div -->
+	<div id="result"></div>
+			   
+	<script>
+	  // Attach a submit handler to the form
+	  $( "#commandForm" ).submit(function( event ) {
+	   
+		// Stop form from submitting normally
+		event.preventDefault();
+		   
+		// Get some values from elements on the page:
+		var $form = $( this ),
+		command = $form.find( "input[name='commandText']" ).val(),
+		url = $form.attr( "action" );
+			   
+		// Send the data using post
+		var posting = $.post( url, { commandText: command } );
+			   
+		// Put the results in a div
+		posting.done(function( data ) {
+			$( "#result" ).empty().append( data );
+		});
+		});
+	</script>
+</body>
+</html>
