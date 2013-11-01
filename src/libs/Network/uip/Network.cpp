@@ -160,7 +160,7 @@ void Network::on_get_public_data(void* argument) {
         int n1= snprintf(buf,             sizeof(buf),         "IP Addr: %d.%d.%d.%d\n", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
         int n2= snprintf(&buf[n1],       sizeof(buf)-n1,       "IP GW: %d.%d.%d.%d\n", ipgw[0], ipgw[1], ipgw[2], ipgw[3]);
         int n3= snprintf(&buf[n1+n2],    sizeof(buf)-n1-n2,    "IP mask: %d.%d.%d.%d\n", ipmask[0], ipmask[1], ipmask[2], ipmask[3]);
-        int n4= snprintf(&buf[n1+n2+n3], sizeof(buf)-n1-n2-n3, "MAC Address: %02lX:%02lX:%02lX:%02lX:%02lX:%02lX\n",
+        int n4= snprintf(&buf[n1+n2+n3], sizeof(buf)-n1-n2-n3, "MAC Address: %02X:%02X:%02X:%02X:%02X:%02X\n",
             mac_address[0], mac_address[1], mac_address[2], mac_address[3], mac_address[4], mac_address[5]);
         char *str = (char *)malloc(n1+n2+n3+n4+1);
         memcpy(str, buf, n1+n2+n3+n4);

@@ -52,7 +52,7 @@ print("Waiting for complete...")
 while okcnt < linecnt:
     rep= tn.read_some()
     okcnt += rep.count("ok")
-    if verbose: print(str(linecnt) + " - " + str(okcnt) + "           ")
+    if verbose: print(str(linecnt) + " - " + str(okcnt) )
 
 # turn on prompt
 write_raw_sequence(tn, telnetlib.IAC + telnetlib.DO + "\x55")

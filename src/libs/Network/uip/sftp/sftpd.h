@@ -25,13 +25,14 @@ private:
     enum STATES { STATE_NORMAL, STATE_CONNECTED, STATE_GET_LENGTH, STATE_DOWNLOAD, STATE_CLOSE };
     STATES state;
     int acked();
-    int newdata();
+    int handle_command();
+    int handle_download();
     int senddata();
 
     struct psock sin, sout;
     char buf[80];
-    char *outbuf;
-    int filesize;
+    const char *outbuf;
+    unsigned int filesize;
 };
 
 #endif /* __sftpd_H__ */
