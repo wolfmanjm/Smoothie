@@ -10,11 +10,6 @@ import sys
 import telnetlib
 import argparse
 
-def write_raw_sequence(tn, seq):
-    sock = tn.get_socket()
-    if sock is not None:
-        sock.send(seq)
-
 # Define command line argument interface
 parser = argparse.ArgumentParser(description='Stream g-code file to Smoothie over telnet.')
 parser.add_argument('gcode_file', type=argparse.FileType('r'),
@@ -36,8 +31,6 @@ tn = telnetlib.Telnet(args.ipaddr)
 # read startup prompt
 tn.read_until("> ")
 
-# turn off prompt
-write_raw_sequence(tn, telnetlib.IAC + telnetlib.DONT + "\x55")
 okcnt= 0
 linecnt= 0
 for line in f:
@@ -54,8 +47,6 @@ while okcnt < linecnt:
     okcnt += rep.count("ok")
     if verbose: print(str(linecnt) + " - " + str(okcnt) )
 
-# turn on prompt
-write_raw_sequence(tn, telnetlib.IAC + telnetlib.DO + "\x55")
 tn.write("exit\n")
 tn.read_all()
 

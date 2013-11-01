@@ -52,7 +52,7 @@
 
 // FIXME this should be stored in uip_conn->appstate so more than one telnet session can happen
 static struct telnetd_state *s= NULL;
-static int prompt= 1;
+static int prompt= 0;
 
 #define TELNET_IAC   255
 #define TELNET_WILL  251
@@ -60,6 +60,7 @@ static int prompt= 1;
 #define TELNET_DO    253
 #define TELNET_DONT  254
 
+#define TELNET_GA       0x03
 #define TELNET_X_PROMPT 0x55
 
 /*---------------------------------------------------------------------------*/
@@ -306,6 +307,9 @@ newdata(void)
             case STATE_DO:
                if (c == TELNET_X_PROMPT) {
                     prompt= 1;
+                }else if (c == TELNET_GA) {
+                    // enable prompt if telnet client running
+                    prompt= 1;
                 }else{
                      /* Reply with a WONT */
                     sendopt(TELNET_WONT, c);
@@ -349,7 +353,7 @@ telnetd_appcall(void)
         }
         s->bufptr = 0;
         s->state = STATE_NORMAL;
-        prompt= 1;
+        prompt= 0;
         shell_start();
     }
 
