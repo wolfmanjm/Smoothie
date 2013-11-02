@@ -21,8 +21,7 @@ parser.add_argument('-q','--quiet',action='store_true', default=False,
 args = parser.parse_args()
 
 f = args.gcode_file
-verbose = True
-if args.quiet : verbose = False
+verbose = not args.quiet
 
 # Stream g-code to Smoothie
 print("Streaming " + args.gcode_file.name + " to " + args.ipaddr)

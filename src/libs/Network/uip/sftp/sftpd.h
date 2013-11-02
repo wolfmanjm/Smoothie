@@ -29,10 +29,11 @@ private:
     int handle_download();
     int senddata();
 
-    struct psock sin, sout;
+    struct psock sin;
     char buf[80];
     const char *outbuf;
     unsigned int filesize;
+    char *filename;
 };
 
 #endif /* __sftpd_H__ */

@@ -39,6 +39,7 @@
 #include "checksumm.h"
 #include "utils.h"
 #include "stdio.h"
+#include "stdlib.h"
 
 #include "deque"
 
@@ -105,6 +106,42 @@ static void shell_test(char *str)
 
     // }
     // printf("Done\n");
+/*
+    const char *fn= "/sd/test6.txt";
+    uint16_t *buf= (uint16_t *)malloc(200*2);
+    int cnt= 0;
+    FILE *fp;
+    for(int i=0;i<10;i++) {
+        fp= fopen(fn, i == 0 ? "w" : "a");
+        if(fp == NULL) {
+            printf("failed to open file\n");
+            return;
+        }
+        for (int x = 0; x < 200; ++x) {
+            buf[x]= x+cnt;
+        }
+        cnt+=200;
+        int n= fwrite(buf, 2, 200, fp);
+        printf("wrote %d, %d\n", i, n);
+        fclose(fp);
+    }
+
+    fp= fopen(fn, "r");
+    if(fp == NULL) {
+        printf("failed to open file for read\n");
+        return;
+    }
+    printf("Opened file %s for read\n", fn);
+    do {
+        int n= fread(buf, 2, 200, fp);
+        if(n <= 0) break;
+        for(int x=0;x<n;x++) {
+            printf("%04X, ", buf[x]);
+        }
+    }while(1);
+    fclose(fp);
+    free(buf);
+    */
 }
 
 /*---------------------------------------------------------------------------*/
