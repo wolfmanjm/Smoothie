@@ -194,8 +194,13 @@ PT_THREAD(handle_output(struct httpd_state *s))
         PSOCK_SEND_STR(&s->sout, s->command);
 
     }else if(s->method == POST && strcmp(s->filename, "/upload") == 0) {
-        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
-        PSOCK_SEND_STR(&s->sout, s->uploadok ? "OK\r\n" : "FAILED\r\n");
+        if(s->uploadok == 0) {
+            PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_503));
+            PSOCK_SEND_STR(&s->sout, "FAILED\r\n");
+        }else{
+            PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+            PSOCK_SEND_STR(&s->sout, "OK\r\n");
+        }
 
     }else if (!httpd_fs_open(s->filename, &s->file)) {
         DEBUG_PRINTF("404 file not found\n");
@@ -326,7 +331,7 @@ PT_THREAD(handle_input(struct httpd_state *s))
                 DEBUG_PRINTF("finished upload status %d\n", s->uploadok);
             }
             s->state = STATE_OUTPUT;
-            if(s->uploadok == 0) PSOCK_CLOSE_EXIT(&s->sin);
+            PSOCK_CLOSE_EXIT(&s->sin);
             break;
 
         }else {
@@ -341,7 +346,9 @@ PT_THREAD(handle_input(struct httpd_state *s))
 static void
 handle_connection(struct httpd_state *s)
 {
-    handle_input(s);
+    if (s->state != STATE_OUTPUT){
+        handle_input(s);
+    }
     if (s->state == STATE_OUTPUT) {
         handle_output(s);
     }
