@@ -39,19 +39,24 @@
 #include "httpd-fs.h"
 
 struct httpd_state {
-    unsigned char timer;
-    struct psock sin, sout;
-    struct pt outputpt, scriptpt;
-    char inputbuf[50];
-    char filename[20];
-    char state;
-    struct httpd_fs_file file;
-    int len;
-    char *scriptptr;
-    int scriptlen;
-
-    unsigned short count;
+  unsigned char timer;
+  struct psock sin, sout;
+  struct pt outputpt, scriptpt;
+  char inputbuf[100];
+  char filename[60];
+  char upload_name[32];
+  char command[100];
+  char method;
+  char state;
+  struct httpd_fs_file file;
+  int len;
+  char *scriptptr;
+  int scriptlen;
+  int content_length;
+  unsigned short count;
+  int uploadok;
 };
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -61,7 +66,9 @@ void httpd_appcall(void);
 
 void httpd_log(char *msg);
 void httpd_log_file(u16_t *requester, char *file);
+
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* __HTTPD_H__ */

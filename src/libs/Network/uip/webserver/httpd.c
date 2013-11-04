@@ -55,16 +55,26 @@
  * $Id: httpd.c,v 1.2 2006/06/11 21:46:38 adam Exp $
  */
 
+#include <stdio.h>
+
+#define DEBUG_PRINTF printf
 #include "uip.h"
 #include "httpd.h"
 #include "httpd-fs.h"
-#include "httpd-cgi.h"
 #include "http-strings.h"
 
 #include <string.h>
+#include "stdio.h"
+#include "stdlib.h"
 
 #define STATE_WAITING 0
-#define STATE_OUTPUT  1
+#define STATE_HEADERS 1
+#define STATE_BODY    2
+#define STATE_OUTPUT  3
+#define STATE_UPLOAD  4
+
+#define GET  1
+#define POST 2
 
 #define ISO_nl      0x0a
 #define ISO_space   0x20
@@ -74,6 +84,43 @@
 #define ISO_slash   0x2f
 #define ISO_colon   0x3a
 
+// Used to save files to SDCARD during upload
+static FILE *fd;
+static char *output_filename= NULL;
+static int file_cnt= 0;
+static int open_file(const char *fn)
+{
+    if(output_filename != NULL) free(output_filename);
+    output_filename= malloc(strlen(fn)+5);
+    strcpy(output_filename, "/sd/");
+    strcat(output_filename, fn);
+    fd= fopen(output_filename, "w");
+    if(fd == NULL) return 0;
+    return 1;
+}
+
+static int save_file(char *buf, int len)
+{
+    if(fwrite(buf, 1, len, fd) == len){
+        file_cnt+= len;
+        // HACK alert work around bug causing file corruption when writing large amounts of data
+        if(file_cnt >= 400) {
+            file_cnt= 0;
+            fclose(fd);
+            fd= fopen(output_filename, "a");
+        }
+        return 1;
+    }
+
+    return 0;
+}
+
+static int close_file()
+{
+    free(output_filename);
+    fclose(fd);
+    return 1;
+}
 
 /*---------------------------------------------------------------------------*/
 static unsigned short
@@ -103,85 +150,6 @@ PT_THREAD(send_file(struct httpd_state *s))
     } while (s->file.len > 0);
 
     PSOCK_END(&s->sout);
-}
-/*---------------------------------------------------------------------------*/
-static
-PT_THREAD(send_part_of_file(struct httpd_state *s))
-{
-    PSOCK_BEGIN(&s->sout);
-
-    PSOCK_SEND(&s->sout, s->file.data, s->len);
-
-    PSOCK_END(&s->sout);
-}
-/*---------------------------------------------------------------------------*/
-static void
-next_scriptstate(struct httpd_state *s)
-{
-    char *p;
-    p = strchr(s->scriptptr, ISO_nl) + 1;
-    s->scriptlen -= (unsigned short)(p - s->scriptptr);
-    s->scriptptr = p;
-}
-/*---------------------------------------------------------------------------*/
-static
-PT_THREAD(handle_script(struct httpd_state *s))
-{
-    char *ptr;
-
-    PT_BEGIN(&s->scriptpt);
-
-
-    while (s->file.len > 0) {
-
-        /* Check if we should start executing a script. */
-        if (*s->file.data == ISO_percent &&
-            *(s->file.data + 1) == ISO_bang) {
-            s->scriptptr = s->file.data + 3;
-            s->scriptlen = s->file.len - 3;
-            if (*(s->scriptptr - 1) == ISO_colon) {
-                httpd_fs_open(s->scriptptr + 1, &s->file);
-                PT_WAIT_THREAD(&s->scriptpt, send_file(s));
-            } else {
-                PT_WAIT_THREAD(&s->scriptpt,
-                               httpd_cgi(s->scriptptr)(s, s->scriptptr));
-            }
-            next_scriptstate(s);
-
-            /* The script is over, so we reset the pointers and continue
-            sending the rest of the file. */
-            s->file.data = s->scriptptr;
-            s->file.len = s->scriptlen;
-        } else {
-            /* See if we find the start of script marker in the block of HTML
-            to be sent. */
-
-            if (s->file.len > uip_mss()) {
-                s->len = uip_mss();
-            } else {
-                s->len = s->file.len;
-            }
-
-            if (*s->file.data == ISO_percent) {
-                ptr = strchr(s->file.data + 1, ISO_percent);
-            } else {
-                ptr = strchr(s->file.data, ISO_percent);
-            }
-            if (ptr != NULL &&
-                ptr != s->file.data) {
-                s->len = (int)(ptr - s->file.data);
-                if (s->len >= uip_mss()) {
-                    s->len = uip_mss();
-                }
-            }
-            PT_WAIT_THREAD(&s->scriptpt, send_part_of_file(s));
-            s->file.data += s->len;
-            s->file.len -= s->len;
-
-        }
-    }
-
-    PT_END(&s->scriptpt);
 }
 /*---------------------------------------------------------------------------*/
 static
@@ -220,7 +188,17 @@ PT_THREAD(handle_output(struct httpd_state *s))
 
     PT_BEGIN(&s->outputpt);
 
-    if (!httpd_fs_open(s->filename, &s->file)) {
+    if(s->method == POST && strcmp(s->filename, "/command") == 0) {
+        DEBUG_PRINTF("Executing command post\n");
+        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+        PSOCK_SEND_STR(&s->sout, s->command);
+
+    }else if(s->method == POST && strcmp(s->filename, "/upload") == 0) {
+        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+        PSOCK_SEND_STR(&s->sout, s->uploadok ? "OK\r\n" : "FAILED\r\n");
+
+    }else if (!httpd_fs_open(s->filename, &s->file)) {
+        DEBUG_PRINTF("404 file not found\n");
         httpd_fs_open(http_404_html, &s->file);
         strcpy(s->filename, http_404_html);
         PT_WAIT_THREAD(&s->outputpt,
@@ -229,17 +207,13 @@ PT_THREAD(handle_output(struct httpd_state *s))
         PT_WAIT_THREAD(&s->outputpt,
                        send_file(s));
     } else {
+        DEBUG_PRINTF("sending file %s\n", s->filename);
         PT_WAIT_THREAD(&s->outputpt,
                        send_headers(s,
                                     http_header_200));
         ptr = strchr(s->filename, ISO_period);
-        if (ptr != NULL && strncmp(ptr, http_shtml, 6) == 0) {
-            PT_INIT(&s->scriptpt);
-            PT_WAIT_THREAD(&s->outputpt, handle_script(s));
-        } else {
-            PT_WAIT_THREAD(&s->outputpt,
-                           send_file(s));
-        }
+
+        PT_WAIT_THREAD(&s->outputpt, send_file(s));
     }
     PSOCK_CLOSE(&s->sout);
     PT_END(&s->outputpt);
@@ -248,43 +222,116 @@ PT_THREAD(handle_output(struct httpd_state *s))
 static
 PT_THREAD(handle_input(struct httpd_state *s))
 {
-    char *Variable1;
-
     PSOCK_BEGIN(&s->sin);
+
     PSOCK_READTO(&s->sin, ISO_space);
 
-
-    if (strncmp(s->inputbuf, http_get, 4) != 0) {
+    if (strncmp(s->inputbuf, http_get, 4) == 0) {
+        s->method = GET;
+    } else if (strncmp(s->inputbuf, http_post, 4) == 0) {
+        s->method = POST;
+    } else {
+        DEBUG_PRINTF("Unexpected method: %s\n", s->inputbuf);
         PSOCK_CLOSE_EXIT(&s->sin);
     }
+    DEBUG_PRINTF("Method: %s\n", s->inputbuf);
+
     PSOCK_READTO(&s->sin, ISO_space);
 
     if (s->inputbuf[0] != ISO_slash) {
         PSOCK_CLOSE_EXIT(&s->sin);
     }
 
+
     if (s->inputbuf[1] == ISO_space) {
         strncpy(s->filename, http_index_html, sizeof(s->filename));
     } else {
         s->inputbuf[PSOCK_DATALEN(&s->sin) - 1] = 0;
         strncpy(s->filename, &s->inputbuf[0], sizeof(s->filename));
-        Variable1 = s->filename;
-        if (strcmp(Variable1, "/command") == 0) {
-            //handle_command(s);
-            strncpy(s->filename, http_index_html, sizeof(s->filename));
-        }
     }
+
+    DEBUG_PRINTF("filename: %s\n", s->filename);
 
     /*  httpd_log_file(uip_conn->ripaddr, s->filename);*/
 
-    s->state = STATE_OUTPUT;
-
+    s->state = STATE_HEADERS;
+    s->content_length= 0;
     while (1) {
-        PSOCK_READTO(&s->sin, ISO_nl);
+        if(s->state == STATE_HEADERS) {
+            // read the headers of the request
+            PSOCK_READTO(&s->sin, ISO_nl);
+            s->inputbuf[PSOCK_DATALEN(&s->sin) - 1] = 0;
+            if(s->inputbuf[0] == '\r') {
+                DEBUG_PRINTF("end of headers\n");
+                if(s->method == GET) {
+                    s->state = STATE_OUTPUT;
+                    break;
+                }else if(s->method == POST) {
+                    if(strcmp(s->filename, "/upload") == 0) {
+                        s->state= STATE_UPLOAD;
+                    }else{
+                        s->state= STATE_BODY;
+                    }
+                }
+            }else{
+                DEBUG_PRINTF("reading header: %s\n", s->inputbuf);
+                // handle headers here
+                if(strncmp(s->inputbuf, http_content_length, sizeof(http_content_length)-1) == 0) {
+                    s->inputbuf[PSOCK_DATALEN(&s->sin) - 2] = 0;
+                    s->content_length= atoi(&s->inputbuf[sizeof(http_content_length)-1]);
+                    DEBUG_PRINTF("Content length= %s, %d\n", &s->inputbuf[sizeof(http_content_length)-1], s->content_length);
 
-        if (strncmp(s->inputbuf, http_referer, 8) == 0) {
-            s->inputbuf[PSOCK_DATALEN(&s->sin) - 2] = 0;
-            /*      httpd_log(&s->inputbuf[9]);*/
+                }else if(strncmp(s->inputbuf, "X-Filename: ", 11) == 0) {
+                    s->inputbuf[PSOCK_DATALEN(&s->sin) - 2] = 0;
+                    strncpy(s->upload_name, &s->inputbuf[12], sizeof(s->upload_name)-1);
+                    DEBUG_PRINTF("Upload name= %s\n", s->upload_name);
+                }
+            }
+
+        }else if(s->state == STATE_BODY) {
+            // read the Body of the request
+            if(s->content_length > 0) {
+                DEBUG_PRINTF("start reading body %d...\n", s->content_length);
+                while(s->content_length > 2) {
+                    PSOCK_READTO(&s->sin, ISO_nl);
+                    s->inputbuf[PSOCK_DATALEN(&s->sin) - 1] = 0;
+                    s->content_length -= PSOCK_DATALEN(&s->sin);
+                    DEBUG_PRINTF("read body: %s, %d\n", s->inputbuf, s->content_length);
+                }
+                strncpy(s->command, s->inputbuf, sizeof(s->command));
+                DEBUG_PRINTF("Read body: %s\n", s->command);
+                s->state = STATE_OUTPUT;
+
+            }else{
+                s->state = STATE_OUTPUT;
+            }
+            break;
+
+        }else if(s->state == STATE_UPLOAD) {
+            DEBUG_PRINTF("Uploading file: %s, %d\n", s->upload_name, s->content_length);
+
+            // The body is the raw data to be stored to the file
+            if(!open_file(s->upload_name)) {
+                DEBUG_PRINTF("failed to open file\n");
+                s->uploadok= 0;
+            }else{
+                while(s->content_length > 0) {
+                    PSOCK_READTO(&s->sin, ISO_nl);
+                    int n= PSOCK_DATALEN(&s->sin);
+                    if(!save_file(s->inputbuf, n)) break;
+                    s->content_length -= n;
+                }
+                close_file();
+                s->uploadok= s->content_length == 0 ? 1 : 0;
+                DEBUG_PRINTF("finished upload status %d\n", s->uploadok);
+            }
+            s->state = STATE_OUTPUT;
+            if(s->uploadok == 0) PSOCK_CLOSE_EXIT(&s->sin);
+            break;
+
+        }else {
+            DEBUG_PRINTF("WTF State: %d", s->state);
+            break;
         }
     }
 
@@ -299,7 +346,6 @@ handle_connection(struct httpd_state *s)
         handle_output(s);
     }
 }
-
 /*---------------------------------------------------------------------------*/
 void
 httpd_appcall(void)
@@ -315,6 +361,8 @@ httpd_appcall(void)
     } else if (uip_connected()) {
         s = malloc(sizeof(struct httpd_state));
         uip_conn->appstate = s;
+        DEBUG_PRINTF("Connection: %d.%d.%d.%d\n", uip_ipaddr1(uip_conn->ripaddr), uip_ipaddr2(uip_conn->ripaddr), uip_ipaddr3(uip_conn->ripaddr), uip_ipaddr4(uip_conn->ripaddr));
+
         PSOCK_INIT(&s->sin, s->inputbuf, sizeof(s->inputbuf) - 1);
         PSOCK_INIT(&s->sout, s->inputbuf, sizeof(s->inputbuf) - 1);
         PT_INIT(&s->outputpt);
@@ -322,16 +370,19 @@ httpd_appcall(void)
         /*    timer_set(&s->timer, CLOCK_SECOND * 100);*/
         s->timer = 0;
         handle_connection(s);
+
     } else if (s != NULL) {
         if (uip_poll()) {
             ++s->timer;
-            if (s->timer >= 20) {
+            if (s->timer >= 20) { // if period is 0.5 sec this is 10 seconds
                 uip_abort();
+                return;
             }
         } else {
             s->timer = 0;
         }
         handle_connection(s);
+
     } else {
         uip_abort();
     }

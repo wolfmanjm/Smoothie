@@ -7,6 +7,7 @@ extern const char http_post[6];
 extern const char http_10[9];
 extern const char http_11[9];
 extern const char http_content_type[15];
+extern const char http_content_length[17];
 extern const char http_texthtml[10];
 extern const char http_location[11];
 extern const char http_host[7];
