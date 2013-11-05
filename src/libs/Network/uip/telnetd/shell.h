@@ -93,7 +93,7 @@ void shell_quit(char *);
  * \param str1 The first half of the string to be output.
  * \param str2 The second half of the string to be output.
  */
-void shell_output(const char *str);
+int shell_output(const char *str);
 
 /**
  * Print a prompt to the shell window.
@@ -105,11 +105,8 @@ void shell_output(const char *str);
  *
  */
 void shell_prompt(const char *prompt);
-void shell_response(const char *str);
-void shell_got_command();
-const char *shell_get_command();
-int shell_has_space();
 int shell_queue_size();
+int shell_can_output();
 
 #ifdef __cplusplus
 }

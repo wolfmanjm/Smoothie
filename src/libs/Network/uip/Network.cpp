@@ -1,9 +1,10 @@
+#include "CommandQueue.h"
+
 #include "Kernel.h"
 
 #include "Network.h"
 #include "PublicDataRequest.h"
 #include "PlayerPublicAccess.h"
-#include "libs/SerialMessage.h"
 #include "net_util.h"
 #include "shell.h"
 #include "uip_arp.h"
@@ -13,6 +14,7 @@
 #include "webserver.h"
 #include "dhcpc.h"
 #include "sftpd.h"
+
 
 #include <mri.h>
 
@@ -26,13 +28,16 @@ extern "C" void uip_log(char *m)
 static bool webserver_enabled, telnet_enabled, use_dhcp;
 static Network *theNetwork;
 static Sftpd *sftpd;
+static CommandQueue *command_q= CommandQueue::getInstance();
 
+Network* Network::instance;
 Network::Network()
 {
     ethernet = new LPC17XX_Ethernet();
     tickcnt= 0;
     theNetwork= this;
     sftpd= NULL;
+    instance= this;
 }
 
 Network::~Network()
@@ -318,16 +323,7 @@ void Network::init(void)
 void Network::on_main_loop(void *argument)
 {
     // issue commands here if any available
-    const char *cmd = shell_get_command();
-    if (cmd != NULL) {
-        struct SerialMessage message;
-        message.message = cmd;
-        message.stream = &ethernet_stream;
-        shell_got_command(); // clear the command q
-
-        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-        shell_response(NULL); // tells shell we are done with the command
-    }
+    command_q->pop();
 }
 
 // select between webserver and telnetd server

@@ -67,6 +67,8 @@
 #include "stdio.h"
 #include "stdlib.h"
 
+#include "CommandQueue.h"
+
 #define STATE_WAITING 0
 #define STATE_HEADERS 1
 #define STATE_BODY    2
@@ -191,6 +193,11 @@ PT_THREAD(handle_output(struct httpd_state *s))
     if(s->method == POST && strcmp(s->filename, "/command") == 0) {
         DEBUG_PRINTF("Executing command post\n");
         PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+
+        // stick the command  on the command queue
+        network_add_command(s->command, 1);
+
+        // then wait for the response
         PSOCK_SEND_STR(&s->sout, s->command);
 
     }else if(s->method == POST && strcmp(s->filename, "/upload") == 0) {
@@ -394,6 +401,12 @@ httpd_appcall(void)
         uip_abort();
     }
 }
+// this callback gets the results of a command, line by line
+static int command_result(const char *str)
+{
+    DEBUG_PRINTF("Got command result: %s\n", str);
+    return 0;
+}
 /*---------------------------------------------------------------------------*/
 /**
  * \brief      Initialize the web server
@@ -405,6 +418,7 @@ void
 httpd_init(void)
 {
     uip_listen(HTONS(80));
+    register_callback(command_result, 1);
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

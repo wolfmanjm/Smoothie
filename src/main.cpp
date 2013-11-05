@@ -20,7 +20,7 @@
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
-#include "Network.h"
+#include "libs/Network/uip/Network.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/Config.h"

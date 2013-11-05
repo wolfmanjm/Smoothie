@@ -41,14 +41,10 @@
 #include "stdio.h"
 #include "stdlib.h"
 
-#include "deque"
-
 struct ptentry {
     uint16_t command_cs;
     void (* pfunc)(char *str);
 };
-
-static std::deque<char*> *command_q= NULL;
 
 #define SHELL_PROMPT "> "
 
@@ -145,12 +141,14 @@ static void shell_test(char *str)
 }
 
 /*---------------------------------------------------------------------------*/
+#include "CommandQueue.h"
+static CommandQueue *command_queue= CommandQueue::getInstance();
 static void
 unknown(char *str)
 {
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
-        command_q->push_back(strdup(str));
+        command_queue->add(str, 2);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -165,41 +163,42 @@ static struct ptentry parsetab[] = {
     {0, unknown}
 };
 /*---------------------------------------------------------------------------*/
-void
-shell_init(void)
+// this callback gets the results of a command, line by line
+// NULL means command completed
+static int shell_command_result(const char *str)
 {
+    if(str == NULL) {
+        // indicates comamnd is complete
+        // only prompt when command is completed
+       shell_prompt(SHELL_PROMPT);
+       return 0;
+
+    }else{
+        if(shell_can_output()) {
+            if(shell_output(str) == -1) return -1; // connection was closed
+            return 1;
+        }
+        // we are stalled
+        return 0;
+    }
+}
+
+void shell_init(void)
+{
+    command_queue->registerCallback(shell_command_result, 2);
 }
 /*---------------------------------------------------------------------------*/
 void
 shell_start()
 {
-    if(command_q != NULL){
-        for (std::deque<char*>::iterator i = command_q->begin(); i != command_q->end(); ++i) {
-            free(*i);
-        }
-        command_q->clear();
-        delete command_q;
-    }
-
-    command_q= new std::deque<char*>();
-
     shell_output("Smoothie command shell\r\n> ");
 }
 void shell_stop()
 {
-    if(command_q != NULL){
-        for (std::deque<char*>::iterator i = command_q->begin(); i != command_q->end(); ++i) {
-            free(*i);
-        }
-        command_q->clear();
-        delete command_q;
-        command_q= NULL;
-    }
 }
 int shell_queue_size()
 {
-    if(command_q == NULL || command_q->empty()) return 0;
-    return command_q->size();
+   return command_queue->size();
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -210,26 +209,3 @@ shell_input(char *cmd)
     }
 }
 /*---------------------------------------------------------------------------*/
-const char *shell_get_command()
-{
-    if(command_q == NULL || command_q->empty()) return NULL;
-    return command_q->front();
-}
-
-void shell_got_command()
-{
-    if(command_q != NULL && !command_q->empty()){
-        free(command_q->front());
-        command_q->pop_front();
-    }
-}
-
-void shell_response(const char *resp)
-{
-    if(resp == NULL) {
-        // only prompt when command is completed
-        shell_prompt(SHELL_PROMPT);
-    }else{
-        shell_output(resp);
-    }
-}

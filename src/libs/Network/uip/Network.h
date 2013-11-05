@@ -4,10 +4,11 @@
 #include "timer.h"
 #include "LPC17XX_Ethernet.h"
 #include "Module.h"
-#include "EthernetStream.h"
+#include "NetworkStream.h"
 
 #include "uip.h"
 #include "NetworkPublicAccess.h"
+
 
 #define network_enable_checksum CHECKSUM("enable")
 #define network_webserver_checksum CHECKSUM("webserver")
@@ -28,7 +29,7 @@ public:
     void on_main_loop(void* argument);
     void on_get_public_data(void* argument);
     void dhcpc_configured(uint32_t ipaddr, uint32_t ipmask, uint32_t ipgw);
-
+    static Network *getInstance() { return instance;}
 
 private:
     void init();
@@ -36,8 +37,9 @@ private:
     void handlePacket();
     void tapdev_send(void *pPacket, unsigned int size);
 
+    static Network *instance;
+
     LPC17XX_Ethernet *ethernet;
-    EthernetStream ethernet_stream;
 
     struct timer periodic_timer, arp_timer;
     uint8_t mac_address[6];
@@ -45,6 +47,7 @@ private:
     uint8_t ipmask[4];
     uint8_t ipgw[4];
     volatile uint32_t tickcnt;
+
 };
 
 #endif

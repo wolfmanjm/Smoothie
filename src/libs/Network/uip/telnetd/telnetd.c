@@ -83,20 +83,20 @@ shell_quit(char *str)
     s->state = STATE_CLOSE;
 }
 /*---------------------------------------------------------------------------*/
-static void
-sendline(char *line)
+static int sendline(char *line)
 {
     unsigned int i;
 
     for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
         if (s->lines[i] == NULL) {
             s->lines[i] = line;
-            break;
+            return i;
         }
     }
     if (i == TELNETD_CONF_NUMLINES) {
         dealloc_line(line);
     }
+    return TELNETD_CONF_NUMLINES;
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -111,10 +111,10 @@ shell_prompt(const char *str)
     }
 }
 /*---------------------------------------------------------------------------*/
-void
-shell_output(const char *str)
+int shell_output(const char *str)
 {
-    if(s == NULL) return;
+    if(s == NULL) return -1; // closed
+
     unsigned chunk = 256; // small chunk size so we don't allocate huge blocks, and must be less than mss
     unsigned len = strlen(str);
     char *line;
@@ -123,20 +123,27 @@ shell_output(const char *str)
         line = alloc_line(len + 1);
         if (line != NULL) {
             strcpy(line, str);
-            sendline(line);
+            return sendline(line);
+        }else{
+            // out of memory treat like full
+            return TELNETD_CONF_NUMLINES;
         }
     } else {
         // need to split line over multiple send lines
         int size = chunk; // size to copy
         int off = 0;
+        int n= 0;
         while (len >= chunk) {
             line = alloc_line(chunk + 1);
             if (line != NULL) {
                 memcpy(line, str + off, size);
                 line[size] = 0;
-                sendline(line);
+                n= sendline(line);
                 len -= size;
                 off += size;
+            }else{
+                // out of memory treat like full
+                return TELNETD_CONF_NUMLINES;
             }
         }
         if (len > 0) {
@@ -144,13 +151,17 @@ shell_output(const char *str)
             line = alloc_line(len + 1);
             if (line != NULL) {
                 strcpy(line, str + off);
-                sendline(line);
+                n= sendline(line);
+            }else{
+                // out of memory treat like full
+                return TELNETD_CONF_NUMLINES;
             }
         }
+        return n;
     }
 }
 // check if we can queue or if queue is full
-int shell_has_space()
+int shell_can_output()
 {
     int i;
     int cnt = 0;
@@ -158,7 +169,7 @@ int shell_has_space()
     for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
         if (s->lines[i] == NULL) cnt++;
     }
-    return cnt;
+    return cnt < 4 ? 0 : 1;
 }
 
 /*---------------------------------------------------------------------------*/
