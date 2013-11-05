@@ -5,7 +5,7 @@ typedef int (*cb_t)(const char *);
 
 #ifdef __cplusplus
 
-#include <deque>
+#include "fifo.h"
 #include <string>
 #include <map>
 
@@ -24,7 +24,7 @@ public:
 
 private:
     typedef struct {char* str; uint8_t id;} cmd_t;
-    std::deque<cmd_t> q;
+    Fifo<cmd_t> q;
     std::map<int, NetworkStream*> stream_map;
     static CommandQueue *instance;
 };

@@ -168,7 +168,7 @@ static struct ptentry parsetab[] = {
 static int shell_command_result(const char *str)
 {
     if(str == NULL) {
-        // indicates comamnd is complete
+        // indicates command is complete
         // only prompt when command is completed
        shell_prompt(SHELL_PROMPT);
        return 0;

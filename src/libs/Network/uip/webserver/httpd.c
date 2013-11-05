@@ -125,6 +125,35 @@ static int close_file()
 }
 
 /*---------------------------------------------------------------------------*/
+static unsigned short generate_command_response(void *state)
+{
+    struct httpd_state *s = (struct httpd_state *)state;
+
+    if (s->file.len > uip_mss()) {
+        s->len = uip_mss();
+    } else {
+        s->len = s->file.len;
+    }
+    memcpy(uip_appdata, s->file.data, s->len);
+
+    return s->len;
+}
+
+/*---------------------------------------------------------------------------*/
+static PT_THREAD(send_command_response(struct httpd_state *s))
+{
+    PSOCK_BEGIN(&s->sout);
+
+    do {
+        PSOCK_GENERATOR_SEND(&s->sout, generate_command_response, s);
+        s->file.len -= s->len;
+        s->file.data += s->len;
+    } while (s->file.len > 0);
+
+    PSOCK_END(&s->sout);
+}
+
+/*---------------------------------------------------------------------------*/
 static unsigned short
 generate_part_of_file(void *state)
 {
@@ -191,14 +220,13 @@ PT_THREAD(handle_output(struct httpd_state *s))
     PT_BEGIN(&s->outputpt);
 
     if(s->method == POST && strcmp(s->filename, "/command") == 0) {
-        DEBUG_PRINTF("Executing command post\n");
-        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
-
+        DEBUG_PRINTF("Executing command post: %s\n", s->command);
         // stick the command  on the command queue
         network_add_command(s->command, 1);
 
-        // then wait for the response
-        PSOCK_SEND_STR(&s->sout, s->command);
+        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+        // then send response as we get it
+        PT_WAIT_THREAD(&s->outputpt, send_command_response(s));
 
     }else if(s->method == POST && strcmp(s->filename, "/upload") == 0) {
         if(s->uploadok == 0) {
@@ -402,10 +430,15 @@ httpd_appcall(void)
     }
 }
 // this callback gets the results of a command, line by line
+// need to check if we need to stall the upstream sender
+// return 0 if stalled 1 if ok to keep providing more
+// -1 if the connection has closed or is not in output state
+// NOTE may need to see which connection to send to if more than one
 static int command_result(const char *str)
 {
-    DEBUG_PRINTF("Got command result: %s\n", str);
-    return 0;
+    if(str == NULL) DEBUG_PRINTF("End of command\n");
+    else DEBUG_PRINTF("Got command result: %s", str);
+    return 1;
 }
 /*---------------------------------------------------------------------------*/
 /**

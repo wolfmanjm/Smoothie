@@ -33,17 +33,16 @@ extern "C" {
 int CommandQueue::add(const char *cmd, int cb_id)
 {
     cmd_t c= {strdup(cmd), (uint8_t)cb_id};
-    q.push_back(c);
+    q.push(c);
     return q.size();
 }
 
 // pops the next command off the queue and submits it.
 bool CommandQueue::pop()
 {
-    if (q.empty()) return false;
+    if (q.size() == 0) return false;
 
-    cmd_t c= q.front();
-    q.pop_front();
+    cmd_t c= q.pop();
     char *cmd= c.str;
 
     struct SerialMessage message;
