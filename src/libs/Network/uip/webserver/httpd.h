@@ -50,8 +50,7 @@ struct httpd_state {
   char state;
   struct httpd_fs_file file;
   int len;
-  char *scriptptr;
-  int scriptlen;
+  char *strbuf;
   int content_length;
   unsigned short count;
   int uploadok;

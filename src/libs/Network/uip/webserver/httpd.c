@@ -57,7 +57,6 @@
 
 #include <stdio.h>
 
-#define DEBUG_PRINTF printf
 #include "uip.h"
 #include "httpd.h"
 #include "httpd-fs.h"
@@ -68,6 +67,8 @@
 #include "stdlib.h"
 
 #include "CommandQueue.h"
+
+#include "c-fifo.h"
 
 #define STATE_WAITING 0
 #define STATE_HEADERS 1
@@ -85,6 +86,9 @@
 #define ISO_period  0x2e
 #define ISO_slash   0x2f
 #define ISO_colon   0x3a
+
+//#define DEBUG_PRINTF printf
+#define DEBUG_PRINTF(...)
 
 // Used to save files to SDCARD during upload
 static FILE *fd;
@@ -125,30 +129,20 @@ static int close_file()
 }
 
 /*---------------------------------------------------------------------------*/
-static unsigned short generate_command_response(void *state)
-{
-    struct httpd_state *s = (struct httpd_state *)state;
-
-    if (s->file.len > uip_mss()) {
-        s->len = uip_mss();
-    } else {
-        s->len = s->file.len;
-    }
-    memcpy(uip_appdata, s->file.data, s->len);
-
-    return s->len;
-}
-
-/*---------------------------------------------------------------------------*/
 static PT_THREAD(send_command_response(struct httpd_state *s))
 {
     PSOCK_BEGIN(&s->sout);
 
     do {
-        PSOCK_GENERATOR_SEND(&s->sout, generate_command_response, s);
-        s->file.len -= s->len;
-        s->file.data += s->len;
-    } while (s->file.len > 0);
+        PSOCK_WAIT_UNTIL( &s->sout, fifo_size() > 0 );
+        s->strbuf= fifo_pop();
+        if(s->strbuf == NULL) break;
+        // send it
+        DEBUG_PRINTF("Sending response: %s", s->strbuf);
+        PSOCK_SEND_STR(&s->sout, s->strbuf);
+        // free the strdup
+        free(s->strbuf);
+    }while(1);
 
     PSOCK_END(&s->sout);
 }
@@ -436,8 +430,19 @@ httpd_appcall(void)
 // NOTE may need to see which connection to send to if more than one
 static int command_result(const char *str)
 {
-    if(str == NULL) DEBUG_PRINTF("End of command\n");
-    else DEBUG_PRINTF("Got command result: %s", str);
+    if(str == NULL) {
+        DEBUG_PRINTF("End of command\n");
+        fifo_push(NULL);
+
+    }else{
+        DEBUG_PRINTF("Got command result: %s", str);
+        if(fifo_size() < 10) {
+            fifo_push(strdup(str));
+            return 1;
+        }else{
+            return 0;
+        }
+    }
     return 1;
 }
 /*---------------------------------------------------------------------------*/
