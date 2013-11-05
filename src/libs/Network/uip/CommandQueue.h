@@ -7,7 +7,6 @@ typedef int (*cb_t)(const char *);
 
 #include "fifo.h"
 #include <string>
-#include <map>
 
 #include "NetworkStream.h"
 
@@ -25,7 +24,7 @@ public:
 private:
     typedef struct {char* str; uint8_t id;} cmd_t;
     Fifo<cmd_t> q;
-    std::map<int, NetworkStream*> stream_map;
+    NetworkStream* stream_map[2];
     static CommandQueue *instance;
 };
 
