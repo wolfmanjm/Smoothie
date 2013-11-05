@@ -60,6 +60,7 @@ static int prompt= 0;
 #define TELNET_DO    253
 #define TELNET_DONT  254
 
+#define TELNET_LINEMODE 0x22
 #define TELNET_GA       0x03
 #define TELNET_X_PROMPT 0x55
 
@@ -294,14 +295,15 @@ newdata(void)
                 }
                 break;
             case STATE_WILL:
-                /* Reply with a DONT */
-                sendopt(TELNET_DONT, c);
+                if (c == TELNET_LINEMODE) {
+                    //sendopt(TELNET_DO, c);
+                }
                 s->state = STATE_NORMAL;
                 break;
 
             case STATE_WONT:
                 /* Reply with a DONT */
-                sendopt(TELNET_DONT, c);
+                //sendopt(TELNET_DONT, c);
                 s->state = STATE_NORMAL;
                 break;
             case STATE_DO:
@@ -312,7 +314,7 @@ newdata(void)
                     prompt= 1;
                 }else{
                      /* Reply with a WONT */
-                    sendopt(TELNET_WONT, c);
+                    //sendopt(TELNET_WONT, c);
                 }
                 s->state = STATE_NORMAL;
                 break;
@@ -321,7 +323,7 @@ newdata(void)
                     prompt= 0;
                 }else{
                     /* Reply with a WONT */
-                    sendopt(TELNET_WONT, c);
+                    //sendopt(TELNET_WONT, c);
                 }
                 s->state = STATE_NORMAL;
                 break;

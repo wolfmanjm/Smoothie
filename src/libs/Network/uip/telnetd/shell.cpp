@@ -183,7 +183,7 @@ shell_start()
 
     command_q= new std::deque<char*>();
 
-    shell_output("Smoothie command shell\n> ");
+    shell_output("Smoothie command shell\r\n> ");
 }
 void shell_stop()
 {
