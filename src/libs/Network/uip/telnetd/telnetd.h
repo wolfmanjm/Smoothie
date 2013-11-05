@@ -57,6 +57,7 @@ struct telnetd_state {
     char *lines[TELNETD_CONF_NUMLINES];
     char buf[TELNETD_CONF_MAXCOMMANDLENGTH];
     char bufptr;
+    char first_time;
     u8_t numsent;
     u8_t state;
 };

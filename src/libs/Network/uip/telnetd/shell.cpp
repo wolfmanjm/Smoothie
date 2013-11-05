@@ -155,7 +155,7 @@ unknown(char *str)
 }
 /*---------------------------------------------------------------------------*/
 static struct ptentry parsetab[] = {
-    {CHECKSUM("net"), connections},
+    {CHECKSUM("netstat"), connections},
     {CHECKSUM("exit"), shell_quit},
     {CHECKSUM("quit"), shell_quit},
     {CHECKSUM("test"), shell_test},

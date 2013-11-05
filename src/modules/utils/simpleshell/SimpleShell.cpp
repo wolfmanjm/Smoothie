@@ -338,7 +338,7 @@ void SimpleShell::net_command( string parameters, StreamOutput *stream)
     bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ipconfig_checksum, &returned_data );
     if(ok) {
         char *str= (char *)returned_data;
-        stream->printf("%s\n", str);
+        stream->printf("%s\r\n", str);
         free(str);
 
     }else{

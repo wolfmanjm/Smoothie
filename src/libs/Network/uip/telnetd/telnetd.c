@@ -353,10 +353,10 @@ telnetd_appcall(void)
         for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
             s->lines[i] = NULL;
         }
+        s->first_time= 1;
         s->bufptr = 0;
         s->state = STATE_NORMAL;
         prompt= 0;
-        shell_start();
     }
 
     if (s->state == STATE_CLOSE) {
@@ -383,13 +383,18 @@ telnetd_appcall(void)
         newdata();
     }
 
-
     if (uip_rexmit() || uip_newdata() || uip_acked() || uip_connected() || uip_poll()) {
         senddata();
     }
 
     if(uip_poll() && uip_stopped(uip_conn) && shell_queue_size() < 5) {
         uip_restart();
+    }
+
+    if(s->first_time == 1 && uip_poll()) {
+        s->first_time= 0;
+        shell_start();
+        senddata();
     }
 }
 /*---------------------------------------------------------------------------*/
