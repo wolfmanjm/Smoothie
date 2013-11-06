@@ -87,8 +87,8 @@
 #define ISO_slash   0x2f
 #define ISO_colon   0x3a
 
-//#define DEBUG_PRINTF printf
-#define DEBUG_PRINTF(...)
+#define DEBUG_PRINTF printf
+//#define DEBUG_PRINTF(...)
 
 // Used to save files to SDCARD during upload
 static FILE *fd;
@@ -188,9 +188,8 @@ PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
 
     ptr = strrchr(s->filename, ISO_period);
     if (ptr == NULL) {
-        PSOCK_SEND_STR(&s->sout, http_content_type_binary);
-    } else if (strncmp(http_html, ptr, 5) == 0 ||
-               strncmp(http_shtml, ptr, 6) == 0) {
+        PSOCK_SEND_STR(&s->sout, http_content_type_plain); // http_content_type_binary);
+    } else if (strncmp(http_html, ptr, 5) == 0 || strncmp(http_shtml, ptr, 6) == 0) {
         PSOCK_SEND_STR(&s->sout, http_content_type_html);
     } else if (strncmp(http_css, ptr, 4) == 0) {
         PSOCK_SEND_STR(&s->sout, http_content_type_css);
@@ -209,8 +208,6 @@ PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
 static
 PT_THREAD(handle_output(struct httpd_state *s))
 {
-    char *ptr;
-
     PT_BEGIN(&s->outputpt);
 
     if(s->method == POST && strcmp(s->filename, "/command") == 0) {
@@ -223,6 +220,7 @@ PT_THREAD(handle_output(struct httpd_state *s))
         PT_WAIT_THREAD(&s->outputpt, send_command_response(s));
 
     }else if(s->method == POST && strcmp(s->filename, "/upload") == 0) {
+        DEBUG_PRINTF("upload output: %d\n", s->uploadok);
         if(s->uploadok == 0) {
             PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_503));
             PSOCK_SEND_STR(&s->sout, "FAILED\r\n");
@@ -245,7 +243,6 @@ PT_THREAD(handle_output(struct httpd_state *s))
         PT_WAIT_THREAD(&s->outputpt,
                        send_headers(s,
                                     http_header_200));
-        ptr = strchr(s->filename, ISO_period);
 
         PT_WAIT_THREAD(&s->outputpt, send_file(s));
     }
@@ -360,7 +357,6 @@ PT_THREAD(handle_input(struct httpd_state *s))
                 DEBUG_PRINTF("finished upload status %d\n", s->uploadok);
             }
             s->state = STATE_OUTPUT;
-            PSOCK_CLOSE_EXIT(&s->sin);
             break;
 
         }else {
@@ -410,7 +406,8 @@ httpd_appcall(void)
     } else if (s != NULL) {
         if (uip_poll()) {
             ++s->timer;
-            if (s->timer >= 20) { // if period is 0.5 sec this is 10 seconds
+            if (s->timer >= 200) { // if period is 0.1 sec this is 20 seconds
+                DEBUG_PRINTF("Timer expired, aborting\n");
                 uip_abort();
                 return;
             }
