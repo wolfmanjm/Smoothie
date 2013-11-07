@@ -16,26 +16,30 @@
 #include "Panel.h"
 
 class Panel;
-class PanelScreen {
-    public:
-        PanelScreen();
-        virtual void on_refresh();
-        virtual void on_main_loop();
-        PanelScreen* set_panel(Panel* parent);
-        PanelScreen* set_parent(PanelScreen* passed_parent);
-        virtual void on_enter();
-        // if you completely rewrite the screen do not clear it, this avoids flicker
-        void refresh_screen(bool clear);
-        void refresh_menu(bool clear);
-        void refresh_menu(void){ refresh_menu(true); };
-        virtual void display_menu_line(uint16_t line)= 0;
+class PanelScreen
+{
+public:
+    PanelScreen();
+    virtual void on_refresh();
+    virtual void on_main_loop();
+    PanelScreen *set_panel(Panel *parent);
+    PanelScreen *set_parent(PanelScreen *passed_parent);
+    virtual void on_enter();
+    // if you completely rewrite the screen do not clear it, this avoids flicker
+    void refresh_screen(bool clear);
+    void refresh_menu(bool clear);
+    void refresh_menu(void)
+    {
+        refresh_menu(true);
+    };
+    virtual void display_menu_line(uint16_t line) = 0;
 
-        Panel* panel;
-        PanelScreen* parent;
+    Panel *panel;
+    PanelScreen *parent;
 
-      protected:
-        void send_gcode(std::string g);
-        void send_command(const char* gcstr);
+protected:
+    void send_gcode(std::string g);
+    void send_command(const char *gcstr);
 };
 
 

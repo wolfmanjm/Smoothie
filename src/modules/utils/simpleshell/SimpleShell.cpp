@@ -434,6 +434,28 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
     delete kr;
     delete tk;
 #endif
+#if 0
+// time idle loop
+#include "mbed.h"
+static int tmin = 1000000;
+static int tmax = 0;
+void time_idle()
+{
+    Timer timer;
+    timer.start();
+    int begin, end;
+    for (int i = 0; i < 1000; ++i) {
+        begin = timer.read_us();
+        THEKERNEL->call_event(ON_IDLE);
+        end = timer.read_us();
+        int d = end - begin;
+        if (d < tmin) tmin = d;
+        if (d > tmax) tmax = d;
+    }
+}
+static Timer timer;
+static int lastt = 0;
+#endif
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
