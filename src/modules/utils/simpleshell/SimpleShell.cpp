@@ -51,6 +51,7 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("mem"),      &SimpleShell::mem_command},
     {CHECKSUM("get"),      &SimpleShell::get_command},
     {CHECKSUM("set_temp"), &SimpleShell::set_temp_command},
+    {CHECKSUM("test"),     &SimpleShell::test_command},
 
     // unknown command
     {0, NULL}
@@ -265,7 +266,6 @@ void SimpleShell::pwd_command( string parameters, StreamOutput *stream )
 // Output the contents of a file, first parameter is the filename, second is the limit ( in number of lines to output )
 void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 {
-
     // Get parameters ( filename and line limit )
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string limit_paramater   = shift_parameter( parameters );
@@ -332,14 +332,6 @@ static uint32_t getDeviceType()
     return result[1];
 }
 
-#if 0
-#include "mbed.h"
-#include "BaseSolution.h"
-#include "RostockSolution.h"
-#include "JohannKosselSolution.h"
-#endif
-
-
 // print out build version
 void SimpleShell::version_command( string parameters, StreamOutput *stream)
 {
@@ -347,27 +339,6 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
     uint32_t dev = getDeviceType();
     const char *mcu = (dev & 0x00100000) ? "LPC1769" : "LPC1768";
     stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), mcu, SystemCoreClock / 1000000);
-
-#if 0
-    double millimeters[3]= {100.0, 200.0, 300.0};
-    int steps[3];
-    BaseSolution* r= new RostockSolution(THEKERNEL->config);
-    BaseSolution* k= new JohannKosselSolution(THEKERNEL->config);
-    Timer timer;
-    timer.start();
-    for(int i=0;i<10;i++) r->millimeters_to_steps(millimeters, steps);
-    timer.stop();
-    float tr= timer.read();
-    timer.reset();
-    timer.start();
-    for(int i=0;i<10;i++) k->millimeters_to_steps(millimeters, steps);
-    timer.stop();
-    float tk= timer.read();
-    stream->printf("time RostockSolution: %f, time JohannKosselSolution: %f\n", tr, tk);
-    delete kr;
-    delete tk;
-#endif
-
 }
 
 // Reset the system
@@ -436,6 +407,35 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
+#if 0
+#include "mbed.h"
+#include "BaseSolution.h"
+#include "RostockSolution.h"
+#include "JohannKosselSolution.h"
+#endif
+void SimpleShell::test_command( string parameters, StreamOutput *stream)
+{
+#if 0
+    double millimeters[3]= {100.0, 200.0, 300.0};
+    int steps[3];
+    BaseSolution* r= new RostockSolution(THEKERNEL->config);
+    BaseSolution* k= new JohannKosselSolution(THEKERNEL->config);
+    Timer timer;
+    timer.start();
+    for(int i=0;i<10;i++) r->millimeters_to_steps(millimeters, steps);
+    timer.stop();
+    float tr= timer.read();
+    timer.reset();
+    timer.start();
+    for(int i=0;i<10;i++) k->millimeters_to_steps(millimeters, steps);
+    timer.stop();
+    float tk= timer.read();
+    stream->printf("time RostockSolution: %f, time JohannKosselSolution: %f\n", tr, tk);
+    delete kr;
+    delete tk;
+#endif
+}
+
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
 {
     stream->printf("Commands:\r\n");
@@ -458,7 +458,6 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");
-
 	stream->printf("r - repeat last command\r\n");
 }
 
