@@ -28,7 +28,7 @@ PrepareScreen::PrepareScreen()
 void PrepareScreen::on_enter()
 {
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(10);
+    this->panel->setup_menu(8);
     this->refresh_menu();
 }
 
@@ -53,8 +53,6 @@ void PrepareScreen::display_menu_line(uint16_t line)
         case 5: this->panel->lcd->printf("Cool Down"      ); break;
         case 6: this->panel->lcd->printf("Extrude"        ); break;
         case 7: this->panel->lcd->printf("Motors off"     ); break;
-        case 8: this->panel->lcd->printf("Power On"       ); break;
-        case 9: this->panel->lcd->printf("Power Off"      ); break;
             //case 8: this->panel->lcd->printf("Set Temperature"); break;
     }
 }
@@ -70,8 +68,6 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
         case 5: this->cooldown(); break;
         case 6: this->panel->enter_screen(this->extruder_screen); break;
         case 7: command = "M84"; break;
-        case 8: command = "M80"; break;
-        case 9: command = "M81"; break;
             //case 8: this->panel->enter_screen(this->temp_screen      ); break;
     }
 }
