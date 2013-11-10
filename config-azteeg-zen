@@ -1,6 +1,6 @@
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            1200             # Default rate ( mm/minute ) for G1/G2/G3 moves
-default_seek_rate                            1200             # Default rate ( mm/minute ) for G0 moves
+default_seek_rate                            1800             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
 mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
 
@@ -157,7 +157,7 @@ panel.spi_cs_pin                             0.16              # set spi chip se
 panel.encoder_a_pin                          2.8!^             # encoder pin
 panel.encoder_b_pin                          1.23!^            # encoder pin
 panel.click_button_pin                       2.11!^            # click button
-panel.a0_pin                                 2.6              # st7565 needs an a0
+panel.a0_pin                                 2.6               # st7565 needs an a0
 panel.contrast                               24                # some panels need contrast set, this is for mviki
 panel.reverse                                true              # reverse the screen 180
 panel.menu_offset                            0                 # some panels will need 1 here
@@ -168,6 +168,32 @@ panel.gamma_jog_feedrate                     1500              # z jogging feedr
 
 panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
 panel.bed_temperature                        60                # temp to set bed when preheat is selected
+
+custom_menu.power_on.enable                true              #
+custom_menu.power_on.name                  Power_on          #
+custom_menu.power_on.command               M80               #
+
+custom_menu.power_off.enable               true              #
+custom_menu.power_off.name                 Power_off         #
+custom_menu.power_off.command              M81               #
+
+// NOTE spaces on commands must be _ and multiple commands separated with |
+custom_menu.fr.enable                      true              #
+custom_menu.fr.name                        Front_right       #
+custom_menu.fr.command                     G0_X170_Y10       #
+custom_menu.fl.enable                      true              #
+custom_menu.fl.name                        Front_left        #
+custom_menu.fl.command                     G0_X10_Y10        #
+custom_menu.br.enable                      true              #
+custom_menu.br.name                        Back_right        #
+custom_menu.br.command                     G0_X170_Y170      #
+custom_menu.bl.enable                      true              #
+custom_menu.bl.name                        Back_left         #
+custom_menu.bl.command                     G0_X10_Y170       #
+custom_menu.c.enable                       true              #
+custom_menu.c.name                         Center            #
+custom_menu.c.command                      G0_X90_Y90        #
+
 
 # needed on a smoothieboard or azteeg
 currentcontrol_module_enable                 true            #
