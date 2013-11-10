@@ -35,6 +35,8 @@
 #ifndef __HTTPD_FSDATA_H__
 #define __HTTPD_FSDATA_H__
 
+#undef HTTPD_FS_STATISTICS
+
 #include "uip.h"
 
 

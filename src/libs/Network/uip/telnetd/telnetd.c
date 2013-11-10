@@ -252,19 +252,18 @@ get_char(u8_t c)
     }
 }
 /*---------------------------------------------------------------------------*/
-static void
-sendopt(u8_t option, u8_t value)
-{
-    char *line;
-    line = alloc_line(4);
-    if (line != NULL) {
-        line[0] = TELNET_IAC;
-        line[1] = option;
-        line[2] = value;
-        line[3] = 0;
-        sendline(line);
-    }
-}
+// static void sendopt(u8_t option, u8_t value)
+// {
+//     char *line;
+//     line = alloc_line(4);
+//     if (line != NULL) {
+//         line[0] = TELNET_IAC;
+//         line[1] = option;
+//         line[2] = value;
+//         line[3] = 0;
+//         sendline(line);
+//     }
+// }
 /*---------------------------------------------------------------------------*/
 static void
 newdata(void)

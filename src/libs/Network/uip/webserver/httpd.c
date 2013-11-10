@@ -1,3 +1,9 @@
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 /**
  * \addtogroup apps
  * @{
@@ -105,7 +111,7 @@ static int open_file(const char *fn)
     return 1;
 }
 
-static int save_file(char *buf, int len)
+static int save_file(char *buf, unsigned int len)
 {
     if(fwrite(buf, 1, len, fd) == len){
         file_cnt+= len;

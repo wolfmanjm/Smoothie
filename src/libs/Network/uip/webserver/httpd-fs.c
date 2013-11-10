@@ -1,3 +1,8 @@
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+
 /*
  * Copyright (c) 2001, Swedish Institute of Computer Science.
  * All rights reserved.

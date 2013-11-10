@@ -1,3 +1,5 @@
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 #include "sftpd.h"
 #include "string.h"
 #include "stdlib.h"
@@ -34,6 +36,7 @@ int Sftpd::senddata()
         strcpy((char *)uip_appdata, outbuf);
         uip_send(uip_appdata, strlen(outbuf));
     }
+    return 0;
 }
 
 int Sftpd::handle_command()

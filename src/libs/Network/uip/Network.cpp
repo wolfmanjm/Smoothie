@@ -1,3 +1,7 @@
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 #include "CommandQueue.h"
 
 #include "Kernel.h"
@@ -10,6 +14,7 @@
 #include "uip_arp.h"
 #include "clock-arch.h"
 
+#include "uip.h"
 #include "telnetd.h"
 #include "webserver.h"
 #include "dhcpc.h"
@@ -278,9 +283,9 @@ void Network::dhcpc_configured(uint32_t ipaddr, uint32_t ipmask, uint32_t ipgw)
     memcpy(this->ipmask, &ipmask, 4);
     memcpy(this->ipgw, &ipgw, 4);
 
-    uip_sethostaddr(this->ipaddr);
-    uip_setnetmask(this->ipmask);
-    uip_setdraddr(this->ipgw);
+    uip_sethostaddr((u16_t*)this->ipaddr);
+    uip_setnetmask((u16_t*)this->ipmask);
+    uip_setdraddr((u16_t*)this->ipgw);
 
     setup_servers();
 }

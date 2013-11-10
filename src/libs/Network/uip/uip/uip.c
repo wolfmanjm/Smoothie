@@ -1,3 +1,8 @@
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+
 #define DEBUG_PRINTF(...)
 //printf(__VA_ARGS__)
 
