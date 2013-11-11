@@ -234,12 +234,6 @@ void Network::on_idle(void *argument)
     }
 }
 
-void Network::tapdev_send(void *pPacket, unsigned int size)
-{
-    memcpy(ethernet->request_packet_buffer(), pPacket, size);
-    ethernet->write_packet((uint8_t *) pPacket, size);
-}
-
 static void setup_servers()
 {
     if (webserver_enabled) {
@@ -352,6 +346,33 @@ extern "C" void app_select_appcall(void)
     }
 }
 
+void Network::tapdev_send(void *pPacket, unsigned int size)
+{
+    memcpy(ethernet->request_packet_buffer(), pPacket, size);
+    ethernet->write_packet((uint8_t *) pPacket, size);
+}
+
+// define this to split full frames into two to illicit an ack from the endpoint
+#define SPLIT_OUTPUT
+
+#ifdef SPLIT_OUTPUT
+extern "C" void uip_split_output(void);
+extern "C" void tcpip_output()
+{
+    theNetwork->tapdev_send(uip_buf, uip_len);
+}
+void network_device_send()
+{
+    uip_split_output();
+    //tcpip_output();
+}
+#else
+void network_device_send()
+{
+    tapdev_send(uip_buf, uip_len);
+}
+#endif
+
 void Network::handlePacket(void)
 {
     if (uip_len > 0) {  /* received packet */
@@ -366,8 +387,9 @@ void Network::handlePacket(void)
 
             if (uip_len > 0) {
                 uip_arp_out();
-                tapdev_send(uip_buf, uip_len);
+                network_device_send();
             }
+
         } else if (BUF->type == htons(UIP_ETHTYPE_ARP)) { /*ARP packet */
             uip_arp_arpin();
             /* If the above function invocation resulted in data that
@@ -376,6 +398,7 @@ void Network::handlePacket(void)
             if (uip_len > 0) {
                 tapdev_send(uip_buf, uip_len);  /* ARP ack*/
             }
+
         } else {
             printf("Unknown ethernet packet type %04X\n", BUF->type);
             uip_len = 0;

@@ -27,12 +27,12 @@ public:
     void on_get_public_data(void* argument);
     void dhcpc_configured(uint32_t ipaddr, uint32_t ipmask, uint32_t ipgw);
     static Network *getInstance() { return instance;}
+    void tapdev_send(void *pPacket, unsigned int size);
 
 private:
     void init();
     uint32_t tick(uint32_t dummy);
     void handlePacket();
-    void tapdev_send(void *pPacket, unsigned int size);
 
     static Network *instance;
 
