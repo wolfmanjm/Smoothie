@@ -293,7 +293,7 @@ void Network::dhcpc_configured(uint32_t ipaddr, uint32_t ipmask, uint32_t ipgw)
 void Network::init(void)
 {
     // two timers for tcp/ip
-    timer_set(&periodic_timer, CLOCK_SECOND / 10); /* 0.1s */
+    timer_set(&periodic_timer, CLOCK_SECOND / 2); /* 0.5s */
     timer_set(&arp_timer, CLOCK_SECOND * 10);   /* 10s */
 
     // Initialize the uIP TCP/IP stack.

@@ -412,7 +412,7 @@ httpd_appcall(void)
     } else if (s != NULL) {
         if (uip_poll()) {
             ++s->timer;
-            if (s->timer >= 200) { // if period is 0.1 sec this is 20 seconds
+            if (s->timer >= 20*2) { // we have a 0.5 second poll and we want 20 second timeout
                 DEBUG_PRINTF("Timer expired, aborting\n");
                 uip_abort();
                 return;
