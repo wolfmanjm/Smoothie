@@ -95,7 +95,8 @@ struct dhcp_msg {
 #define DHCP_OPTION_REQ_LIST     55
 #define DHCP_OPTION_END         255
 
-static const u8_t xid[4] = {0xad, 0xde, 0x12, 0x23};
+static uint32_t xid= 0x00112233;
+
 static const u8_t magic_cookie[4] = {99, 130, 83, 99};
 /*---------------------------------------------------------------------------*/
 static u8_t *
@@ -150,7 +151,7 @@ create_msg(register struct dhcp_msg *m, int rea)
     m->htype = DHCP_HTYPE_ETHERNET;
     m->hlen = s.mac_len;
     m->hops = 0;
-    memcpy(m->xid, xid, sizeof(m->xid));
+    memcpy(m->xid, &xid, sizeof(m->xid));
     m->secs = 0;
     m->flags = HTONS(BOOTP_BROADCAST); /*  Broadcast bit. */
     /*  uip_ipaddr_copy(m->ciaddr, uip_hostaddr);*/
@@ -241,7 +242,7 @@ parse_msg(void)
     struct dhcp_msg *m = (struct dhcp_msg *)uip_appdata;
 
     if (m->op == DHCP_REPLY &&
-        memcmp(m->xid, xid, sizeof(xid)) == 0 &&
+        memcmp(m->xid, &xid, sizeof(xid)) == 0 &&
         memcmp(m->chaddr, s.mac_addr, s.mac_len) == 0) {
         memcpy(&s.ipaddr, m->yiaddr, 4);
         return parse_options(&m->options[4], uip_datalen());
@@ -257,6 +258,7 @@ PT_THREAD(handle_dhcp(void))
     /* try_again:*/
     s.state = STATE_SENDING;
     s.ticks = CLOCK_SECOND;
+    xid++;
 
     send_discover();
     do {
@@ -280,6 +282,7 @@ PT_THREAD(handle_dhcp(void))
     } while (s.state != STATE_OFFER_RECEIVED);
 
     s.ticks = CLOCK_SECOND;
+    xid++;
 
     send_request(0);
     do {
@@ -305,17 +308,43 @@ PT_THREAD(handle_dhcp(void))
 
     dhcpc_configured(&s);
 
-    // just hang here for now.. TODO handle expiration
+    // now we wait for close to expiration and renew the lease
     do {
-        PT_YIELD(&s.pt);
+        // we should reacquire expired leases here.
+        timer_set(&s.timer, (ntohl(s.lease_time) * 0.5)*CLOCK_SECOND); // half of lease expire time
+        PT_WAIT_UNTIL(&s.pt, timer_expired(&s.timer));
+
+        uip_log("reaquire dhcp lease");
+
+        // spec says send request direct to server that gave it to us, but seems to be unecessary
+        //uip_ipaddr_copy(&s.conn->ripaddr, s.serverid);
+
+        s.ticks = CLOCK_SECOND;
+        xid++;
+        send_request(0);
+        do {
+            timer_set(&s.timer, s.ticks);
+            PT_WAIT_UNTIL(&s.pt, uip_newdata() || timer_expired(&s.timer));
+
+            if (timer_expired(&s.timer)) {
+                if (s.ticks <= CLOCK_SECOND * 10) {
+                    s.ticks += CLOCK_SECOND;
+                    send_request(0); // resend only on timeout
+                } else {
+                    // give up
+                    // TODO probably need to deal with upstream apps and stop them then reinit them
+                    PT_RESTART(&s.pt);
+                }
+            }else{
+                if (parse_msg() == DHCPACK) {
+                    uip_log("dhcp lease renewed");
+                    break;
+                }
+            }
+            PT_YIELD(&s.pt);
+        }while(1);
+
     }while(1);
-    // we should reacquire expired leases here.
-    // timer_set(&s.timer, ntohl(s.lease_time*CLOCK_SECOND); // after this number of seconds reacquire.
-    // PT_WAIT_UNTIL(&s.pt, timer_expired(&s.timer));
-    // uip_log("reaquire lease");
-    // uip_ipaddr(ipaddr, 0, 0, 0, 0);
-    // uip_sethostaddr(ipaddr);
-    // PT_RESTART(&s.pt);
 
     PT_END(&s.pt);
 }

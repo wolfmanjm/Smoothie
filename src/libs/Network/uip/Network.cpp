@@ -343,6 +343,9 @@ extern "C" void app_select_appcall(void)
             }
             sftpd->appcall();
             break;
+        default:
+            printf("unknown app for port: %d\n", uip_conn->lport);
+
     }
 }
 
