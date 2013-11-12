@@ -322,7 +322,9 @@ void Network::init(void)
 void Network::on_main_loop(void *argument)
 {
     // issue commands here if any available
-    command_q->pop();
+    while(command_q->pop()) {
+        // keep feeding them until empty
+    }
 }
 
 // select between webserver and telnetd server

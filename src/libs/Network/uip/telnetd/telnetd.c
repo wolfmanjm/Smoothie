@@ -204,6 +204,8 @@ senddata(void)
     char *bufptr, *lineptr;
     int buflen, linelen;
 
+    if(s == NULL) return; // if closed don't do anything
+
     bufptr = uip_appdata;
     buflen = 0;
     for (s->numsent = 0; s->numsent < TELNETD_CONF_NUMLINES && s->lines[s->numsent] != NULL ; ++s->numsent) {
@@ -228,6 +230,7 @@ closed(void)
     for (i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
         if (s->lines[i] != NULL) {
             dealloc_line(s->lines[i]);
+            s->lines[i]= NULL;
         }
     }
     shell_stop();
@@ -348,7 +351,8 @@ newdata(void)
     }
 
     // if the command queue is getting too big we stop TCP
-    if(shell_queue_size() > 10) {
+    if(shell_queue_size() > 20) {
+        //printf("stopped: %d\n", shell_queue_size());
         uip_stop();
     }
 }
@@ -381,9 +385,11 @@ telnetd_appcall(void)
             free(s);
             s = NULL;
         }
+        if(uip_stopped(uip_conn)) {
+            uip_restart();
+        }
         return;
     }
-
 
     if (uip_acked()) {
         acked();
@@ -397,11 +403,12 @@ telnetd_appcall(void)
         senddata();
     }
 
-    if(uip_poll() && uip_stopped(uip_conn) && shell_queue_size() < 5) {
+    if(uip_stopped(uip_conn) && shell_queue_size() < 5) {
+        //printf("restarted %d\n", shell_queue_size());
         uip_restart();
     }
 
-    if(s->first_time == 1 && uip_poll()) {
+    if(s != NULL && s->first_time == 1 && uip_poll()) {
         s->first_time= 0;
         shell_start();
         senddata();

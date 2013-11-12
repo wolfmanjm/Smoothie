@@ -40,6 +40,9 @@
 #include "utils.h"
 #include "stdio.h"
 #include "stdlib.h"
+#include "CommandQueue.h"
+
+static CommandQueue *command_queue= CommandQueue::getInstance();
 
 struct ptentry {
     uint16_t command_cs;
@@ -67,7 +70,7 @@ static void
 help(char *str)
 {
     shell_output("Available commands: All others are passed on\n");
-    shell_output("net         - show network info\n");
+    shell_output("netstat     - show network info\n");
     shell_output("?           - show network help\n");
     shell_output("help        - show command help\n");
     shell_output("exit, quit  - exit shell\n");
@@ -94,6 +97,7 @@ static void connections(char *str)
 static void shell_test(char *str)
 {
     printf("In Test\n");
+
     // struct timer t;
     // u16_t ticks=  CLOCK_SECOND*5;
     // timer_set(&t, ticks);
@@ -141,10 +145,8 @@ static void shell_test(char *str)
 }
 
 /*---------------------------------------------------------------------------*/
-#include "CommandQueue.h"
-static CommandQueue *command_queue= CommandQueue::getInstance();
-static void
-unknown(char *str)
+
+static void unknown(char *str)
 {
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
