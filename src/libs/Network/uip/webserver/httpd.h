@@ -41,8 +41,8 @@
 struct httpd_state {
   unsigned char timer;
   struct psock sin, sout;
-  struct pt outputpt, scriptpt;
-  char inputbuf[100];
+  struct pt outputpt;
+  char inputbuf[132];
   char filename[60];
   char upload_name[32];
   char command[100];

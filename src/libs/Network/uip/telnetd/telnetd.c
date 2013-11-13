@@ -403,7 +403,7 @@ telnetd_appcall(void)
         senddata();
     }
 
-    if(uip_stopped(uip_conn) && shell_queue_size() < 5) {
+    if(uip_poll() && uip_stopped(uip_conn) && shell_queue_size() < 5) {
         //printf("restarted %d\n", shell_queue_size());
         uip_restart();
     }

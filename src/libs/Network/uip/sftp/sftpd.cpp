@@ -214,15 +214,10 @@ void Sftpd::appcall(void)
         }
     }
 
-
     if (uip_rexmit() || uip_newdata() || uip_acked() || uip_connected() || uip_poll()) {
         this->senddata();
     }
 
-    if (uip_poll() && uip_stopped(uip_conn)) {
-        DEBUG_PRINTF("sftp: restart\n");
-        uip_restart();
-    }
 }
 
 void Sftpd::init(void)

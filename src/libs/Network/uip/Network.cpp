@@ -225,7 +225,21 @@ void Network::on_idle(void *argument)
             }
 #endif
         }
-
+/*
+        This didn't work actually made it worse,it should have worked though
+        else{
+            // TODO if the command queue is below a certain amount we should poll any stopped connections
+            if(command_q->size() < 4) {
+                for (struct uip_conn *connr = &uip_conns[0]; connr <= &uip_conns[UIP_CONNS - 1]; ++connr) {
+                    if(uip_stopped(connr)){
+                        // Force a poll of this
+                        printf("Force poll of connection\n");
+                        uip_poll_conn(connr);
+                    }
+                }
+            }
+        }
+*/
         /* Call the ARP timer function every 10 seconds. */
         if (timer_expired(&arp_timer)) {
             timer_reset(&arp_timer);

@@ -353,6 +353,8 @@ PT_THREAD(handle_input(struct httpd_state *s))
                 s->uploadok= 0;
             }else{
                 while(s->content_length > 0) {
+                    // TODO convert to a PTHREAD and read buffer directly, then binary files can be uploaded
+                    // NOTE this also truncates long lines to 132 characters sizeof(inputbuf)
                     PSOCK_READTO(&s->sin, ISO_nl);
                     int n= PSOCK_DATALEN(&s->sin);
                     if(!save_file(s->inputbuf, n)) break;
