@@ -402,7 +402,7 @@ char psock_newdata(struct psock *s);
  */
 #define PSOCK_GET_LENGTH_OF_REST_OF_BUFFER(psock) (psock)->readlen
 #define PSOCK_GET_START_OF_REST_OF_BUFFER(psock) (psock)->readptr
-#define PSOCK_MARK_BUFFER_READ(psock) (psock)->readlen= 0
+#define PSOCK_MARK_BUFFER_READ(psock) do { (psock)->readlen= 0; (psock)->state = 0; } while(0)
 
 #endif /* __PSOCK_H__ */
 
