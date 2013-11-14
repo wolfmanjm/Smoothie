@@ -65,7 +65,7 @@ function clickXY(event){
     } else {
       command = "G1 Y" + (magnitude * ydir) + " F" + document.getElementById("xy_velocity").value;
     }
-    runCommand(command);
+    runCommand("G91 " + command + " G90");
   } else { // home button pressed
     if (pos_x < 49 && pos_y < 49) { // home x button
       command = "G28 X0";
@@ -94,16 +94,16 @@ function clickZ(event){
   var range = lookupRange(Math.abs(ydelta));
   var direction = (ydelta > 0)?1:-1;
   if (range < 4) {
-    runCommand("G1 Z" + (Math.pow(10,range-2) * direction) + " F" + document.getElementById("z_velocity").value);
+    runCommand("G91 G1 Z" + (Math.pow(10,range-2) * direction) + " F" + document.getElementById("z_velocity").value + " G90");
   }
-}  
+}
 
 function extrude(event,a,b) {
   var length = document.getElementById("extrude_length").value;
   var velocity = document.getElementById("extrude_velocity").value;
   var direction = (event.currentTarget.id=='extrude')?1:-1;
   runCommand("G1 E" + (length * direction) + " F" + velocity);
-}    
+}
 
 function motorsOff(event) {
   runCommand("M18");
