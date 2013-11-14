@@ -41,8 +41,8 @@
 struct httpd_state {
   unsigned char timer;
   struct psock sin, sout;
-  struct pt outputpt;
-  char inputbuf[132];
+  struct pt outputpt, inputpt;
+  char inputbuf[80];
   char filename[60];
   char upload_name[32];
   char command[100];
@@ -53,7 +53,8 @@ struct httpd_state {
   char *strbuf;
   int content_length;
   unsigned short count;
-  int uploadok;
+  uint8_t uploadok;
+  uint8_t upload_state;
 };
 
 #ifdef __cplusplus

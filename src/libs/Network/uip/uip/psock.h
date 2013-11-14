@@ -109,17 +109,17 @@ struct psock {
 			    psock functions. */
   const u8_t *sendptr;   /* Pointer to the next data to be sent. */
   u8_t *readptr;         /* Pointer to the next data to be read. */
-  
+
   char *bufptr;          /* Pointer to the buffer used for buffering
 			    incoming data. */
-  
+
   u16_t sendlen;         /* The number of bytes left to be sent. */
   u16_t readlen;         /* The number of bytes left to be read. */
 
   struct psock_buf buf;  /* The structure holding the state of the
 			    input buffer. */
   unsigned int bufsize;  /* The size of the input buffer. */
-  
+
   unsigned char state;   /* The state of the protosocket. */
 };
 
@@ -247,8 +247,28 @@ PT_THREAD(psock_readbuf(struct psock *psock));
  *
  * \hideinitializer
  */
-#define PSOCK_READBUF(psock)				\
+#define PSOCK_READBUF(psock)        \
   PT_WAIT_THREAD(&((psock)->pt), psock_readbuf(psock))
+
+PT_THREAD(psock_readbuf_len(struct psock *psock,  uint16_t len));
+
+/**
+ * Read n bytes of data where n is the smaller of the buffer size or len
+ *
+ * This macro will block waiting for data and read the data into the
+ * input buffer specified with the call to PSOCK_INIT(). Data is read
+ * until either len bytes are read or size of the buffer, note len should
+ * be smaller or equel to the buffer size
+ *
+ * \param psock (struct psock *) A pointer to the protosocket from which
+ * data should be read.
+ *
+ * \param len (int) The number of bytes to be read.
+ * \hideinitializer
+ */
+#define PSOCK_READBUF_LEN(psock, len)                        \
+PT_WAIT_THREAD(&((psock)->pt), psock_readbuf_len(psock, len))
+
 
 PT_THREAD(psock_readto(struct psock *psock, unsigned char c));
 /**
@@ -353,13 +373,13 @@ char psock_newdata(struct psock *s);
    PSOCK_BEGIN(s);
 
    PSOCK_WAIT_UNTIL(s, PSOCK_NEWADATA(s) || timer_expired(t));
-   
+
    if(PSOCK_NEWDATA(s)) {
      PSOCK_READTO(s, '\n');
    } else {
      handle_timed_out(s);
    }
-   
+
    PSOCK_END(s);
  }
  \endcode
@@ -374,6 +394,15 @@ char psock_newdata(struct psock *s);
 
 #define PSOCK_WAIT_THREAD(psock, condition)   \
   PT_WAIT_THREAD(&((psock)->pt), (condition))
+
+
+/**
+ * return a pointer and length of whatever is left in the uip_appdata buffer
+ * after previous use of PSOCK_READTO() and mark the internal buffer as fully read
+ */
+#define PSOCK_GET_LENGTH_OF_REST_OF_BUFFER(psock) (psock)->readlen
+#define PSOCK_GET_START_OF_REST_OF_BUFFER(psock) (psock)->readptr
+#define PSOCK_MARK_BUFFER_READ(psock) (psock)->readlen= 0
 
 #endif /* __PSOCK_H__ */
 

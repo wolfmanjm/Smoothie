@@ -111,7 +111,7 @@ static int open_file(const char *fn)
     return 1;
 }
 
-static int save_file(char *buf, unsigned int len)
+static int save_file(uint8_t *buf, unsigned int len)
 {
     if(fwrite(buf, 1, len, fd) == len){
         file_cnt+= len;
@@ -256,6 +256,79 @@ PT_THREAD(handle_output(struct httpd_state *s))
     PT_END(&s->outputpt);
 }
 /*---------------------------------------------------------------------------*/
+// this forces us to yield every other call as we read all data everytime
+static char has_newdata(struct httpd_state *s)
+{
+    if (s->upload_state == 1) {
+        /* All data in uip_appdata buffer already consumed. */
+        s->upload_state = 0;
+        return 0;
+    } else if (uip_newdata()) {
+        /* There is new data that has not been consumed. */
+        return 1;
+    } else {
+        /* There is no new data. */
+        return 0;
+    }
+}
+
+/*
+ * handle trhe uploaded data, as there may be part of that buffer still in the last packet buffer
+ * write that first from the buf/len parameters
+ */
+static PT_THREAD(handle_uploaded_data(struct httpd_state *s, uint8_t *buf, int len))
+{
+    PT_BEGIN(&s->inputpt);
+
+    DEBUG_PRINTF("Uploading file: %s, %d\n", s->upload_name, s->content_length);
+
+    // The body is the raw data to be stored to the file
+    if(!open_file(s->upload_name)) {
+        DEBUG_PRINTF("failed to open file\n");
+        s->uploadok= 0;
+        PT_EXIT(&s->inputpt);
+    }
+
+    DEBUG_PRINTF("opened file: %s\n", s->upload_name);
+
+    if(len > 0) {
+        // write the first part of the buffer
+        if(!save_file(buf, len)) {
+            DEBUG_PRINTF("initial write failed\n");
+            s->uploadok= 0;
+            PT_EXIT(&s->inputpt);
+        }
+        s->content_length -= len;
+    }
+
+    s->upload_state= 1; // first time through we need to yield to get new data
+
+    // save the entire input buffer
+    while(s->content_length > 0) {
+        PT_WAIT_UNTIL(&s->inputpt, has_newdata(s));
+        s->upload_state= 1;
+
+        u8_t *readptr= (u8_t *)uip_appdata;
+        int readlen= uip_datalen();
+        //DEBUG_PRINTF("read %d bytes of data\n", readlen);
+
+        if(readlen > 0) {
+            if(!save_file(readptr, readlen)) {
+                DEBUG_PRINTF("write failed\n");
+                s->uploadok= 0;
+                PT_EXIT(&s->inputpt);
+            }
+            s->content_length -= readlen;
+        }
+    }
+
+    close_file();
+    s->uploadok= 1;
+    DEBUG_PRINTF("finished upload\n");
+
+    PT_END(&s->inputpt);
+}
+/*---------------------------------------------------------------------------*/
 static
 PT_THREAD(handle_input(struct httpd_state *s))
 {
@@ -345,25 +418,8 @@ PT_THREAD(handle_input(struct httpd_state *s))
             break;
 
         }else if(s->state == STATE_UPLOAD) {
-            DEBUG_PRINTF("Uploading file: %s, %d\n", s->upload_name, s->content_length);
-
-            // The body is the raw data to be stored to the file
-            if(!open_file(s->upload_name)) {
-                DEBUG_PRINTF("failed to open file\n");
-                s->uploadok= 0;
-            }else{
-                while(s->content_length > 0) {
-                    // TODO convert to a PTHREAD and read buffer directly, then binary files can be uploaded
-                    // NOTE this also truncates long lines to 132 characters sizeof(inputbuf)
-                    PSOCK_READTO(&s->sin, ISO_nl);
-                    int n= PSOCK_DATALEN(&s->sin);
-                    if(!save_file(s->inputbuf, n)) break;
-                    s->content_length -= n;
-                }
-                close_file();
-                s->uploadok= s->content_length == 0 ? 1 : 0;
-                DEBUG_PRINTF("finished upload status %d\n", s->uploadok);
-            }
+            PSOCK_WAIT_THREAD(&s->sin, handle_uploaded_data(s, PSOCK_GET_START_OF_REST_OF_BUFFER(&s->sin), PSOCK_GET_LENGTH_OF_REST_OF_BUFFER(&s->sin)));
+            PSOCK_MARK_BUFFER_READ(&s->sin);
             s->state = STATE_OUTPUT;
             break;
 
@@ -406,6 +462,7 @@ httpd_appcall(void)
         PSOCK_INIT(&s->sin, s->inputbuf, sizeof(s->inputbuf) - 1);
         PSOCK_INIT(&s->sout, s->inputbuf, sizeof(s->inputbuf) - 1);
         PT_INIT(&s->outputpt);
+        PT_INIT(&s->inputpt);
         s->state = STATE_WAITING;
         /*    timer_set(&s->timer, CLOCK_SECOND * 100);*/
         s->timer = 0;
