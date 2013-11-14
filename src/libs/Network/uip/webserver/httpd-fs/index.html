@@ -102,7 +102,7 @@ function extrude(event,a,b) {
   var length = document.getElementById("extrude_length").value;
   var velocity = document.getElementById("extrude_velocity").value;
   var direction = (event.currentTarget.id=='extrude')?1:-1;
-  runCommand("G1 E" + (length * direction) + " F" + velocity);
+  runCommand("G91 G1 E" + (length * direction) + " F" + velocity + " G90");
 }
 
 function motorsOff(event) {
