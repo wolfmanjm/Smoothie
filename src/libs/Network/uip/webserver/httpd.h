@@ -55,6 +55,7 @@ struct httpd_state {
   unsigned short count;
   uint8_t uploadok;
   uint8_t upload_state;
+  uint8_t cache_page;
 };
 
 #ifdef __cplusplus

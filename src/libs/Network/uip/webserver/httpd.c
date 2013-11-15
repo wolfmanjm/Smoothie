@@ -183,8 +183,7 @@ PT_THREAD(send_file(struct httpd_state *s))
     PSOCK_END(&s->sout);
 }
 /*---------------------------------------------------------------------------*/
-static
-PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
+static PT_THREAD(send_headers_3(struct httpd_state *s, const char *statushdr, char send_content_type))
 {
     char *ptr;
 
@@ -192,23 +191,29 @@ PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
 
     PSOCK_SEND_STR(&s->sout, statushdr);
 
-    ptr = strrchr(s->filename, ISO_period);
-    if (ptr == NULL) {
-        PSOCK_SEND_STR(&s->sout, http_content_type_plain); // http_content_type_binary);
-    } else if (strncmp(http_html, ptr, 5) == 0 || strncmp(http_shtml, ptr, 6) == 0) {
-        PSOCK_SEND_STR(&s->sout, http_content_type_html);
-    } else if (strncmp(http_css, ptr, 4) == 0) {
-        PSOCK_SEND_STR(&s->sout, http_content_type_css);
-    } else if (strncmp(http_png, ptr, 4) == 0) {
-        PSOCK_SEND_STR(&s->sout, http_content_type_png);
-    } else if (strncmp(http_gif, ptr, 4) == 0) {
-        PSOCK_SEND_STR(&s->sout, http_content_type_gif);
-    } else if (strncmp(http_jpg, ptr, 4) == 0) {
-        PSOCK_SEND_STR(&s->sout, http_content_type_jpg);
-    } else {
-        PSOCK_SEND_STR(&s->sout, http_content_type_plain);
+    if(send_content_type) {
+        ptr = strrchr(s->filename, ISO_period);
+        if (ptr == NULL) {
+            PSOCK_SEND_STR(&s->sout, http_content_type_plain); // http_content_type_binary);
+        } else if (strncmp(http_html, ptr, 5) == 0 || strncmp(http_shtml, ptr, 6) == 0) {
+            PSOCK_SEND_STR(&s->sout, http_content_type_html);
+        } else if (strncmp(http_css, ptr, 4) == 0) {
+            PSOCK_SEND_STR(&s->sout, http_content_type_css);
+        } else if (strncmp(http_png, ptr, 4) == 0) {
+            PSOCK_SEND_STR(&s->sout, http_content_type_png);
+        } else if (strncmp(http_gif, ptr, 4) == 0) {
+            PSOCK_SEND_STR(&s->sout, http_content_type_gif);
+        } else if (strncmp(http_jpg, ptr, 4) == 0) {
+            PSOCK_SEND_STR(&s->sout, http_content_type_jpg);
+        } else {
+            PSOCK_SEND_STR(&s->sout, http_content_type_plain);
+        }
     }
     PSOCK_END(&s->sout);
+}
+static PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
+{
+    return send_headers_3(s, statushdr, 1);
 }
 /*---------------------------------------------------------------------------*/
 static
@@ -244,6 +249,12 @@ PT_THREAD(handle_output(struct httpd_state *s))
                                     http_header_404));
         PT_WAIT_THREAD(&s->outputpt,
                        send_file(s));
+
+    } else if(s->cache_page) {
+        // tell it it has not changed
+        DEBUG_PRINTF("304 Not Modified\n");
+        PT_WAIT_THREAD(&s->outputpt, send_headers_3(s, http_header_304, 0));
+
     } else {
         DEBUG_PRINTF("sending file %s\n", s->filename);
         PT_WAIT_THREAD(&s->outputpt,
@@ -344,14 +355,14 @@ PT_THREAD(handle_input(struct httpd_state *s))
         DEBUG_PRINTF("Unexpected method: %s\n", s->inputbuf);
         PSOCK_CLOSE_EXIT(&s->sin);
     }
-    DEBUG_PRINTF("Method: %s\n", s->inputbuf);
+
+    DEBUG_PRINTF("Method: %s\n", s->method == POST ? "POST" : "GET");
 
     PSOCK_READTO(&s->sin, ISO_space);
 
     if (s->inputbuf[0] != ISO_slash) {
         PSOCK_CLOSE_EXIT(&s->sin);
     }
-
 
     if (s->inputbuf[1] == ISO_space) {
         strncpy(s->filename, http_index_html, sizeof(s->filename));
@@ -366,6 +377,7 @@ PT_THREAD(handle_input(struct httpd_state *s))
 
     s->state = STATE_HEADERS;
     s->content_length= 0;
+    s->cache_page= 0;
     while (1) {
         if(s->state == STATE_HEADERS) {
             // read the headers of the request
@@ -395,9 +407,13 @@ PT_THREAD(handle_input(struct httpd_state *s))
                     s->inputbuf[PSOCK_DATALEN(&s->sin) - 2] = 0;
                     strncpy(s->upload_name, &s->inputbuf[12], sizeof(s->upload_name)-1);
                     DEBUG_PRINTF("Upload name= %s\n", s->upload_name);
+
+                }else if(strncmp(s->inputbuf, http_cache_control, sizeof(http_cache_control)-1) == 0) {
+                    s->inputbuf[PSOCK_DATALEN(&s->sin) - 2] = 0;
+                    s->cache_page= strncmp(http_no_cache, &s->inputbuf[sizeof(http_cache_control)-1], sizeof(http_no_cache)-1) != 0;
+                    DEBUG_PRINTF("cache page= %d\n", s->cache_page);
                 }
             }
-
         }else if(s->state == STATE_BODY) {
             // read the Body of the request
             if(s->content_length > 0) {
