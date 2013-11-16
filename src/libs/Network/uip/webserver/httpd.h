@@ -51,10 +51,10 @@ struct httpd_state {
   char state;
   struct httpd_fs_file file;
   FILE *fd;
-  int len;
+  uint16_t len;
   char *strbuf;
   int content_length;
-  unsigned short count;
+  uint16_t count;
   uint8_t uploadok;
   uint8_t upload_state;
   uint8_t cache_page;
