@@ -13,6 +13,7 @@ CommandQueue *CommandQueue::instance = NULL;
 CommandQueue::CommandQueue()
 {
     command_queue_instance = this;
+    stream_map[0]= &(StreamOutput::NullStream);
 }
 
 

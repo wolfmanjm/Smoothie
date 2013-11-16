@@ -150,7 +150,7 @@ static void unknown(char *str)
 {
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
-        command_queue->add(str, 0);
+        command_queue->add(str, 2);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -187,7 +187,7 @@ static int shell_command_result(const char *str)
 
 void shell_init(void)
 {
-    command_queue->registerCallback(shell_command_result, 0);
+    command_queue->registerCallback(shell_command_result, 2);
 }
 /*---------------------------------------------------------------------------*/
 void

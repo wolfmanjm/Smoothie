@@ -285,6 +285,12 @@ PT_THREAD(handle_output(struct httpd_state *s))
         // then send response as we get it
         PT_WAIT_THREAD(&s->outputpt, send_command_response(s));
 
+    }else if(s->method == POST && strcmp(s->filename, "/command_silent") == 0) {
+        DEBUG_PRINTF("Executing silent command post: %s\n", s->command);
+        // stick the command  on the command queue specifying null output stream
+        network_add_command(s->command, 0);
+        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+
     }else if(s->method == POST && strcmp(s->filename, "/upload") == 0) {
         DEBUG_PRINTF("upload output: %d\n", s->uploadok);
         if(s->uploadok == 0) {

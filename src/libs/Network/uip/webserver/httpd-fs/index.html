@@ -14,16 +14,16 @@ function runCommand(cmd) {
   // Get some values from elements on the page:
   var $form = $( "#commandForm" );
   cmd += "\n";
-  url = $form.attr( "action" );
+  url = "/command_silent"; // $form.attr( "action" );
   // Send the data using post
   var posting = $.post( url, cmd );
   // Put the results in a div
-  posting.done(function( data ) {
-    $( "#result" ).empty();
-    $.each(data.split('\n'), function(index) {
-      $( "#result" ).append( this + '<br/>' );
-    });
-  });
+  // posting.done(function( data ) {
+  //   $( "#result" ).empty();
+  //   $.each(data.split('\n'), function(index) {
+  //     $( "#result" ).append( this + '<br/>' );
+  //   });
+  // });
 }
 
 function lookupConcentric(radius){

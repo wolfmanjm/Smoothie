@@ -24,7 +24,7 @@ public:
 private:
     typedef struct {char* str; uint8_t id;} cmd_t;
     Fifo<cmd_t> q;
-    NetworkStream* stream_map[2];
+    StreamOutput* stream_map[3];
     static CommandQueue *instance;
 };
 
