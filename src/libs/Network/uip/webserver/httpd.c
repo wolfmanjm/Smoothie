@@ -516,6 +516,9 @@ httpd_appcall(void)
 
     if (uip_closed() || uip_aborted() || uip_timedout()) {
         if (s != NULL) {
+            DEBUG_PRINTF("Closing connection: %d\n", HTONS(uip_conn->rport));
+            if(s->fd != NULL) fclose(fd); // clean up
+            if(s->strbuf != NULL) free(s->strbuf);
             free(s);
             uip_conn->appstate = NULL;
         }
@@ -523,7 +526,9 @@ httpd_appcall(void)
     } else if (uip_connected()) {
         s = malloc(sizeof(struct httpd_state));
         uip_conn->appstate = s;
-        DEBUG_PRINTF("Connection: %d.%d.%d.%d\n", uip_ipaddr1(uip_conn->ripaddr), uip_ipaddr2(uip_conn->ripaddr), uip_ipaddr3(uip_conn->ripaddr), uip_ipaddr4(uip_conn->ripaddr));
+        DEBUG_PRINTF("Connection: %d.%d.%d.%d:%d\n", uip_ipaddr1(uip_conn->ripaddr), uip_ipaddr2(uip_conn->ripaddr),
+            uip_ipaddr3(uip_conn->ripaddr), uip_ipaddr4(uip_conn->ripaddr),
+            HTONS(uip_conn->rport));
 
         PSOCK_INIT(&s->sin, s->inputbuf, sizeof(s->inputbuf) - 1);
         PSOCK_INIT(&s->sout, s->inputbuf, sizeof(s->inputbuf) - 1);
@@ -532,6 +537,8 @@ httpd_appcall(void)
         s->state = STATE_WAITING;
         /*    timer_set(&s->timer, CLOCK_SECOND * 100);*/
         s->timer = 0;
+        s->fd= NULL;
+        s->strbuf= NULL;
         handle_connection(s);
 
     } else if (s != NULL) {
@@ -548,6 +555,7 @@ httpd_appcall(void)
         handle_connection(s);
 
     } else {
+        DEBUG_PRINTF("abort\n");
         uip_abort();
     }
 }
