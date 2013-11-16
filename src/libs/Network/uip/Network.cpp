@@ -419,7 +419,7 @@ void Network::handlePacket(void)
             }
 
         } else {
-            printf("Unknown ethernet packet type %04X\n", BUF->type);
+            printf("Unknown ethernet packet type %04X\n", htons(BUF->type));
             uip_len = 0;
         }
     }

@@ -107,7 +107,19 @@ static int open_file(const char *fn)
     strcpy(output_filename, "/sd/");
     strcat(output_filename, fn);
     fd= fopen(output_filename, "w");
-    if(fd == NULL) return 0;
+    if(fd == NULL) {
+        free(output_filename);
+        output_filename= NULL;
+        return 0;
+    }
+    return 1;
+}
+
+static int close_file()
+{
+    free(output_filename);
+    output_filename= NULL;
+    fclose(fd);
     return 1;
 }
 
@@ -122,16 +134,11 @@ static int save_file(uint8_t *buf, unsigned int len)
             fd= fopen(output_filename, "a");
         }
         return 1;
+
+    }else{
+        close_file();
+        return 0;
     }
-
-    return 0;
-}
-
-static int close_file()
-{
-    free(output_filename);
-    fclose(fd);
-    return 1;
 }
 
 static int fs_open(struct httpd_state *s)
