@@ -134,6 +134,23 @@ static int close_file()
     return 1;
 }
 
+static int fs_open(struct httpd_state *s)
+{
+    if(strncmp(s->filename, "/sd/", 4) == 0) {
+        DEBUG_PRINTF("Opening file %s\n", s->filename);
+        s->fd= fopen(s->filename, "r");
+        if(s->fd == NULL) {
+            DEBUG_PRINTF("Failed to open: %s\n", s->filename);
+            return 0;
+        }
+        return 1;
+
+    }else{
+        s->fd= NULL;
+        return httpd_fs_open(s->filename, &s->file);
+    }
+}
+
 /*---------------------------------------------------------------------------*/
 static PT_THREAD(send_command_response(struct httpd_state *s))
 {
@@ -154,8 +171,7 @@ static PT_THREAD(send_command_response(struct httpd_state *s))
 }
 
 /*---------------------------------------------------------------------------*/
-static unsigned short
-generate_part_of_file(void *state)
+static unsigned short generate_part_of_file(void *state)
 {
     struct httpd_state *s = (struct httpd_state *)state;
 
@@ -167,6 +183,22 @@ generate_part_of_file(void *state)
     memcpy(uip_appdata, s->file.data, s->len);
 
     return s->len;
+}
+/*---------------------------------------------------------------------------*/
+static unsigned short generate_part_of_sd_file(void *state)
+{
+    struct httpd_state *s = (struct httpd_state *)state;
+
+    int len= fread(uip_appdata, 1, uip_mss(), s->fd);
+    if(len <= 0) {
+        // we need to send something
+        strcpy(uip_appdata, "\r\n");
+        len= 2;
+        s->len= 0;
+    }else{
+        s->len= len;
+    }
+    return len;
 }
 /*---------------------------------------------------------------------------*/
 static
@@ -182,6 +214,22 @@ PT_THREAD(send_file(struct httpd_state *s))
 
     PSOCK_END(&s->sout);
 }
+
+/*---------------------------------------------------------------------------*/
+static PT_THREAD(send_sd_file(struct httpd_state *s))
+{
+    PSOCK_BEGIN(&s->sout);
+
+    do {
+        PSOCK_GENERATOR_SEND(&s->sout, generate_part_of_sd_file, s);
+    } while (s->len > 0);
+
+    fclose(s->fd);
+    s->fd= NULL;
+
+    PSOCK_END(&s->sout);
+}
+
 /*---------------------------------------------------------------------------*/
 static PT_THREAD(send_headers_3(struct httpd_state *s, const char *statushdr, char send_content_type))
 {
@@ -240,15 +288,12 @@ PT_THREAD(handle_output(struct httpd_state *s))
             PSOCK_SEND_STR(&s->sout, "OK\r\n");
         }
 
-    }else if (!httpd_fs_open(s->filename, &s->file)) {
+    }else if (!fs_open(s)) {
         DEBUG_PRINTF("404 file not found\n");
         httpd_fs_open(http_404_html, &s->file);
         strcpy(s->filename, http_404_html);
-        PT_WAIT_THREAD(&s->outputpt,
-                       send_headers(s,
-                                    http_header_404));
-        PT_WAIT_THREAD(&s->outputpt,
-                       send_file(s));
+        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_404));
+        PT_WAIT_THREAD(&s->outputpt, send_file(s));
 
     } else if(s->cache_page) {
         // tell it it has not changed
@@ -257,12 +302,17 @@ PT_THREAD(handle_output(struct httpd_state *s))
 
     } else {
         DEBUG_PRINTF("sending file %s\n", s->filename);
-        PT_WAIT_THREAD(&s->outputpt,
-                       send_headers(s,
-                                    http_header_200));
+        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+        if(s->fd != NULL) {
+            // send from sd card
+            PT_WAIT_THREAD(&s->outputpt, send_sd_file(s));
 
-        PT_WAIT_THREAD(&s->outputpt, send_file(s));
+        }else{
+            // send from FLASH
+            PT_WAIT_THREAD(&s->outputpt, send_file(s));
+        }
     }
+
     PSOCK_CLOSE(&s->sout);
     PT_END(&s->outputpt);
 }

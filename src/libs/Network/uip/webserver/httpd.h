@@ -37,6 +37,7 @@
 
 #include "psock.h"
 #include "httpd-fs.h"
+#include "stdio.h"
 
 struct httpd_state {
   unsigned char timer;
@@ -49,6 +50,7 @@ struct httpd_state {
   char method;
   char state;
   struct httpd_fs_file file;
+  FILE *fd;
   int len;
   char *strbuf;
   int content_length;
