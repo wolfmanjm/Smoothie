@@ -295,7 +295,7 @@ PT_THREAD(handle_output(struct httpd_state *s))
             PSOCK_SEND_STR(&s->sout, "OK\r\n");
         }
 
-    }else if (!fs_open(s)) {
+    }else if (!fs_open(s)) { // Note this has the side effect of opening the file
         DEBUG_PRINTF("404 file not found\n");
         httpd_fs_open(http_404_html, &s->file);
         strcpy(s->filename, http_404_html);
@@ -303,6 +303,11 @@ PT_THREAD(handle_output(struct httpd_state *s))
         PT_WAIT_THREAD(&s->outputpt, send_file(s));
 
     } else if(s->cache_page) {
+        if(s->fd != NULL) {
+            // if it was an sd file then we need to close it
+            fclose(s->fd);
+            s->fd= NULL;
+        }
         // tell it it has not changed
         DEBUG_PRINTF("304 Not Modified\n");
         PT_WAIT_THREAD(&s->outputpt, send_headers_3(s, http_header_304, 0));
