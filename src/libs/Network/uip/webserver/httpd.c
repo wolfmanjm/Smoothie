@@ -534,8 +534,14 @@ httpd_appcall(void)
 
     if (uip_connected()) {
         s = malloc(sizeof(struct httpd_state));
+        if(s == NULL) {
+            DEBUG_PRINTF("Connection: Out of memory\n");
+            uip_abort();
+            return;
+        }
         uip_conn->appstate = s;
-        DEBUG_PRINTF("Connection: %d.%d.%d.%d:%d\n", uip_ipaddr1(uip_conn->ripaddr), uip_ipaddr2(uip_conn->ripaddr),
+        DEBUG_PRINTF("Connection: %d.%d.%d.%d:%d\n",
+            uip_ipaddr1(uip_conn->ripaddr), uip_ipaddr2(uip_conn->ripaddr),
             uip_ipaddr3(uip_conn->ripaddr), uip_ipaddr4(uip_conn->ripaddr),
             HTONS(uip_conn->rport));
 
@@ -551,7 +557,8 @@ httpd_appcall(void)
     }
 
     if(s == NULL) {
-        DEBUG_PRINTF("No state context\n");
+        DEBUG_PRINTF("ERROR no state context\n");
+        uip_abort();
         return;
     }
 
