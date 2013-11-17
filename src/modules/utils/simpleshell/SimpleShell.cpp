@@ -425,11 +425,13 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 }
 
 #if 0
-#include "mbed.h"
 #include "BaseSolution.h"
 #include "RostockSolution.h"
 #include "JohannKosselSolution.h"
+#include "mbed.h"
+#include "stdio.h"
 #endif
+
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
 #if 0
@@ -472,6 +474,25 @@ void time_idle()
 }
 static Timer timer;
 static int lastt = 0;
+#endif
+#if 0
+    // time sdcard read
+    FILE *fd= fopen("/sd/zombie.g", "r");
+    char buf[512];
+    Timer timer;
+    timer.start();
+    for(int i=0;i<200;i++) {
+        int n= fread(buf, 1, sizeof(buf), fd);
+        if(n != sizeof(buf)) {
+            printf("Read failed\n");
+            fclose(fd);
+            return;
+        }
+    }
+    timer.stop();
+    fclose(fd);
+    float t= timer.read();
+    printf("read time: %f, %f bytes/sec\n", t, sizeof(buf)*100/t);
 #endif
 }
 

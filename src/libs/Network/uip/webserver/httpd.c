@@ -532,16 +532,7 @@ httpd_appcall(void)
 {
     struct httpd_state *s = (struct httpd_state *)(uip_conn->appstate);
 
-    if (uip_closed() || uip_aborted() || uip_timedout()) {
-        if (s != NULL) {
-            DEBUG_PRINTF("Closing connection: %d\n", HTONS(uip_conn->rport));
-            if(s->fd != NULL) fclose(fd); // clean up
-            if(s->strbuf != NULL) free(s->strbuf);
-            free(s);
-            uip_conn->appstate = NULL;
-        }
-
-    } else if (uip_connected()) {
+    if (uip_connected()) {
         s = malloc(sizeof(struct httpd_state));
         uip_conn->appstate = s;
         DEBUG_PRINTF("Connection: %d.%d.%d.%d:%d\n", uip_ipaddr1(uip_conn->ripaddr), uip_ipaddr2(uip_conn->ripaddr),
@@ -557,26 +548,36 @@ httpd_appcall(void)
         s->timer = 0;
         s->fd= NULL;
         s->strbuf= NULL;
-        handle_connection(s);
+    }
 
-    } else if (s != NULL) {
-        if (uip_poll()) {
-            ++s->timer;
-            if (s->timer >= 20*2) { // we have a 0.5 second poll and we want 20 second timeout
-                DEBUG_PRINTF("Timer expired, aborting\n");
-                uip_abort();
-                return;
-            }
-        } else {
-            s->timer = 0;
+    if(s == NULL) {
+        DEBUG_PRINTF("No state context\n");
+        return;
+    }
+
+    // chec for timeout on connection here so we can cleanup if we abort
+    if (uip_poll()) {
+        ++s->timer;
+        if (s->timer >= 20*2) { // we have a 0.5 second poll and we want 20 second timeout
+            DEBUG_PRINTF("Timer expired, aborting\n");
+            uip_abort();
         }
-        handle_connection(s);
+    } else {
+        s->timer = 0;
+    }
+
+    if (uip_closed() || uip_aborted() || uip_timedout()) {
+        DEBUG_PRINTF("Closing connection: %d\n", HTONS(uip_conn->rport));
+        if(s->fd != NULL) fclose(fd); // clean up
+        if(s->strbuf != NULL) free(s->strbuf);
+        free(s) ;
+        uip_conn->appstate = NULL;
 
     } else {
-        DEBUG_PRINTF("abort\n");
-        uip_abort();
+        handle_connection(s);
     }
 }
+
 // this callback gets the results of a command, line by line
 // need to check if we need to stall the upstream sender
 // return 0 if stalled 1 if ok to keep providing more
