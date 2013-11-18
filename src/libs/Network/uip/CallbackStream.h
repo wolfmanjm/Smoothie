@@ -10,7 +10,7 @@ typedef int (*cb_t)(const char *, void *);
 class CallbackStream : public StreamOutput {
     public:
         CallbackStream(cb_t cb, void *u);
-        ~CallbackStream();
+        virtual ~CallbackStream();
         int puts(const char*);
         void inc() { use_count++; }
         void dec();
