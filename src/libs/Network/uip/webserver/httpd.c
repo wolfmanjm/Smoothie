@@ -592,12 +592,12 @@ httpd_appcall(void)
     }
 
     if(s == NULL) {
-        DEBUG_PRINTF("ERROR no state context\n");
+        DEBUG_PRINTF("ERROR no state context: %d\n", uip_flags);
         uip_abort();
         return;
     }
 
-    // chec for timeout on connection here so we can cleanup if we abort
+    // check for timeout on connection here so we can cleanup if we abort
     if (uip_poll()) {
         ++s->timer;
         if (s->timer >= 20*2) { // we have a 0.5 second poll and we want 20 second timeout

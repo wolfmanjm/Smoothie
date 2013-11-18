@@ -53,11 +53,8 @@ class Telnetd;
 class Shell
 {
 public:
-    Shell(Telnetd *telnet){ this->telnet= telnet; init(); }
-    // FIXME we cannot delete this stream until it is no longer in any command queue entries
-    // so add a user counter to it and a delteme flag so when counter gets to zero it deletes itself
-    // and sends any output to null
-    ~Shell(){ delete pstream; };
+    Shell(Telnetd *telnet);
+    ~Shell();
 
     /**
      * Start the shell back-end.
@@ -98,7 +95,6 @@ public:
 
 private:
     bool parse(register char *str, struct ptentry *t);
-    void init(void);
     Telnetd *telnet; // telnet instance we are connected to
     StreamOutput *pstream;
 };

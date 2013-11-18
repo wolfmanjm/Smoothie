@@ -9,13 +9,19 @@ typedef int (*cb_t)(const char *, void *);
 
 class CallbackStream : public StreamOutput {
     public:
-        CallbackStream(cb_t cb, void *u) { callback= cb; user= u; closed= false; };
+        CallbackStream(cb_t cb, void *u);
+        ~CallbackStream();
         int puts(const char*);
+        void inc() { use_count++; }
+        void dec();
+        int get_count() { return use_count; }
+        void mark_closed();
 
     private:
         cb_t callback;
         void *user;
         bool closed;
+        int use_count;
 };
 
 #else

@@ -43,6 +43,9 @@
 #include "telnetd.h"
 #include "CallbackStream.h"
 
+//#define DEBUG_PRINTF(...)
+#define DEBUG_PRINTF printf
+
 struct ptentry {
     uint16_t command_cs;
     void (* pfunc)(char *str, Shell *sh);
@@ -213,12 +216,6 @@ int Shell::command_result(const char *str, void *p)
     }
 }
 
-void Shell::init(void)
-{
-    // create a callback StreamOutput for this connection
-    pstream = new CallbackStream(command_result, this);
-}
-
 /*---------------------------------------------------------------------------*/
 void Shell::start()
 {
@@ -246,4 +243,21 @@ int Shell::output(const char *str)
 void Shell::close()
 {
     telnet->close();
+}
+
+Shell::Shell(Telnetd *telnet)
+{
+    DEBUG_PRINTF("Shell: ctor %p - %p\n", this, telnet);
+    this->telnet= telnet;
+    // create a callback StreamOutput for this connection
+    pstream = new CallbackStream(command_result, this);
+}
+
+Shell::~Shell()
+{
+    // we cannot delete this stream until it is no longer in any command queue entries
+    // so mark it as closed, and allow t to delte itself when it is no longer being used
+    // Note this will not work for the play command, so always use play -q
+    static_cast<CallbackStream*>(pstream)->mark_closed(); // mark the stream as closed so we do not get any callbacks
+    DEBUG_PRINTF("Shell: dtor %p\n", this);
 }

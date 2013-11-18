@@ -21,7 +21,7 @@ class NullStreamOutput;
 class StreamOutput : public mbed::Stream {
     public:
         StreamOutput(){}
-//         virtual int puts(const char *str) = 0;
+
         virtual int printf(const char* format, ...) __attribute__ ((format(printf, 2, 3))) {
             char *buffer;
             // Make the message

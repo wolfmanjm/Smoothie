@@ -1,6 +1,22 @@
 #include "CallbackStream.h"
 #include "Kernel.h"
 
+#define DEBUG_PRINTF std::printf
+
+CallbackStream::CallbackStream(cb_t cb, void *u)
+{
+    DEBUG_PRINTF("Callbackstream ctor: %p\n", this);
+    callback= cb;
+    user= u;
+    closed= false;
+    use_count= 0;
+}
+
+CallbackStream::~CallbackStream()
+{
+    DEBUG_PRINTF("Callbackstream dtor: %p\n", this);
+}
+
 int CallbackStream::puts(const char *s)
 {
     if(closed) return 0;
@@ -28,6 +44,17 @@ int CallbackStream::puts(const char *s)
     return len;
 }
 
+void CallbackStream::mark_closed()
+{
+    closed= true;
+    if(use_count <= 0) delete this;
+}
+void CallbackStream::dec()
+{
+    use_count--;
+    if(closed && use_count <= 0) delete this;
+}
+
 extern "C" void *new_callback_stream(cb_t cb, void *u)
 {
     return new CallbackStream(cb, u);
@@ -35,5 +62,6 @@ extern "C" void *new_callback_stream(cb_t cb, void *u)
 
 extern "C" void delete_callback_stream(void *p)
 {
-    delete (CallbackStream*)p;
+    // we don't delete it in case it is still on the command queue
+    ((CallbackStream*)p)->mark_closed();
 }

@@ -35,6 +35,11 @@ int CommandQueue::add(const char *cmd, StreamOutput *pstream)
 {
     cmd_t c= {strdup(cmd), pstream==NULL?null_stream:pstream};
     q.push(c);
+    if(pstream != NULL) {
+        // count how many times this is on the queue
+        CallbackStream *s= static_cast<CallbackStream *>(pstream);
+        s->inc();
+    }
     return q.size();
 }
 
@@ -53,6 +58,10 @@ bool CommandQueue::pop()
     free(cmd);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     message.stream->puts(NULL); // indicates command is done
-
+    if(message.stream != null_stream) {
+        // decrement usage count
+        CallbackStream *s= static_cast<CallbackStream *>(message.stream);
+        s->dec();
+    }
     return true;
 }

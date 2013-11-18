@@ -328,7 +328,7 @@ void Telnetd::poll()
 
 Telnetd::Telnetd()
 {
-    DEBUG_PRINTF("Telnetd: ctor\n");
+    DEBUG_PRINTF("Telnetd: ctor %p\n", this);
     for (int i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
         lines[i] = NULL;
     }
@@ -342,7 +342,7 @@ Telnetd::Telnetd()
 
 Telnetd::~Telnetd()
 {
-    DEBUG_PRINTF("Telnetd: dtor\n");
+    DEBUG_PRINTF("Telnetd: dtor %p\n", this);
     for (int i = 0; i < TELNETD_CONF_NUMLINES; ++i) {
         if (lines[i] != NULL) dealloc_line(lines[i]);
     }
@@ -363,7 +363,7 @@ void Telnetd::appcall(void)
     }
 
     if (uip_closed() || uip_aborted() || uip_timedout()) {
-        DEBUG_PRINTF("closed: %p\n", instance);
+        DEBUG_PRINTF("Telnetd: closed: %p\n", instance);
         if(instance != NULL) {
             delete instance;
             uip_conn->appstate= NULL;
