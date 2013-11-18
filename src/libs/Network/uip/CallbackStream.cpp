@@ -1,19 +1,15 @@
-// EthernetStream cpp
-//
-
-#include "NetworkStream.h"
+#include "CallbackStream.h"
 #include "Kernel.h"
-#include "shell.h"
 
-int NetworkStream::puts(const char *s)
+int CallbackStream::puts(const char *s)
 {
-    if(s == NULL) return (*callback)(NULL);
+    if(s == NULL) return (*callback)(NULL, user);
 
     int len = strlen(s);
     int n;
     do {
         // call this streams result callback
-        n= (*callback)(s);
+        n= (*callback)(s, user);
 
         // if closed just pretend we sent it
         if(n == -1) return len;

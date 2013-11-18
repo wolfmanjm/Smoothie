@@ -10,7 +10,6 @@
 #include "PublicDataRequest.h"
 #include "PlayerPublicAccess.h"
 #include "net_util.h"
-#include "shell.h"
 #include "uip_arp.h"
 #include "clock-arch.h"
 
@@ -258,7 +257,7 @@ static void setup_servers()
 
     if (telnet_enabled) {
         // Initialize the telnet server
-        telnetd_init();
+        Telnetd::init();
         printf("Telnetd initialized\n");
     }
 
@@ -348,9 +347,11 @@ extern "C" void app_select_appcall(void)
         case HTONS(80):
             if (webserver_enabled) httpd_appcall();
             break;
+
         case HTONS(23):
-            if (telnet_enabled) telnetd_appcall();
+            if (telnet_enabled) Telnetd::appcall();
             break;
+
         case HTONS(115):
             if(sftpd == NULL) {
                 sftpd= new Sftpd();
@@ -359,6 +360,7 @@ extern "C" void app_select_appcall(void)
             }
             sftpd->appcall();
             break;
+
         default:
             printf("unknown app for port: %d\n", uip_conn->lport);
 

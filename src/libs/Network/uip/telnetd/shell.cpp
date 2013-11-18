@@ -40,19 +40,17 @@
 #include "utils.h"
 #include "stdio.h"
 #include "stdlib.h"
-#include "CommandQueue.h"
-
-static CommandQueue *command_queue= CommandQueue::getInstance();
+#include "telnetd.h"
 
 struct ptentry {
     uint16_t command_cs;
-    void (* pfunc)(char *str);
+    void (* pfunc)(char *str, Telnetd *telnet);
 };
 
 #define SHELL_PROMPT "> "
 
 /*---------------------------------------------------------------------------*/
-static bool parse(register char *str, struct ptentry *t)
+bool Shell::parse(register char *str, struct ptentry *t)
 {
     struct ptentry *p;
     for (p = t; p->command_cs != 0; ++p) {
@@ -61,19 +59,18 @@ static bool parse(register char *str, struct ptentry *t)
         }
     }
 
-    p->pfunc(str);
+    p->pfunc(str, telnet);
 
     return p->command_cs != 0;
 }
 /*---------------------------------------------------------------------------*/
-static void
-help(char *str)
+static void help(char *str, Telnetd *telnet)
 {
-    shell_output("Available commands: All others are passed on\n");
-    shell_output("netstat     - show network info\n");
-    shell_output("?           - show network help\n");
-    shell_output("help        - show command help\n");
-    shell_output("exit, quit  - exit shell\n");
+    telnet->output("Available commands: All others are passed on\n");
+    telnet->output("netstat     - show network info\n");
+    telnet->output("?           - show network help\n");
+    telnet->output("help        - show command help\n");
+    telnet->output("exit, quit  - exit shell\n");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -91,13 +88,13 @@ static const char *states[] = {
   "RUNNING",
   "CALLED"
 };
-static void connections(char *str)
+static void connections(char *str, Telnetd *telnet)
 {
     char istr[128];
     struct uip_conn* connr;
     snprintf(istr, sizeof(istr), "Initial MSS: %d, MSS: %d\n", uip_initialmss(), uip_mss());
-    shell_output(istr);
-    shell_output("Current connections: \n");
+    telnet->output(istr);
+    telnet->output("Current connections: \n");
 
     for(connr = &uip_conns[0]; connr <= &uip_conns[UIP_CONNS - 1]; ++connr) {
         snprintf(istr, sizeof(istr), "%d, %u.%u.%u.%u:%u, %s, %u, %u, %c %c\n",
@@ -110,12 +107,17 @@ static void connections(char *str)
             (uip_outstanding(connr))? '*':' ',
             (uip_stopped(connr))? '!':' ');
 
-        shell_output(istr);
+        telnet->output(istr);
     }
 }
 
+static void quit(char *str, Telnetd *telnet)
+{
+    telnet->close();
+}
+
 //#include "clock.h"
-static void shell_test(char *str)
+static void test(char *str, Telnetd *telnet)
 {
     printf("In Test\n");
 
@@ -167,19 +169,19 @@ static void shell_test(char *str)
 
 /*---------------------------------------------------------------------------*/
 
-static void unknown(char *str)
+static void unknown(char *str, Telnetd *telnet)
 {
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
-        command_queue->add(str, 2);
+        CommandQueue::getInstance()->add(str, 2);
     }
 }
 /*---------------------------------------------------------------------------*/
 static struct ptentry parsetab[] = {
     {CHECKSUM("netstat"), connections},
-    {CHECKSUM("exit"), shell_quit},
-    {CHECKSUM("quit"), shell_quit},
-    {CHECKSUM("test"), shell_test},
+    {CHECKSUM("exit"), quit},
+    {CHECKSUM("quit"), quit},
+    {CHECKSUM("test"), test},
     {CHECKSUM("?"), help},
 
     /* Default action */
@@ -188,17 +190,21 @@ static struct ptentry parsetab[] = {
 /*---------------------------------------------------------------------------*/
 // this callback gets the results of a command, line by line
 // NULL means command completed
-static int shell_command_result(const char *str)
+// static
+int Shell::command_result(const char *str, void *ti)
 {
+    // FIXME problem when telnet is deleted and this gets called from slow command
+    // need a way to know telnet was closed
+    Telnetd *telnet= (Telnetd*)ti;
     if(str == NULL) {
         // indicates command is complete
         // only prompt when command is completed
-       shell_prompt(SHELL_PROMPT);
+       telnet->output_prompt(SHELL_PROMPT);
        return 0;
 
     }else{
-        if(shell_can_output()) {
-            if(shell_output(str) == -1) return -1; // connection was closed
+        if(telnet->can_output()) {
+            if(telnet->output(str) == -1) return -1; // connection was closed
             return 1;
         }
         // we are stalled
@@ -206,29 +212,27 @@ static int shell_command_result(const char *str)
     }
 }
 
-void shell_init(void)
+void Shell::init(void)
 {
-    command_queue->registerCallback(shell_command_result, 2);
+    // FIXME need to allow multiple callbacks with different telnets
+    CommandQueue::getInstance()->registerCallback(command_result, 2, telnet);
+}
+
+/*---------------------------------------------------------------------------*/
+void Shell::start()
+{
+    telnet->output("Smoothie command shell\r\n> ");
+}
+
+int Shell::queue_size()
+{
+   return CommandQueue::getInstance()->size();
 }
 /*---------------------------------------------------------------------------*/
-void
-shell_start()
-{
-    shell_output("Smoothie command shell\r\n> ");
-}
-void shell_stop()
-{
-}
-int shell_queue_size()
-{
-   return command_queue->size();
-}
-/*---------------------------------------------------------------------------*/
-void
-shell_input(char *cmd)
+void Shell::input(char *cmd)
 {
     if(parse(cmd, parsetab)) {
-        shell_prompt(SHELL_PROMPT);
+        telnet->output_prompt(SHELL_PROMPT);
     }
 }
 /*---------------------------------------------------------------------------*/

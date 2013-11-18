@@ -4,7 +4,6 @@
 #include "timer.h"
 #include "LPC17XX_Ethernet.h"
 #include "Module.h"
-#include "NetworkStream.h"
 #include "NetworkPublicAccess.h"
 
 #define network_enable_checksum CHECKSUM("enable")

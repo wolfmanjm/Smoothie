@@ -1,14 +1,14 @@
 #ifndef _COMMANDQUEUE_H_
 #define _COMMANDQUEUE_H_
 
-typedef int (*cb_t)(const char *);
+typedef int (*cb_t)(const char *, void *);
 
 #ifdef __cplusplus
 
 #include "fifo.h"
 #include <string>
 
-#include "NetworkStream.h"
+#include "StreamOutput.h"
 
 class CommandQueue
 {
@@ -18,8 +18,9 @@ public:
     bool pop();
     int add(const char* cmd, int cb_id);
     int size() {return q.size();}
-    static CommandQueue* getInstance() { if(instance == 0) instance= new CommandQueue(); return instance; }
+    static CommandQueue* getInstance();
     void registerCallback(cb_t cb, int id);
+    void registerCallback(cb_t cb, int id, void *user);
 
 private:
     typedef struct {char* str; uint8_t id;} cmd_t;

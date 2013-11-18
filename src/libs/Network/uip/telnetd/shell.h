@@ -45,71 +45,66 @@
 #ifndef __SHELL_H__
 #define __SHELL_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "telnetd.h"
+#include "CommandQueue.h"
 
-/**
- * Initialize the shell.
- *
- * Called when the shell front-end process starts. This function may
- * be used to start listening for signals.
- */
-void shell_init(void);
+class Telnetd;
 
-/**
- * Start the shell back-end.
- *
- * Called by the front-end when a new shell is started.
- */
-void shell_start(void);
-void shell_stop(void);
+class Shell
+{
+public:
+    Shell(Telnetd *telnet){ this->telnet= telnet; init(); }
+    ~Shell(){};
 
-/**
- * Process a shell command.
- *
- * This function will be called by the shell GUI / telnet server whan
- * a command has been entered that should be processed by the shell
- * back-end.
- *
- * \param command The command to be processed.
- */
-void shell_input(char *command);
+    /**
+     * Start the shell back-end.
+     *
+     * Called by the front-end when a new shell is started.
+     */
+    void start(void);
 
-/**
- * Quit the shell.
- *
- */
-void shell_quit(char *);
+    /**
+     * Process a shell command.
+     *
+     * This function will be called by the shell GUI / telnet server whan
+     * a command has been entered that should be processed by the shell
+     * back-end.
+     *
+     * \param command The command to be processed.
+     */
+    void input(char *command);
 
+    /**
+     * Print a string to the shell window.
+     *
+     * This function is implemented by the shell GUI / telnet server and
+     * can be called by the shell back-end to output a string in the
+     * shell window. The string is automatically appended with a linebreak.
+     *
+     * \param str1 The first half of the string to be output.
+     * \param str2 The second half of the string to be output.
+     */
+    int output(const char *str);
 
-/**
- * Print a string to the shell window.
- *
- * This function is implemented by the shell GUI / telnet server and
- * can be called by the shell back-end to output a string in the
- * shell window. The string is automatically appended with a linebreak.
- *
- * \param str1 The first half of the string to be output.
- * \param str2 The second half of the string to be output.
- */
-int shell_output(const char *str);
+    /**
+     * Print a prompt to the shell window.
+     *
+     * This function can be used by the shell back-end to print out a
+     * prompt to the shell window.
+     *
+     * \param prompt The prompt to be printed.
+     *
+     */
+    void prompt(const char *prompt);
 
-/**
- * Print a prompt to the shell window.
- *
- * This function can be used by the shell back-end to print out a
- * prompt to the shell window.
- *
- * \param prompt The prompt to be printed.
- *
- */
-void shell_prompt(const char *prompt);
-int shell_queue_size();
-int shell_can_output();
+    int queue_size();
+    int can_output();
+    static int command_result(const char *str, void *ti);
 
-#ifdef __cplusplus
-}
-#endif
+private:
+    bool parse(register char *str, struct ptentry *t);
+    void init(void);
+    Telnetd *telnet; // telnet instance we are connected to
+};
 
 #endif /* __SHELL_H__ */

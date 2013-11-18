@@ -554,8 +554,13 @@ struct uip_conn *uip_connect(uip_ipaddr_t *ripaddr, u16_t port);
  *
  * \hideinitializer
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
 void uip_send(const void *data, int len);
-
+#ifdef __cplusplus
+}
+#endif
 /**
  * The length of any incoming data that is currently avaliable (if avaliable)
  * in the uip_appdata buffer.

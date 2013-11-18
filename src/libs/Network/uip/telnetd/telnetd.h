@@ -35,37 +35,50 @@
 #ifndef __TELNETD_H__
 #define __TELNETD_H__
 
-#include "uipopt.h"
+#include "shell.h"
+#include "stdint.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+class Shell;
 
-void telnetd_appcall(void);
-void telnetd_init(void);
+class Telnetd
+{
+public:
+    Telnetd();
+    ~Telnetd();
 
-#ifdef __cplusplus
-}
-#endif
+    static void init(void);
+    static void appcall(void);
 
-#define TELNETD_CONF_MAXCOMMANDLENGTH 132
-#ifndef TELNETD_CONF_NUMLINES
-#define TELNETD_CONF_NUMLINES 32
-#endif
+    void output_prompt(const char *str);
+    int output(const char *str);
+    int can_output();
+    void close();
 
-struct telnetd_state {
+private:
+    static const int TELNETD_CONF_MAXCOMMANDLENGTH= 132;
+    static const int TELNETD_CONF_NUMLINES= 32;
+
+    Shell *shell;
+
+    // FIXME this needs to be a FIFO
     char *lines[TELNETD_CONF_NUMLINES];
     char buf[TELNETD_CONF_MAXCOMMANDLENGTH];
     char bufptr;
-    char first_time;
-    u8_t numsent;
-    u8_t state;
+    uint8_t numsent;
+    uint8_t state;
+    uint16_t rport;
+
+    bool prompt;
+
+    bool first_time;
+
+    int sendline(char *line);
+    void acked(void);
+    void senddata(void);
+    void get_char(uint8_t c);
+    void newdata(void);
+    void poll(void);
+
 };
-
-//typedef struct telnetd_state uip_tcp_appstate_t;
-
-// #ifndef UIP_APPCALL
-// #define UIP_APPCALL     telnetd_appcall
-// #endif
 
 #endif /* __TELNETD_H__ */

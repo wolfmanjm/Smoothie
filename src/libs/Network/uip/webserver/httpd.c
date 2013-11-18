@@ -590,7 +590,7 @@ httpd_appcall(void)
 // return 0 if stalled 1 if ok to keep providing more
 // -1 if the connection has closed or is not in output state
 // NOTE may need to see which connection to send to if more than one
-static int command_result(const char *str)
+static int command_result(const char *str, void *dummy)
 {
     if(str == NULL) {
         DEBUG_PRINTF("End of command\n");

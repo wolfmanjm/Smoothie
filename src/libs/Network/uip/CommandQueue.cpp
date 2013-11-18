@@ -6,9 +6,11 @@
 
 #include "Kernel.h"
 #include "libs/SerialMessage.h"
+#include "CallbackStream.h"
 
 static CommandQueue *command_queue_instance;
 CommandQueue *CommandQueue::instance = NULL;
+
 
 CommandQueue::CommandQueue()
 {
@@ -16,6 +18,11 @@ CommandQueue::CommandQueue()
     stream_map[0]= &(StreamOutput::NullStream);
 }
 
+CommandQueue* CommandQueue::getInstance()
+{
+    if(instance == 0) instance= new CommandQueue();
+    return instance;
+}
 
 extern "C" {
 
@@ -59,5 +66,10 @@ bool CommandQueue::pop()
 
 void CommandQueue::registerCallback(cb_t cb, int id)
 {
-    stream_map[id]= new NetworkStream(cb);
+    stream_map[id]= new CallbackStream(cb);
+}
+
+void CommandQueue::registerCallback(cb_t cb, int id, void *user)
+{
+    stream_map[id]= new CallbackStream(cb, user);
 }
