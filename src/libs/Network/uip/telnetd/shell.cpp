@@ -41,10 +41,11 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "telnetd.h"
+#include "CallbackStream.h"
 
 struct ptentry {
     uint16_t command_cs;
-    void (* pfunc)(char *str, Telnetd *telnet);
+    void (* pfunc)(char *str, Shell *sh);
 };
 
 #define SHELL_PROMPT "> "
@@ -59,65 +60,65 @@ bool Shell::parse(register char *str, struct ptentry *t)
         }
     }
 
-    p->pfunc(str, telnet);
+    p->pfunc(str, this);
 
     return p->command_cs != 0;
 }
 /*---------------------------------------------------------------------------*/
-static void help(char *str, Telnetd *telnet)
+static void help(char *str, Shell *sh)
 {
-    telnet->output("Available commands: All others are passed on\n");
-    telnet->output("netstat     - show network info\n");
-    telnet->output("?           - show network help\n");
-    telnet->output("help        - show command help\n");
-    telnet->output("exit, quit  - exit shell\n");
+    sh->output("Available commands: All others are passed on\n");
+    sh->output("netstat     - show network info\n");
+    sh->output("?           - show network help\n");
+    sh->output("help        - show command help\n");
+    sh->output("exit, quit  - exit shell\n");
 }
 
 /*---------------------------------------------------------------------------*/
 static const char *states[] = {
-  "CLOSED",
-  "SYN_RCVD",
-  "SYN_SENT",
-  "ESTABLISHED",
-  "FIN_WAIT_1",
-  "FIN_WAIT_2",
-  "CLOSING",
-  "TIME_WAIT",
-  "LAST_ACK",
-  "NONE",
-  "RUNNING",
-  "CALLED"
+    "CLOSED",
+    "SYN_RCVD",
+    "SYN_SENT",
+    "ESTABLISHED",
+    "FIN_WAIT_1",
+    "FIN_WAIT_2",
+    "CLOSING",
+    "TIME_WAIT",
+    "LAST_ACK",
+    "NONE",
+    "RUNNING",
+    "CALLED"
 };
-static void connections(char *str, Telnetd *telnet)
+static void connections(char *str, Shell *sh)
 {
     char istr[128];
-    struct uip_conn* connr;
+    struct uip_conn *connr;
     snprintf(istr, sizeof(istr), "Initial MSS: %d, MSS: %d\n", uip_initialmss(), uip_mss());
-    telnet->output(istr);
-    telnet->output("Current connections: \n");
+    sh->output(istr);
+    sh->output("Current connections: \n");
 
-    for(connr = &uip_conns[0]; connr <= &uip_conns[UIP_CONNS - 1]; ++connr) {
+    for (connr = &uip_conns[0]; connr <= &uip_conns[UIP_CONNS - 1]; ++connr) {
         snprintf(istr, sizeof(istr), "%d, %u.%u.%u.%u:%u, %s, %u, %u, %c %c\n",
-            HTONS(connr->lport),
-            uip_ipaddr1(connr->ripaddr), uip_ipaddr2(connr->ripaddr),  uip_ipaddr3(connr->ripaddr), uip_ipaddr4(connr->ripaddr),
-            HTONS(connr->rport),
-            states[connr->tcpstateflags & UIP_TS_MASK],
-            connr->nrtx,
-            connr->timer,
-            (uip_outstanding(connr))? '*':' ',
-            (uip_stopped(connr))? '!':' ');
+                 HTONS(connr->lport),
+                 uip_ipaddr1(connr->ripaddr), uip_ipaddr2(connr->ripaddr),  uip_ipaddr3(connr->ripaddr), uip_ipaddr4(connr->ripaddr),
+                 HTONS(connr->rport),
+                 states[connr->tcpstateflags & UIP_TS_MASK],
+                 connr->nrtx,
+                 connr->timer,
+                 (uip_outstanding(connr)) ? '*' : ' ',
+                 (uip_stopped(connr)) ? '!' : ' ');
 
-        telnet->output(istr);
+        sh->output(istr);
     }
 }
 
-static void quit(char *str, Telnetd *telnet)
+static void quit(char *str, Shell *sh)
 {
-    telnet->close();
+    sh->close();
 }
 
 //#include "clock.h"
-static void test(char *str, Telnetd *telnet)
+static void test(char *str, Shell *sh)
 {
     printf("In Test\n");
 
@@ -129,51 +130,51 @@ static void test(char *str, Telnetd *telnet)
 
     // }
     // printf("Done\n");
-/*
-    const char *fn= "/sd/test6.txt";
-    uint16_t *buf= (uint16_t *)malloc(200*2);
-    int cnt= 0;
-    FILE *fp;
-    for(int i=0;i<10;i++) {
-        fp= fopen(fn, i == 0 ? "w" : "a");
+    /*
+        const char *fn= "/sd/test6.txt";
+        uint16_t *buf= (uint16_t *)malloc(200*2);
+        int cnt= 0;
+        FILE *fp;
+        for(int i=0;i<10;i++) {
+            fp= fopen(fn, i == 0 ? "w" : "a");
+            if(fp == NULL) {
+                printf("failed to open file\n");
+                return;
+            }
+            for (int x = 0; x < 200; ++x) {
+                buf[x]= x+cnt;
+            }
+            cnt+=200;
+            int n= fwrite(buf, 2, 200, fp);
+            printf("wrote %d, %d\n", i, n);
+            fclose(fp);
+        }
+
+        fp= fopen(fn, "r");
         if(fp == NULL) {
-            printf("failed to open file\n");
+            printf("failed to open file for read\n");
             return;
         }
-        for (int x = 0; x < 200; ++x) {
-            buf[x]= x+cnt;
-        }
-        cnt+=200;
-        int n= fwrite(buf, 2, 200, fp);
-        printf("wrote %d, %d\n", i, n);
+        printf("Opened file %s for read\n", fn);
+        do {
+            int n= fread(buf, 2, 200, fp);
+            if(n <= 0) break;
+            for(int x=0;x<n;x++) {
+                printf("%04X, ", buf[x]);
+            }
+        }while(1);
         fclose(fp);
-    }
-
-    fp= fopen(fn, "r");
-    if(fp == NULL) {
-        printf("failed to open file for read\n");
-        return;
-    }
-    printf("Opened file %s for read\n", fn);
-    do {
-        int n= fread(buf, 2, 200, fp);
-        if(n <= 0) break;
-        for(int x=0;x<n;x++) {
-            printf("%04X, ", buf[x]);
-        }
-    }while(1);
-    fclose(fp);
-    free(buf);
-    */
+        free(buf);
+        */
 }
 
 /*---------------------------------------------------------------------------*/
 
-static void unknown(char *str, Telnetd *telnet)
+static void unknown(char *str, Shell *sh)
 {
     // its some other command, so queue it for mainloop to find
     if (strlen(str) > 0) {
-        CommandQueue::getInstance()->add(str, 2);
+        CommandQueue::getInstance()->add(str, sh->getStream());
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -191,20 +192,20 @@ static struct ptentry parsetab[] = {
 // this callback gets the results of a command, line by line
 // NULL means command completed
 // static
-int Shell::command_result(const char *str, void *ti)
+int Shell::command_result(const char *str, void *p)
 {
-    // FIXME problem when telnet is deleted and this gets called from slow command
-    // need a way to know telnet was closed
-    Telnetd *telnet= (Telnetd*)ti;
-    if(str == NULL) {
+    // FIXME problem when shell is deleted and this gets called from slow command
+    // need a way to know this shell was closed or deleted
+    Shell *sh = (Shell *)p;
+    if (str == NULL) {
         // indicates command is complete
         // only prompt when command is completed
-       telnet->output_prompt(SHELL_PROMPT);
-       return 0;
+        sh->telnet->output_prompt(SHELL_PROMPT);
+        return 0;
 
-    }else{
-        if(telnet->can_output()) {
-            if(telnet->output(str) == -1) return -1; // connection was closed
+    } else {
+        if (sh->telnet->can_output()) {
+            if (sh->telnet->output(str) == -1) return -1; // connection was closed
             return 1;
         }
         // we are stalled
@@ -214,8 +215,8 @@ int Shell::command_result(const char *str, void *ti)
 
 void Shell::init(void)
 {
-    // FIXME need to allow multiple callbacks with different telnets
-    CommandQueue::getInstance()->registerCallback(command_result, 2, telnet);
+    // create a callback StreamOutput for this connection
+    pstream = new CallbackStream(command_result, this);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -226,13 +227,23 @@ void Shell::start()
 
 int Shell::queue_size()
 {
-   return CommandQueue::getInstance()->size();
+    return CommandQueue::getInstance()->size();
 }
 /*---------------------------------------------------------------------------*/
 void Shell::input(char *cmd)
 {
-    if(parse(cmd, parsetab)) {
+    if (parse(cmd, parsetab)) {
         telnet->output_prompt(SHELL_PROMPT);
     }
 }
 /*---------------------------------------------------------------------------*/
+
+int Shell::output(const char *str)
+{
+    return telnet->output(str);
+}
+
+void Shell::close()
+{
+    telnet->close();
+}

@@ -73,6 +73,7 @@
 #include "stdlib.h"
 
 #include "CommandQueue.h"
+#include "CallbackStream.h"
 
 #include "c-fifo.h"
 
@@ -95,6 +96,38 @@
 
 #define DEBUG_PRINTF printf
 //#define DEBUG_PRINTF(...)
+
+
+// this callback gets the results of a command, line by line
+// need to check if we need to stall the upstream sender
+// return 0 if stalled 1 if ok to keep providing more
+// -1 if the connection has closed or is not in output state
+// TODO need to see which connection to send to based on dummy
+// and create a different fifo for each connection
+static int command_result(const char *str, void *dummy)
+{
+    if(str == NULL) {
+        DEBUG_PRINTF("End of command\n");
+        fifo_push(NULL);
+
+    }else{
+        DEBUG_PRINTF("Got command result: %s", str);
+        if(fifo_size() < 10) {
+            fifo_push(strdup(str));
+            return 1;
+        }else{
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static void create_callback_stream(struct httpd_state *s)
+{
+// need to create a callback stream here, but do one per connection
+// pass the state to the callback
+    s->pstream= new_callback_stream(command_result, s);
+}
 
 // Used to save files to SDCARD during upload
 static FILE *fd;
@@ -169,6 +202,7 @@ static PT_THREAD(send_command_response(struct httpd_state *s))
         if(s->strbuf == NULL) break;
         // send it
         DEBUG_PRINTF("Sending response: %s", s->strbuf);
+        // TODO send as much as we can in one packet
         PSOCK_SEND_STR(&s->sout, s->strbuf);
         // free the strdup
         free(s->strbuf);
@@ -278,8 +312,8 @@ PT_THREAD(handle_output(struct httpd_state *s))
 
     if(s->method == POST && strcmp(s->filename, "/command") == 0) {
         DEBUG_PRINTF("Executing command post: %s\n", s->command);
-        // stick the command  on the command queue
-        network_add_command(s->command, 1);
+        // stick the command  on the command queue, with this connections stream output
+        network_add_command(s->command, s->pstream);
 
         PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
         // then send response as we get it
@@ -288,7 +322,7 @@ PT_THREAD(handle_output(struct httpd_state *s))
     }else if(s->method == POST && strcmp(s->filename, "/command_silent") == 0) {
         DEBUG_PRINTF("Executing silent command post: %s\n", s->command);
         // stick the command  on the command queue specifying null output stream
-        network_add_command(s->command, 0);
+        network_add_command(s->command, NULL);
         PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
 
     }else if(s->method == POST && strcmp(s->filename, "/upload") == 0) {
@@ -554,6 +588,7 @@ httpd_appcall(void)
         s->timer = 0;
         s->fd= NULL;
         s->strbuf= NULL;
+        create_callback_stream(s);
     }
 
     if(s == NULL) {
@@ -577,6 +612,7 @@ httpd_appcall(void)
         DEBUG_PRINTF("Closing connection: %d\n", HTONS(uip_conn->rport));
         if(s->fd != NULL) fclose(fd); // clean up
         if(s->strbuf != NULL) free(s->strbuf);
+        delete_callback_stream(s->pstream);
         free(s) ;
         uip_conn->appstate = NULL;
 
@@ -585,28 +621,6 @@ httpd_appcall(void)
     }
 }
 
-// this callback gets the results of a command, line by line
-// need to check if we need to stall the upstream sender
-// return 0 if stalled 1 if ok to keep providing more
-// -1 if the connection has closed or is not in output state
-// NOTE may need to see which connection to send to if more than one
-static int command_result(const char *str, void *dummy)
-{
-    if(str == NULL) {
-        DEBUG_PRINTF("End of command\n");
-        fifo_push(NULL);
-
-    }else{
-        DEBUG_PRINTF("Got command result: %s", str);
-        if(fifo_size() < 10) {
-            fifo_push(strdup(str));
-            return 1;
-        }else{
-            return 0;
-        }
-    }
-    return 1;
-}
 /*---------------------------------------------------------------------------*/
 /**
  * \brief      Initialize the web server
@@ -614,11 +628,9 @@ static int command_result(const char *str, void *dummy)
  *             This function initializes the web server and should be
  *             called at system boot-up.
  */
-void
-httpd_init(void)
+void httpd_init(void)
 {
     uip_listen(HTONS(80));
-    register_callback(command_result, 1);
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

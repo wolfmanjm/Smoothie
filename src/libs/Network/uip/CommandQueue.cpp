@@ -15,7 +15,7 @@ CommandQueue *CommandQueue::instance = NULL;
 CommandQueue::CommandQueue()
 {
     command_queue_instance = this;
-    stream_map[0]= &(StreamOutput::NullStream);
+    null_stream= &(StreamOutput::NullStream);
 }
 
 CommandQueue* CommandQueue::getInstance()
@@ -25,22 +25,15 @@ CommandQueue* CommandQueue::getInstance()
 }
 
 extern "C" {
-
-    int network_add_command(const char *cmd, int cb_id)
+    int network_add_command(const char *cmd, void *pstream)
     {
-        return command_queue_instance->add(cmd, cb_id);
+        return command_queue_instance->add(cmd, (StreamOutput*)pstream);
     }
-
-    void register_callback(cb_t cb, int id)
-    {
-        command_queue_instance->registerCallback(cb, id);
-    }
-
 }
 
-int CommandQueue::add(const char *cmd, int cb_id)
+int CommandQueue::add(const char *cmd, StreamOutput *pstream)
 {
-    cmd_t c= {strdup(cmd), (uint8_t)cb_id};
+    cmd_t c= {strdup(cmd), pstream==NULL?null_stream:pstream};
     q.push(c);
     return q.size();
 }
@@ -55,21 +48,11 @@ bool CommandQueue::pop()
 
     struct SerialMessage message;
     message.message = cmd;
-    message.stream = stream_map[c.id];
+    message.stream = c.pstream;
 
     free(cmd);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     message.stream->puts(NULL); // indicates command is done
 
     return true;
-}
-
-void CommandQueue::registerCallback(cb_t cb, int id)
-{
-    stream_map[id]= new CallbackStream(cb);
-}
-
-void CommandQueue::registerCallback(cb_t cb, int id, void *user)
-{
-    stream_map[id]= new CallbackStream(cb, user);
 }

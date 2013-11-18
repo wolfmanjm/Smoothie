@@ -54,7 +54,10 @@ class Shell
 {
 public:
     Shell(Telnetd *telnet){ this->telnet= telnet; init(); }
-    ~Shell(){};
+    // FIXME we cannot delete this stream until it is no longer in any command queue entries
+    // so add a user counter to it and a delteme flag so when counter gets to zero it deletes itself
+    // and sends any output to null
+    ~Shell(){ delete pstream; };
 
     /**
      * Start the shell back-end.
@@ -74,17 +77,8 @@ public:
      */
     void input(char *command);
 
-    /**
-     * Print a string to the shell window.
-     *
-     * This function is implemented by the shell GUI / telnet server and
-     * can be called by the shell back-end to output a string in the
-     * shell window. The string is automatically appended with a linebreak.
-     *
-     * \param str1 The first half of the string to be output.
-     * \param str2 The second half of the string to be output.
-     */
     int output(const char *str);
+    void close();
 
     /**
      * Print a prompt to the shell window.
@@ -100,11 +94,13 @@ public:
     int queue_size();
     int can_output();
     static int command_result(const char *str, void *ti);
+    StreamOutput *getStream() { return pstream; }
 
 private:
     bool parse(register char *str, struct ptentry *t);
     void init(void);
     Telnetd *telnet; // telnet instance we are connected to
+    StreamOutput *pstream;
 };
 
 #endif /* __SHELL_H__ */
