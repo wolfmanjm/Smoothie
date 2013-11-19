@@ -92,11 +92,13 @@ public:
     int can_output();
     static int command_result(const char *str, void *ti);
     StreamOutput *getStream() { return pstream; }
+    void setConsole();
 
 private:
     bool parse(register char *str, struct ptentry *t);
     Telnetd *telnet; // telnet instance we are connected to
     StreamOutput *pstream;
+    bool isConsole;
 };
 
 #endif /* __SHELL_H__ */

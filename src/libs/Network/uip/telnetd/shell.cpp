@@ -42,6 +42,7 @@
 #include "stdlib.h"
 #include "telnetd.h"
 #include "CallbackStream.h"
+#include "Kernel.h"
 
 //#define DEBUG_PRINTF(...)
 #define DEBUG_PRINTF printf
@@ -245,12 +246,21 @@ void Shell::close()
     telnet->close();
 }
 
+void Shell::setConsole()
+{
+    // add it to the kernels output stream if we are a console
+    DEBUG_PRINTF("Shell: Adding stream to kernel streams\n");
+    THEKERNEL->streams->append_stream(pstream);
+    isConsole= true;
+}
+
 Shell::Shell(Telnetd *telnet)
 {
     DEBUG_PRINTF("Shell: ctor %p - %p\n", this, telnet);
     this->telnet= telnet;
     // create a callback StreamOutput for this connection
     pstream = new CallbackStream(command_result, this);
+    isConsole= false;
 }
 
 Shell::~Shell()
@@ -259,5 +269,9 @@ Shell::~Shell()
     // so mark it as closed, and allow t to delte itself when it is no longer being used
     // Note this will not work for the play command, so always use play -q
     static_cast<CallbackStream*>(pstream)->mark_closed(); // mark the stream as closed so we do not get any callbacks
+    if(isConsole) {
+        DEBUG_PRINTF("Shell: Removing stream from kernel streams\n");
+        THEKERNEL->streams->remove_stream(pstream);
+    }
     DEBUG_PRINTF("Shell: dtor %p\n", this);
 }
