@@ -18,6 +18,9 @@
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1
 #define GAMMA_AXIS 2
+#define X_AXIS 0
+#define Y_AXIS 1
+#define Z_AXIS 2
 
 #define NOT_HOMING 0
 #define MOVING_TO_ORIGIN_FAST 1
@@ -148,7 +151,7 @@ void Endstops::on_config_reload(void *argument)
     this->retract_steps[1] = this->kernel->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1] / steps_per_mm[1])->as_number() * steps_per_mm[1];
     this->retract_steps[2] = this->kernel->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2] / steps_per_mm[2])->as_number() * steps_per_mm[2];
 
-    this->debounce_count  = this->kernel->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
+    this->debounce_count  = this->kernel->config->value(endstop_debounce_count_checksum    )->by_default(0)->as_number();
 
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
@@ -279,10 +282,6 @@ void Endstops::do_homing(char axes_to_move)
     this->status = NOT_HOMING;
 }
 
-#define X_AXIS 0
-#define Y_AXIS 1
-#define Z_AXIS 2
-
 void Endstops::wait_for_homed_corexy(int axis)
 {
     bool running = true;
@@ -326,10 +325,7 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate
     this->steppers[Y_AXIS]->move(!diry, retract_steps);
 
     // wait until done
-    while ( this->steppers[X_AXIS]->moving ) {
-        this->kernel->call_event(ON_IDLE);
-    }
-    while ( this->steppers[Y_AXIS]->moving ) {
+    while ( this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving) {
         this->kernel->call_event(ON_IDLE);
     }
 
@@ -348,6 +344,9 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate
 void Endstops::do_homing_corexy(char axes_to_move)
 {
     // TODO should really make order configurable, and allow XY to home at the same time, diagonally
+    // TODO To move XY at the same time only one motor needs to turn, determine which motor and which dirction based on min or max directions
+    // allow to move until an endstop triggers, then stop that motor.
+    // continue moving in the direction not yet triggered (which means two motors turning) until endstop hit
 
     if (axes_to_move & 0x01) { // Home X, which means both X and Y in same direction
         bool dir= this->home_direction[X_AXIS];
