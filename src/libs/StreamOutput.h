@@ -18,7 +18,7 @@
 
 class NullStreamOutput;
 
-class StreamOutput : public mbed::Stream {
+class StreamOutput {
     public:
         StreamOutput(){}
         virtual ~StreamOutput(){}
