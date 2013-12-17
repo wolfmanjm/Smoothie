@@ -8,9 +8,9 @@
 #ifndef STREAMOUTPUT_H
 #define STREAMOUTPUT_H
 
-#include <Stream.h>
 #include <cstdarg>
 #include <cstring>
+#include <stdio.h>
 
 // This is a base class for all StreamOutput objects.
 // StreamOutputs are basically "things you can sent strings to". They are passed along with gcodes for example so modules can answer to those gcodes.
