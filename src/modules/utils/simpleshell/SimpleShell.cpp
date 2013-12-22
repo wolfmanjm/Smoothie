@@ -20,6 +20,7 @@
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
+#include "NetworkPublicAccess.h"
 
 extern unsigned int g_maximumHeapAddress;
 
@@ -51,6 +52,8 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("mem"),      &SimpleShell::mem_command},
     {CHECKSUM("get"),      &SimpleShell::get_command},
     {CHECKSUM("set_temp"), &SimpleShell::set_temp_command},
+    {CHECKSUM("net"),      &SimpleShell::net_command},
+
     {CHECKSUM("test"),     &SimpleShell::test_command},
 
     // unknown command
@@ -120,7 +123,6 @@ void SimpleShell::on_module_loaded()
 	this->register_for_event(ON_SECOND_TICK);
 
     this->reset_delay_secs = 0;
-    this->last_command= "";
 }
 
 void SimpleShell::on_second_tick(void *)
@@ -185,14 +187,6 @@ void SimpleShell::on_console_line_received( void *argument )
     string possible_command = new_message.message;
 
     //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
-
-    if(possible_command.compare("r") == 0 && last_command.size() > 0){
-        // repeat last command
-        possible_command= last_command;
-    }
-
-    // delete previous character if backspace or delete found in line
-    possible_command= handle_bs(possible_command);
 
     unsigned short check_sum = get_checksum( possible_command.substr(0, possible_command.find_first_of(" \r\n")) ); // todo: put this method somewhere more convenient
 
@@ -331,6 +325,21 @@ static uint32_t getDeviceType()
     __enable_irq();
 
     return result[1];
+}
+
+// get network config
+void SimpleShell::net_command( string parameters, StreamOutput *stream)
+{
+    void *returned_data;
+    bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ipconfig_checksum, &returned_data );
+    if(ok) {
+        char *str= (char *)returned_data;
+        stream->printf("%s\r\n", str);
+        free(str);
+
+    }else{
+        stream->printf("No network detected\n");
+    }
 }
 
 // print out build version
@@ -481,6 +490,6 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");
-	stream->printf("r - repeat last command\r\n");
+    stream->printf("net\r\n");
 }
 
