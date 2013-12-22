@@ -13,8 +13,7 @@
 using namespace std;
 #include <vector>
 
-#define switch_checksum              15508
-#define enable_checksum              29545
+#define enable_checksum            CHECKSUM("enable")
 
 class SwitchPool : public Module {
     public:
@@ -27,4 +26,4 @@ class SwitchPool : public Module {
 
 
 
-#endif
+#endif // SWITCHPOOL_H

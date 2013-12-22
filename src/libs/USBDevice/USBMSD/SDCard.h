@@ -81,7 +81,7 @@ public:
 
     void on_main_loop(void);
 
-    int busy();
+    bool busy();
 
 protected:
 
@@ -99,8 +99,10 @@ protected:
     uint32_t _sd_sectors();
     uint32_t _sectors;
 
-    SPI _spi;
+    ::SPI _spi;
     GPIO _cs;
+
+    volatile bool busyflag;
 
     CARD_TYPE cardtype;
 };

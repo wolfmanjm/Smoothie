@@ -19,7 +19,8 @@ bool is_whitespace( int );
 
 string remove_non_number( string str );
 
-uint16_t get_checksum(const string to_check);
+uint16_t get_checksum(const string& to_check);
+uint16_t get_checksum(const char* to_check);
 
 void get_checksums(uint16_t check_sums[], const string key);
 
@@ -29,7 +30,7 @@ string get_arguments( string possible_command );
 
 bool file_exists( const string file_name );
 
-void system_reset( void );
+void system_reset( bool dfu= false );
 
 
 

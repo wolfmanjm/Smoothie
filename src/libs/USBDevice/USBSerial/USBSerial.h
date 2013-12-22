@@ -35,19 +35,19 @@ class USBSerial: public USBCDC, public USBSerial_Receiver, public Module, public
 public:
     USBSerial(USB *);
 
-    virtual int _putc(int c);
-    virtual int _getc();
-    virtual int puts(const char *);
+    int _putc(int c);
+    int _getc();
+    int puts(const char *);
 
     uint8_t available();
 
-    uint16_t writeBlock(uint8_t * buf, uint16_t size);
+    uint16_t writeBlock(const uint8_t * buf, uint16_t size);
 
     CircBuffer<uint8_t> rxbuf;
     CircBuffer<uint8_t> txbuf;
 
-    virtual void on_module_loaded(void);
-    virtual void on_main_loop(void *);
+    void on_module_loaded(void);
+    void on_main_loop(void *);
 
 protected:
 //     virtual bool EpCallback(uint8_t, uint8_t);
@@ -58,6 +58,11 @@ protected:
 
     virtual void on_attach(void);
     virtual void on_detach(void);
+
+    void ensure_tx_space(int);
+
+    volatile bool attach;
+    bool attached;
 
     volatile int nl_in_rx;
 private:

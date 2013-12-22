@@ -14,34 +14,45 @@
 #include "libs/utils.h"
 #include "libs/StreamOutput.h"
 
+class SimpleShell : public Module
+{
+public:
+    SimpleShell() {}
 
-#define ls_command_checksum      19679
-#define cd_command_checksum      11207
-#define pwd_command_checksum     42060
-#define cat_command_checksum     24889
-#define play_command_checksum    17335
-#define reset_command_checksum   27429
-#define dfu_command_checksum     28480
+    void on_module_loaded();
+    void on_console_line_received( void *argument );
+    void on_gcode_received(void *argument);
+    void on_second_tick(void *);
 
-class SimpleShell : public Module {
-    public:
-        SimpleShell(){}
+private:
+    string absolute_from_relative( string path );
+    void ls_command(string parameters, StreamOutput *stream );
+    void cd_command(string parameters, StreamOutput *stream );
+    void delete_file_command(string parameters, StreamOutput *stream );
+    void pwd_command(string parameters, StreamOutput *stream );
+    void cat_command(string parameters, StreamOutput *stream );
+    void rm_command(string parameters, StreamOutput *stream );
+    void break_command(string parameters, StreamOutput *stream );
+    void reset_command(string parameters, StreamOutput *stream );
+    void dfu_command(string parameters, StreamOutput *stream );
+    void help_command(string parameters, StreamOutput *stream );
+    void version_command(string parameters, StreamOutput *stream );
+    void get_command(string parameters, StreamOutput *stream );
+    void set_temp_command(string parameters, StreamOutput *stream );
+    void mem_command(string parameters, StreamOutput *stream );
+    void test_command(string parameters, StreamOutput *stream );
 
-        void on_module_loaded();
-        void on_console_line_received( void* argument );
-        void on_main_loop( void* argument );
-        string absolute_from_relative( string path );
-        void ls_command(   string parameters, StreamOutput* stream );
-        void cd_command(   string parameters, StreamOutput* stream );
-        void pwd_command(  string parameters, StreamOutput* stream );
-        void cat_command(  string parameters, StreamOutput* stream );
-        void play_command( string parameters, StreamOutput* stream );
-        void reset_command(string parameters, StreamOutput* stream );
+    bool parse_command(unsigned short cs, string args, StreamOutput *stream);
 
-        string current_path;
-        bool playing_file;
-        StreamOutput* current_stream;
-        FILE* current_file_handler;
+    typedef void (SimpleShell::*PFUNC)(string parameters, StreamOutput *stream);
+    typedef struct {
+        unsigned short command_cs;
+        PFUNC pfunc;
+    } ptentry_t;
+
+    static ptentry_t commands_table[];
+    string current_path;
+    int reset_delay_secs;
 };
 
 

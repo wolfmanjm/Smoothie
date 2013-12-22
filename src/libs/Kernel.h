@@ -13,21 +13,29 @@
 #include "libs/StreamOutputPool.h"
 #include "libs/StepTicker.h"
 #include "libs/Adc.h"
-#include "libs/Digipot.h"
 #include "libs/Pauser.h"
+#include "libs/PublicData.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
+#include "modules/tools/toolsmanager/ToolsManager.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
+#include <array>
+
+#define THEKERNEL Kernel::instance
 
 //Module manager
+class Config;
 class Module;
-class Player;
+class Conveyor;
 class SlowTicker;
 class Kernel {
     public:
         Kernel();
+        static Kernel* instance; // the Singleton instance of Kernel usable anywhere
+        const char* config_override_filename(){ return "/sd/config-override"; }
+
         void add_module(Module* module);
         void register_for_event(_EVENT_ENUM id_event, Module* module);
         void call_event(_EVENT_ENUM id_event);
@@ -42,17 +50,19 @@ class Kernel {
         Stepper*          stepper;
         Planner*          planner;
         Config*           config;
-        Player*           player;
+        Conveyor*         conveyor;
         Pauser*           pauser;
+        ToolsManager*     toolsmanager;
 
         int debug;
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
-        Digipot*          digipot;
+        PublicData*       public_data;
+        bool              use_leds;
 
     private:
-        Module* hooks[NUMBER_OF_DEFINED_EVENTS][32]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
+        std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
 
 };
 

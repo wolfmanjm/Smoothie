@@ -23,17 +23,22 @@ void Configurator::on_module_loaded(){
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Configurator::on_console_line_received( void* argument ){
     SerialMessage new_message = *static_cast<SerialMessage*>(argument);
+
+    // ignore comments
+    if(new_message.message[0] == ';') return;
+
     string possible_command = new_message.message;
 
     // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
     uint16_t check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
 
     // Act depending on command
-    switch( check_sum ){
-        case config_get_command_checksum: this->config_get_command(  get_arguments(possible_command), new_message.stream ); break;
-        case config_set_command_checksum: this->config_set_command(  get_arguments(possible_command), new_message.stream ); break;
-        case config_load_command_checksum: this->config_load_command(  get_arguments(possible_command), new_message.stream ); break;
-    }
+    if (check_sum == config_get_command_checksum)
+        this->config_get_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == config_set_command_checksum)
+        this->config_set_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == config_load_command_checksum)
+        this->config_load_command(  get_arguments(possible_command), new_message.stream );
 }
 
 // Process and respond to eeprom gcodes (M50x)

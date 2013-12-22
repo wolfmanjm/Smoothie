@@ -15,12 +15,18 @@ using std::string;
 
 volatile bool _isr_context = false;
 
-uint16_t get_checksum(const string to_check){
+uint16_t get_checksum(const string& to_check){
+    return get_checksum(to_check.c_str());
+}
+
+uint16_t get_checksum(const char* to_check){
    // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum
    uint16_t sum1 = 0;
    uint16_t sum2 = 0;
-   for( unsigned int index = 0; index < to_check.length(); ++index ){
-      sum1 = (sum1 + to_check[index]) % 255;
+   const char* p= to_check;
+   char c;
+   while((c= *p++) != 0) {
+      sum1 = (sum1 + c) % 255;
       sum2 = (sum2 + sum1) % 255;
    }
    return (sum2 << 8) | sum1;
@@ -120,13 +126,17 @@ bool file_exists( const string file_name ){
     return exists;
 }
 
-// Prepares and executes a watchdog reset
-void system_reset( void ){
-    LPC_WDT->WDCLKSEL = 0x1;                // Set CLK src to PCLK
-    uint32_t clk = SystemCoreClock / 16;    // WD has a fixed /4 prescaler, PCLK default is /4
-    LPC_WDT->WDTC = 1 * (float)clk;         // Reset in 1 second
-    LPC_WDT->WDMOD = 0x3;                   // Enabled and Reset
-    LPC_WDT->WDFEED = 0xAA;                 // Kick the dog!
-    LPC_WDT->WDFEED = 0x55;
+// Prepares and executes a watchdog reset for dfu or reboot
+void system_reset( bool dfu ){
+    if(dfu) {
+        LPC_WDT->WDCLKSEL = 0x1;                // Set CLK src to PCLK
+        uint32_t clk = SystemCoreClock / 16;    // WD has a fixed /4 prescaler, PCLK default is /4
+        LPC_WDT->WDTC = 1 * (float)clk;         // Reset in 1 second
+        LPC_WDT->WDMOD = 0x3;                   // Enabled and Reset
+        LPC_WDT->WDFEED = 0xAA;                 // Kick the dog!
+        LPC_WDT->WDFEED = 0x55;
+    }else{
+        NVIC_SystemReset();
+    }
 }
 

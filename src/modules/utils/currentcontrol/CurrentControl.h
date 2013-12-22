@@ -5,16 +5,28 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
+#include "DigipotBase.h"
 
-#define alpha_current_checksum   22381
-#define beta_current_checksum    60163
-#define gamma_current_checksum   12906
-#define delta_current_checksum   30321
-#define currentcontrol_module_enable_checksum 38842
+#define alpha_current_checksum                  CHECKSUM("alpha_current")
+#define beta_current_checksum                   CHECKSUM("beta_current")
+#define gamma_current_checksum                  CHECKSUM("gamma_current")
+#define delta_current_checksum                  CHECKSUM("delta_current")
+#define epsilon_current_checksum                CHECKSUM("epsilon_current")
+#define zeta_current_checksum                   CHECKSUM("zeta_current")
+#define eta_current_checksum                    CHECKSUM("eta_current")
+#define theta_current_checksum                  CHECKSUM("theta_current")
+#define currentcontrol_module_enable_checksum   CHECKSUM("currentcontrol_module_enable")
+#define digipotchip_checksum                    CHECKSUM("digipotchip")
+#define digipot_max_current                     CHECKSUM("digipot_max_current")
+#define digipot_factor                          CHECKSUM("digipot_factor")
+
+#define mcp4451_checksum                        CHECKSUM("mcp4451")
+#define ad5206_checksum                         CHECKSUM("ad5206")
 
 class CurrentControl : public Module {
     public:
         CurrentControl();
+        virtual ~CurrentControl() {};
 
         void on_module_loaded();
         void on_gcode_received(void *);
@@ -23,6 +35,13 @@ class CurrentControl : public Module {
         double beta_current;
         double gamma_current;
         double delta_current;
+        double epsilon_current;
+        double zeta_current;
+        double eta_current;
+        double theta_current;
+
+        DigipotBase* digipot;
+
 };
 
 

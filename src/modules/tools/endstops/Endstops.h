@@ -14,70 +14,36 @@
 #include "libs/StepperMotor.h"
 #include "libs/Pin.h"
 
-#define ALPHA_AXIS 0
-#define BETA_AXIS  1
-#define GAMMA_AXIS 2
-
-#define NOT_HOMING 0
-#define MOVING_TO_ORIGIN_FAST 1
-#define MOVING_BACK 2
-#define MOVING_TO_ORIGIN_SLOW 3
-
-#define alpha_min_endstop_checksum       28684
-#define beta_min_endstop_checksum        23457
-#define gamma_min_endstop_checksum       16137
-
-#define alpha_max_endstop_checksum       31246
-#define beta_max_endstop_checksum        26019
-#define gamma_max_endstop_checksum       18699
-
-#define alpha_fast_homing_rate_checksum  19720
-#define beta_fast_homing_rate_checksum   9373
-#define gamma_fast_homing_rate_checksum  3333
-
-#define alpha_slow_homing_rate_checksum  45599
-#define beta_slow_homing_rate_checksum   35252
-#define gamma_slow_homing_rate_checksum  29212
-
-#define alpha_homing_retract_checksum    4419
-#define beta_homing_retract_checksum     48344
-#define gamma_homing_retract_checksum    54848
-#define endstop_debounce_count_checksum  25394
-
 
 class Endstops : public Module{
-    private:
-        void wait_for_homed(char axes_to_move);
-
     public:
         Endstops();
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
 
-        StepperMotor* steppers[3];
-        Pin*          pins[6];
-        double  slow_rates[3];
-        double  fast_rates[3];
-        unsigned int  retract_steps[3];
+    private:
+        void do_homing(char axes_to_move);
+        void do_homing_corexy(char axes_to_move);
+        void wait_for_homed(char axes_to_move);
+        void wait_for_homed_corexy(int axis);
+        void corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps);
+        void trim2mm(double * mm);
+
+        double steps_per_mm[3];
+        double homing_position[3];
+        float home_offset[3];
+        bool home_direction[3];
         unsigned int  debounce_count;
+        unsigned int  retract_steps[3];
+        int  trim[3];
+        double  fast_rates[3];
+        double  slow_rates[3];
+        Pin           pins[6];
+        StepperMotor* steppers[3];
         char status;
+        bool is_corexy;
+        bool is_delta;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

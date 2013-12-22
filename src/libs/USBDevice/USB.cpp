@@ -32,13 +32,9 @@ static usbdesc_language lang = {
 	{ SL_USENGLISH, },
 };
 
-static usbdesc_string_l(10) manufacturer = {
-	22,					// .bLength: 2 + 2 * nchars
-	DT_STRING,			// .bDescType
-	{ 'U', 'S', 'B', ' ', 'M', 'a', 'g', 'i', 'c', '!' }
-};
+static usbstring_const_init(manufacturer, "Uberclock");
 
-static usbstring_const_init(product, "Smoothie v0.1 prototype");
+static usbstring_const_init(product, "Smoothieboard");
 
 static usbstring_init(serial, "01234567abcdefgh01234567abcdefgh");
 
@@ -431,11 +427,8 @@ int USB::addEndpoint(usbdesc_endpoint *epp) {
 }
 
 int USB::addString(const void *ss) {
-	usbdesc_base *s = (usbdesc_base *) ss;
-// 	iprintf("[AST %p ", s);
+	const usbdesc_base *s = (const usbdesc_base *) ss;
 	if (s->bDescType == DT_STRING) {
-// 		iprintf("LEN:%d ", s->bLength);
-
 		uint8_t i;
 		uint8_t stringcount = 0;
 		for (i = 0; i < N_DESCRIPTORS; i++) {
@@ -446,17 +439,10 @@ int USB::addString(const void *ss) {
 		}
 		if (i >= N_DESCRIPTORS) return -1;
 
-// 		iprintf("INS %d ", i);
-
-		descriptors[i] = s;
-
-// 		conf.wTotalLength += descriptors[i]->bLength;
-
-// 		iprintf("%p STROK]", descriptors[i]);
+		descriptors[i] = const_cast<usbdesc_base*>(s);
 
 		return stringcount;
 	}
-// 	iprintf("INVAL]\n");
 	return -1;
 }
 
@@ -581,15 +567,21 @@ void USB::dumpCDC(uint8_t *d) {
 	switch(d[2]) {
 		case USB_CDC_SUBTYPE_HEADER: {
 			usbcdc_header *h = (usbcdc_header *) d;
-			iprintf("\t\t*CDC header\n");
-			iprintf("\t\t\tbcdCDC:  0x%04X\n", h->bcdCDC);
+            if (h)
+            {
+                iprintf("\t\t*CDC header\n");
+                iprintf("\t\t\tbcdCDC:  0x%04X\n", h->bcdCDC);
+            }
 			break;
 		}
 		case USB_CDC_SUBTYPE_UNION: {
 			usbcdc_union *u = (usbcdc_union *) d;
-			iprintf("\t\t*CDC union\n");
-			iprintf("\t\t\tMaster:  %d\n", u->bMasterInterface);
-			iprintf("\t\t\tSlave:   %d\n", u->bSlaveInterface0);
+            if (u)
+            {
+                iprintf("\t\t*CDC union\n");
+                iprintf("\t\t\tMaster:  %d\n", u->bMasterInterface);
+                iprintf("\t\t\tSlave:   %d\n", u->bSlaveInterface0);
+            }
 			break;
 		}
 		case USB_CDC_SUBTYPE_CALL_MANAGEMENT: {
@@ -671,5 +663,11 @@ void USB::dumpDescriptors() {
 
 void USB::on_module_loaded()
 {
+    register_for_event(ON_IDLE);
     connect();
+}
+
+void USB::on_idle(void*)
+{
+    USBHAL::usbisr();
 }
