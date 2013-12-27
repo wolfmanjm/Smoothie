@@ -7,11 +7,13 @@
 
 using namespace std;
 #include <vector>
-#include "libs/nuts_bolts.h"
-#include "libs/RingBuffer.h"
-#include "../communication/utils/Gcode.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
+
+#include "mri.h"
+#include "nuts_bolts.h"
+#include "RingBuffer.h"
+#include "Gcode.h"
+#include "Module.h"
+#include "Kernel.h"
 #include "Block.h"
 #include "Planner.h"
 #include "Conveyor.h"
@@ -173,75 +175,63 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-   this->reverse_pass();
-   this->forward_pass();
-   this->recalculate_trapezoids();
-}
+    RingBuffer<Block,32>* queue = &this->kernel->conveyor->queue;
 
-// Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
-// implements the reverse pass.
-void Planner::reverse_pass(){
-    // For each block
-    int block_index = this->kernel->conveyor->queue.head;
-    Block* blocks[3] = {NULL,NULL,NULL};
+    int newest = queue->prev_block_index(queue->head);
+    int oldest = queue->tail;
 
-    while(block_index!=this->kernel->conveyor->queue.tail){
-        block_index = this->kernel->conveyor->queue.prev_block_index( block_index );
-        blocks[2] = blocks[1];
-        blocks[1] = blocks[0];
-        blocks[0] = &this->kernel->conveyor->queue.buffer[block_index];
-        if( blocks[1] == NULL ){ continue; }
-        blocks[1]->reverse_pass(blocks[2], blocks[0]);
-    }
-    
-}
+    int block_index = newest;
 
-// Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
-// implements the forward pass.
-void Planner::forward_pass() {
-    // For each block
-    int block_index = this->kernel->conveyor->queue.tail;
-    Block* blocks[3] = {NULL,NULL,NULL};
-
-    while(block_index!=this->kernel->conveyor->queue.head){
-        blocks[0] = blocks[1];
-        blocks[1] = blocks[2];
-        blocks[2] = &this->kernel->conveyor->queue.buffer[block_index];
-        if( blocks[0] == NULL ){ continue; }
-        blocks[1]->forward_pass(blocks[0],blocks[2]);
-        block_index = this->kernel->conveyor->queue.next_block_index( block_index );
-    }
-    blocks[2]->forward_pass(blocks[1],NULL);
-
-}
-
-// Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
-// entry_speed for each junction and the entry_speed of the next junction. Must be called by
-// planner_recalculate() after updating the blocks. Any recalulate flagged junction will
-// compute the two adjacent trapezoids to the junction, since the junction speed corresponds
-// to exit speed and entry speed of one another.
-void Planner::recalculate_trapezoids() {
-    int block_index = this->kernel->conveyor->queue.tail;
+    Block* previous;
     Block* current;
-    Block* next = NULL;
+    Block* next;
 
-    while(block_index != this->kernel->conveyor->queue.head){
-        current = next;
-        next = &this->kernel->conveyor->queue.buffer[block_index];
-        if( current ){
-            // Recalculate if current block entry or exit junction speed has changed.
-            if( current->recalculate_flag || next->recalculate_flag ){
-                current->calculate_trapezoid( current->entry_speed/current->nominal_speed, next->entry_speed/current->nominal_speed );
-                current->recalculate_flag = false;
-            }
+    current = &queue->buffer[block_index];
+    current->recalculate_flag = true;
+
+    // if there's only one block in the queue, we fall through both while loops and this ends up in current
+    // so we must set it here, or perform conditionals further down. this is easier
+    next = current;
+
+    while ((block_index != oldest) && (current->recalculate_flag))
+    {
+        block_index = queue->prev_block_index(block_index);
+
+        next = current;
+        current = &queue->buffer[block_index];
+
+        current->recalculate_flag = false;
+
+        current->reverse_pass(next);
+    }
+
+    previous = current;
+    current = next;
+
+    // Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
+    // entry_speed for each junction and the entry_speed of the next junction. Must be called by
+    // planner_recalculate() after updating the blocks. Any recalulate flagged junction will
+    // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
+    // to exit speed and entry speed of one another.
+    while (block_index != newest)
+    {
+        current->forward_pass(previous);
+
+        // Recalculate if current block entry or exit junction speed has changed.
+        if (previous->recalculate_flag || current->recalculate_flag )
+        {
+            previous->calculate_trapezoid( previous->entry_speed/previous->nominal_speed, current->entry_speed/previous->nominal_speed );
+            previous->recalculate_flag = false;
         }
-        block_index = this->kernel->conveyor->queue.next_block_index( block_index );
+
+        block_index = queue->next_block_index(block_index);
+        previous = current;
+        current = &queue->buffer[block_index];
     }
 
     // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
-    next->calculate_trapezoid( next->entry_speed/next->nominal_speed, MINIMUM_PLANNER_SPEED/next->nominal_speed); //TODO: Make configuration option
-    next->recalculate_flag = false;
-
+    current->calculate_trapezoid( current->entry_speed/current->nominal_speed, MINIMUM_PLANNER_SPEED/current->nominal_speed );
+    current->recalculate_flag = false;
 }
 
 // Debug function
