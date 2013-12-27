@@ -427,6 +427,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
+
 #if 0
 #include "mbed.h"
 #include "BaseSolution.h"
@@ -435,6 +436,31 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 #endif
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+#if 0
+    Timer timer;
+    double a= 100.0, b= 200.0, f, x= 0.0;
+    timer.start();
+    for(int i=0;i<1000000;i++) {
+        f= hypot(a, b);
+        x += f;
+    }
+    timer.stop();
+    float t= timer.read();
+    stream->printf("hypot: %f, result: %f\n", t, f);
+
+    timer.reset();
+    timer.start();
+    for(int i=0;i<1000000;i++) {
+        double a2= pow(a, 2);
+        double b2= pow(b, 2);
+        f= sqrt(a2+b2);
+        x += f;
+    }
+    timer.stop();
+    t= timer.read();
+    stream->printf("sqrt: %f, result: %f, x: %f\n", t, f, x);
+#endif
+
 #if 0
     double millimeters[3]= {100.0, 200.0, 300.0};
     int steps[3];
