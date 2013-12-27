@@ -390,7 +390,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     if (what == get_temp_command_checksum) {
         string type = shift_parameter( parameters );
-        bool ok = this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+        bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
         if (ok) {
             struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
@@ -400,10 +400,10 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == get_pos_command_checksum) {
-        bool ok = this->kernel->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+        bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
 
         if (ok) {
-            double *pos = static_cast<double *>(returned_data);
+            float *pos = static_cast<float *>(returned_data);
             stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
 
         } else {
@@ -417,8 +417,8 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 {
     string type = shift_parameter( parameters );
     string temp = shift_parameter( parameters );
-    double t = temp.empty() ? 0.0 : strtod(temp.c_str(), NULL);
-    bool ok = this->kernel->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
+    float t = temp.empty() ? 0.0 : strtof(temp.c_str(), NULL);
+    bool ok = THEKERNEL->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
 
     if (ok) {
         stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
