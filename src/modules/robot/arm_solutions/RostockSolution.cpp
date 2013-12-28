@@ -26,14 +26,9 @@ RostockSolution::RostockSolution(Config* passed_config) : config(passed_config){
     this->arm_length_squared = powf(this->arm_length, 2);
 }
 
-void RostockSolution::millimeters_to_steps( float millimeters[], int steps[] ){
-    float mm[3], alpha_rotated[3], rotated[3];
-    
-    // convert input to float
-    mm[0]= millimeters[0];
-    mm[1]= millimeters[1];
-    mm[2]= millimeters[2];
-    
+void RostockSolution::millimeters_to_steps( float mm[], int steps[] ){
+    float alpha_rotated[3], rotated[3];
+
     if( this->sin_alpha == 0 && this->cos_alpha == 1){
         alpha_rotated[0] = mm[0];
         alpha_rotated[1] = mm[1];
@@ -50,7 +45,7 @@ void RostockSolution::millimeters_to_steps( float millimeters[], int steps[] ){
     steps[GAMMA_STEPPER] = lround( solve_arm( rotated ) * this->gamma_steps_per_mm );
 }
 
-void RostockSolution::steps_to_millimeters( int steps[], float millimeters[] ){} 
+void RostockSolution::steps_to_millimeters( int steps[], float millimeters[] ){}
 
 float RostockSolution::solve_arm( float millimeters[]) {
     return sqrtf(arm_length_squared - powf(millimeters[X_AXIS] - this->arm_radius, 2) - powf(millimeters[Y_AXIS], 2)) + millimeters[Z_AXIS];

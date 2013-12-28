@@ -462,7 +462,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
 #endif
 
 #if 0
-    double millimeters[3]= {100.0, 200.0, 300.0};
+    float millimeters[3]= {100.0, 200.0, 300.0};
     int steps[3];
     BaseSolution* r= new RostockSolution(THEKERNEL->config);
     BaseSolution* k= new JohannKosselSolution(THEKERNEL->config);
@@ -477,8 +477,8 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
     timer.stop();
     float tk= timer.read();
     stream->printf("time RostockSolution: %f, time JohannKosselSolution: %f\n", tr, tk);
-    delete kr;
-    delete tk;
+    delete r;
+    delete k;
 #endif
 #if 0
 // time idle loop
