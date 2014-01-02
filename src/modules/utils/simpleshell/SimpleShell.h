@@ -43,7 +43,6 @@ private:
     void net_command( string parameters, StreamOutput *stream);
     void load_command( string parameters, StreamOutput *stream);
     void save_command( string parameters, StreamOutput *stream);
-    void test_command( string parameters, StreamOutput *stream);
 
     bool parse_command(unsigned short cs, string args, StreamOutput *stream);
 
@@ -57,8 +56,10 @@ private:
     string current_path;
     int reset_delay_secs;
 
+    // only in my branch
     string last_command;
     string handle_bs(string cmd);
+    void test_command( string parameters, StreamOutput *stream);
 };
 
 
