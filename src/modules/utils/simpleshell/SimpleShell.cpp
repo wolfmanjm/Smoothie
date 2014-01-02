@@ -58,6 +58,7 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("load"),     &SimpleShell::load_command},
     {CHECKSUM("save"),     &SimpleShell::save_command},
 
+
     {CHECKSUM("test"),     &SimpleShell::test_command},
 
     // unknown command
