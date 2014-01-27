@@ -54,7 +54,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 23) { // select file
             gcode->mark_as_taken();
             // Get filename
-            this->filename= "/sd/" + absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + shift_parameter( args );
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -129,7 +129,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 32) { // select file and start print
             gcode->mark_as_taken();
             // Get filename
-            this->filename= "/sd/" + absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + shift_parameter( args );
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
