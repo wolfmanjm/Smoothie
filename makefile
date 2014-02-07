@@ -11,10 +11,10 @@ all:
 
 realclean: $(DIRSCLEAN)
 
-clean: 
+clean:
 	@echo Cleaning $*
 	@ $(MAKE) -C src clean
-	
+
 $(DIRSCLEAN): %.clean:
 	@echo Cleaning $*
 	@ $(MAKE) -C $*  clean
