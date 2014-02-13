@@ -538,7 +538,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
     gcode->millimeters_of_travel = pow( target[X_AXIS]-this->last_milestone[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->last_milestone[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->last_milestone[Z_AXIS], 2 );
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
-    if( gcode->millimeters_of_travel < 0.0001F ){
+    if( gcode->millimeters_of_travel < 1e-8F ){
         return;
     }
 
@@ -579,7 +579,8 @@ void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
         for (int i = X_AXIS; i <= Z_AXIS; i++)
             segment_delta[i] = (target[i] - last_milestone[i]) / segments;
 
-        //For each segment
+        // segment 0 is already done - it's the end point of the previous move so we start at segment 1
+        // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++)
         {
             for(int axis=X_AXIS; axis <= Z_AXIS; axis++ )
