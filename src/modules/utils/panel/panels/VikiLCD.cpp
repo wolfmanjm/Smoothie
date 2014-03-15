@@ -292,7 +292,7 @@ void VikiLCD::on_refresh(){
     // Update Only every 20 refreshes, 1 a second
     static int update_counts = 0;
     update_counts++;
-    if( update_counts % 20 == 0 && i2c->is_timed_out()) {
+    if( update_counts % 20 == 0) { // && i2c->is_timed_out()) {
         // if there was a timeout on i2c then reset the lcd
         this->init();
     }
