@@ -177,7 +177,7 @@ custom_menu.power_off.enable               true              #
 custom_menu.power_off.name                 Power_off         #
 custom_menu.power_off.command              M81               #
 
-// NOTE spaces on commands must be _ and multiple commands separated with |
+# NOTE spaces on commands must be _ and multiple commands separated with |
 custom_menu.fr.enable                      true              #
 custom_menu.fr.name                        Front_right       #
 custom_menu.fr.command                     G0_X170_Y10       #

@@ -30,7 +30,9 @@ CCPP = "#{TOOLSBIN}g++"
 LD = "#{TOOLSBIN}g++"
 OBJCOPY = "#{TOOLSBIN}objcopy"
 
-SRC = FileList['src/**/*.{c,cpp}']
+# regex of modules to exclude
+EXCLUDES = /tools.touchprobe/
+SRC = FileList['src/**/*.{c,cpp}'].exclude(EXCLUDES)
 
 OBJDIR = 'OBJ'
 OBJ = SRC.collect { |fn| File.join(OBJDIR, pop_path(File.dirname(fn)), File.basename(fn).ext('o')) } +
@@ -72,7 +74,8 @@ LSCRIPT = "#{MBED_DIR}/LPC1768/GCC_ARM/LPC1768.ld"
 LDFLAGS = "-mcpu=cortex-m3 -mthumb -specs=./build/startfile.spec" +
     " -Wl,-Map=#{OBJDIR}/smoothie.map,--cref,--gc-sections,--wrap=_isatty,--wrap=malloc,--wrap=realloc,--wrap=free" +
     MRI_WRAPS +
-    " -T#{LSCRIPT} -L #{MBED_DIR}/TARGET_LPC1768/TOOLCHAIN_GCC_ARM/"
+    " -T#{LSCRIPT}" +
+    " -u _scanf_float -u _printf_float"
 
 task :clean do
   FileUtils.rm_rf(OBJDIR)
@@ -110,6 +113,10 @@ file "#{PROG}.elf" => OBJ do |t|
   puts "Linking #{t.source}"
   sh "#{LD} #{LDFLAGS} #{OBJ} #{MBED_OBJS.join(' ')} #{LIBS}  -o #{OBJDIR}/#{t.name}"
 end
+
+#arm-none-eabi-objcopy -R .stack -O ihex ../LPC1768/main.elf ../LPC1768/main.hex
+#arm-none-eabi-objdump -d -f -M reg-names-std --demangle ../LPC1768/main.elf >../LPC1768/main.disasm
+#arm-none-eabi-size ../LPC1768/main.elf
 
 rule '.o' => lambda{ |objfile| obj2src(objfile, 'cpp') } do |t|
   puts "Compiling #{t.source}"
