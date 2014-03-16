@@ -43,7 +43,9 @@ Kernel::Kernel(){
 
     // Configure UART depending on MRI config
     // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.
-    NVIC_SetPriorityGrouping(0);
+	NVIC_SetPriorityGrouping(0);
+
+	#if MRI_ENABLE == 1
     switch( __mriPlatform_CommUartIndex() ) {
         case 0:
             this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
@@ -58,8 +60,11 @@ Kernel::Kernel(){
             this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
             break;
     }
+	#else
+	this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+	#endif
 
-    this->add_module( this->config );
+	this->add_module( this->config );
     this->add_module( this->serial );
 
     // HAL stuff

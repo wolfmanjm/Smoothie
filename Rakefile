@@ -1,5 +1,4 @@
 require 'rake'
-require 'rake/clean'
 require 'pathname'
 require 'fileutils'
 
@@ -30,11 +29,13 @@ CCPP = "#{TOOLSBIN}g++"
 LD = "#{TOOLSBIN}g++"
 OBJCOPY = "#{TOOLSBIN}objcopy"
 
-SRC = FileList['src/**/*.{c,cpp}']
+# regex of modules to exclude
+EXCLUDES = /tools.touchprobe/
+SRC = FileList['src/**/*.{c,cpp}'].exclude(EXCLUDES)
 
 OBJDIR = 'OBJ'
 OBJ = SRC.collect { |fn| File.join(OBJDIR, pop_path(File.dirname(fn)), File.basename(fn).ext('o')) } +
-	["#{OBJDIR}/configdefault.o"]
+        ["#{OBJDIR}/configdefault.o"]
 
 # create destination directories
 SRC.each do |s|
@@ -47,31 +48,39 @@ MBED_INCLUDE_DIRS = ["#{MBED_DIR}/", "#{MBED_DIR}/TARGET_LPC1768/"]
 
 INCLUDE = (INCLUDE_DIRS+MBED_INCLUDE_DIRS).collect { |d| "-I#{d}" }.join(" ")
 
-MRI_LIB = ' ./mri/mri.ar'
+MRI_ENABLE = 0 # set to 0 to disable MRI
+MRI_LIB = MRI_ENABLE == 1 ? ' ./mri/mri.ar' : ''
 MBED_LIBS = " #{MBED_DIR}/TARGET_LPC1768/TOOLCHAIN_GCC_ARM/libmbed.a"
 SYS_LIBS = ' -lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys'
 LIBS = MBED_LIBS + SYS_LIBS + MRI_LIB
 
-DEFINES = '-DCHECKSUM_USE_CPP -D__LPC17XX__  -DNO_TOOLS_TOUCHPROBE -DTARGET_LPC1768 ' +
-	' -DMRI_ENABLE=0 -DMRI_INIT_PARAMETERS=0 -DMRI_BREAK_ON_INIT=0 -DMRI_SEMIHOST_STDIO=0' +
-	' -DWRITE_BUFFER_DISABLE=0 -DSTACK_SIZE=3072 -DCHECKSUM_USE_CPP'
+MRI_DEFINES =  ' -DMRI_INIT_PARAMETERS=\'"MRI_UART_0 MRI_UART_SHARE"\' -DMRI_BREAK_ON_INIT=0 -DMRI_SEMIHOST_STDIO=0 ' +
+                " -DMRI_ENABLE=#{MRI_ENABLE}"
+
+DEFINES = ' -DCHECKSUM_USE_CPP -D__LPC17XX__  -DNO_TOOLS_TOUCHPROBE -DTARGET_LPC1768 ' +
+    ' -DWRITE_BUFFER_DISABLE=0 -DSTACK_SIZE=3072 ' +
+    MRI_DEFINES
+
 
 # Compiler flags used to enable creation of header dependencies.
 #DEPFLAGS = -MMD -MP
 CFLAGS = '-Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align -O2 -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -ffunction-sections -fdata-sections  -fno-exceptions -fno-delete-null-pointer-checks'
 CPPFLAGS = CFLAGS + ' -fno-rtti -std=gnu++11'
 
+MRI_WRAPS = MRI_ENABLE == 1 ? ',--wrap=_read,--wrap=_write,--wrap=semihost_connected' : ''
+
 # Linker script to be used.  Indicates what code should be placed where in memory.
 #LSCRIPT = "mbed/src/vendor/NXP/cmsis/LPC1768/GCC_ARM/LPC1768.ld"
 LSCRIPT = "./LPC1768.ld"
 LDFLAGS = "-mcpu=cortex-m3 -mthumb -specs=./build/startfile.spec" +
-    " -Wl,-Map=#{OBJDIR}/smoothie.map,--cref,--gc-sections " +
-    " -T#{LSCRIPT} -L #{MBED_DIR}/TARGET_LPC1768/TOOLCHAIN_GCC_ARM/"
+    " -Wl,-Map=#{OBJDIR}/smoothie.map,--cref,--gc-sections,--wrap=_isatty,--wrap=malloc,--wrap=realloc,--wrap=free" +
+    MRI_WRAPS +
+    " -T#{LSCRIPT}" +
+    " -u _scanf_float -u _printf_float"
 
-# --wrap=_isatty,--wrap=malloc,--wrap=realloc,--wrap=free$(MRI_WRAPS)" +
-
-
-CLEAN.include(OBJ)
+task :clean do
+  FileUtils.rm_rf(OBJDIR)
+end
 
 task :default => [:build]
 
@@ -96,15 +105,22 @@ file "#{PROG}.bin" => "#{PROG}.elf" do
   sh "#{OBJCOPY} -O binary #{OBJDIR}/#{PROG}.elf #{OBJDIR}/#{PROG}.bin"
 end
 
-file "#{PROG}.elf" => OBJ do
-  sh "#{LD} #{LDFLAGS} #{OBJ} #{MBED_OBJS.join(' ')} #{LIBS}  -o #{OBJDIR}/#{PROG}.elf"
+file "#{PROG}.elf" => OBJ do |t|
+  puts "Linking #{t.source}"
+  sh "#{LD} #{LDFLAGS} #{OBJ} #{MBED_OBJS.join(' ')} #{LIBS}  -o #{OBJDIR}/#{t.name}"
 end
 
+#arm-none-eabi-objcopy -R .stack -O ihex ../LPC1768/main.elf ../LPC1768/main.hex
+#arm-none-eabi-objdump -d -f -M reg-names-std --demangle ../LPC1768/main.elf >../LPC1768/main.disasm
+#arm-none-eabi-size ../LPC1768/main.elf
+
 rule '.o' => lambda{ |objfile| obj2src(objfile, 'cpp') } do |t|
+  puts "Compiling #{t.source}"
   sh "#{CCPP} #{CPPFLAGS} #{INCLUDE} #{DEFINES} #{VERSION} -c -o #{t.name} #{t.source}"
 end
 
 rule '.o' => lambda{ |objfile| obj2src(objfile, 'c') } do |t|
+  puts "Compiling #{t.source}"
   sh "#{CC} #{CFLAGS} #{INCLUDE} #{DEFINES} #{VERSION} -c -o #{t.name} #{t.source}"
 end
 
