@@ -21,8 +21,6 @@ DEVICE = 'LPC1768'
 ARCHITECTURE = 'armv7-m'
 
 MBED_DIR = './mbed/drop'
-#MBED_OBJS = FileList["#{MBED_DIR}/TARGET_LPC1768/TOOLCHAIN_GCC_ARM/*.o"] #.exclude(/retarget/)
-MBED_OBJS= []
 
 TOOLSBIN = './gcc-arm-none-eabi/bin/arm-none-eabi-'
 CC = "#{TOOLSBIN}gcc"
@@ -30,13 +28,25 @@ CCPP = "#{TOOLSBIN}g++"
 LD = "#{TOOLSBIN}g++"
 OBJCOPY = "#{TOOLSBIN}objcopy"
 
+# list of modules to exclude, include directory it is in
+EXCLUDE_MODULES= %w(tools/touchprobe)
+# e.g for a CNC machine
+#EXCLUDE_MODULES = %w(tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder)
+
 # regex of modules to exclude
-EXCLUDES = /tools.touchprobe/
-SRC = FileList['src/**/*.{c,cpp}'].exclude(EXCLUDES)
+exclude_defines= []
+EXCLUDES = EXCLUDE_MODULES.collect do |e|
+  exclude_defines << e.tr('/', '_').upcase # create defines for modules to exclude
+  e.sub('/', '\/')
+end
+
+SRC = FileList['src/**/*.{c,cpp}'].exclude(/#{EXCLUDES.join('|')}/)
+
+puts "WARNING Excluding modules: #{EXCLUDE_MODULES.join(' ')}" unless exclude_defines.empty?
 
 OBJDIR = 'OBJ'
 OBJ = SRC.collect { |fn| File.join(OBJDIR, pop_path(File.dirname(fn)), File.basename(fn).ext('o')) } +
-	["#{OBJDIR}/configdefault.o"] + ["#{OBJDIR}/mbed_custom.o"]
+	%W(#{OBJDIR}/configdefault.o #{OBJDIR}/mbed_custom.o)
 
 # create destination directories
 SRC.each do |s|
@@ -45,21 +55,21 @@ SRC.each do |s|
 end
 
 INCLUDE_DIRS = [Dir.glob(['./src/**/', './mri/**/'])].flatten
-MBED_INCLUDE_DIRS = ["#{MBED_DIR}/", "#{MBED_DIR}/LPC1768/"]
+MBED_INCLUDE_DIRS = %W(#{MBED_DIR}/ #{MBED_DIR}/LPC1768/)
 
 INCLUDE = (INCLUDE_DIRS+MBED_INCLUDE_DIRS).collect { |d| "-I#{d}" }.join(" ")
 
 MRI_ENABLE = 1 # set to 0 to disable MRI
-MRI_LIB = MRI_ENABLE == 1 ? ' ./mri/mri.ar' : ''
-MBED_LIBS = " #{MBED_DIR}/LPC1768/GCC_ARM/libmbed.a"
-SYS_LIBS = ' -lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys'
-LIBS = MBED_LIBS + SYS_LIBS + MRI_LIB
+MRI_LIB = MRI_ENABLE == 1 ? './mri/mri.ar' : ''
+MBED_LIB = "#{MBED_DIR}/LPC1768/GCC_ARM/libmbed.a"
+SYS_LIBS = '-lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys'
+LIBS = [MBED_LIB, SYS_LIBS, MRI_LIB].join(' ')
 
-MRI_DEFINES = MRI_ENABLE == 1 ? ' -DMRI_ENABLE=1 -DMRI_INIT_PARAMETERS=\'"MRI_UART_0 MRI_UART_SHARE"\' -DMRI_BREAK_ON_INIT=0 -DMRI_SEMIHOST_STDIO=0' : '-DMRI_ENABLE=0'
-DEFINES = '-DCHECKSUM_USE_CPP -D__LPC17XX__  -DNO_TOOLS_TOUCHPROBE -DTARGET_LPC1768 ' +
-    ' -DWRITE_BUFFER_DISABLE=0 -DSTACK_SIZE=3072 -DCHECKSUM_USE_CPP' +
-    MRI_DEFINES
+MRI_DEFINES = MRI_ENABLE == 1 ? %w(-DMRI_ENABLE=1 -DMRI_INIT_PARAMETERS=\'"MRI_UART_0 MRI_UART_SHARE"\' -DMRI_BREAK_ON_INIT=0 -DMRI_SEMIHOST_STDIO=0) : %w(-DMRI_ENABLE=0)
+defines = %w(-DCHECKSUM_USE_CPP -D__LPC17XX__  -DTARGET_LPC1768 -DWRITE_BUFFER_DISABLE=0 -DSTACK_SIZE=3072 -DCHECKSUM_USE_CPP) +
+  exclude_defines.collect{|d| "-DNO_#{d}"} + MRI_DEFINES
 
+DEFINES= defines.join(' ')
 
 # Compiler flags used to enable creation of header dependencies.
 #DEPFLAGS = -MMD -MP
@@ -81,9 +91,13 @@ task :clean do
   FileUtils.rm_rf(OBJDIR)
 end
 
+task :realclean => [:clean] do
+  sh "cd ./mbed;make clean"
+end
+
 task :default => [:build]
 
-task :build => [:version, "#{PROG}.bin"]
+task :build => [MBED_LIB, :version, "#{PROG}.bin"]
 
 task :version do
   if is_windows?
@@ -96,6 +110,11 @@ task :version do
   end
 end
 
+file MBED_LIB do
+  puts "Building Mbed Using Make"
+  sh "cd ./mbed;make all"
+end
+
 file "#{OBJDIR}/mbed_custom.o" => ['./build/mbed_custom.cpp'] do |t|
   puts "Compiling #{t.source}"
   sh "#{CCPP} #{CPPFLAGS} #{INCLUDE} #{DEFINES} -c -o #{t.name} #{t.prerequisites[0]}"
@@ -105,13 +124,13 @@ file "#{OBJDIR}/configdefault.o" => 'src/config.default' do |t|
   sh "cd ./src; ../#{OBJCOPY} -I binary -O elf32-littlearm -B arm --readonly-text --rename-section .data=.rodata.configdefault config.default ../#{OBJDIR}/configdefault.o"
 end
 
-file "#{PROG}.bin" => "#{PROG}.elf" do
+file "#{PROG}.bin" => ["#{PROG}.elf"] do
   sh "#{OBJCOPY} -O binary #{OBJDIR}/#{PROG}.elf #{OBJDIR}/#{PROG}.bin"
 end
 
 file "#{PROG}.elf" => OBJ do |t|
   puts "Linking #{t.source}"
-  sh "#{LD} #{LDFLAGS} #{OBJ} #{MBED_OBJS.join(' ')} #{LIBS}  -o #{OBJDIR}/#{t.name}"
+  sh "#{LD} #{LDFLAGS} #{OBJ} #{LIBS}  -o #{OBJDIR}/#{t.name}"
 end
 
 #arm-none-eabi-objcopy -R .stack -O ihex ../LPC1768/main.elf ../LPC1768/main.hex
