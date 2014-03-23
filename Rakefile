@@ -27,20 +27,28 @@ CC = "#{TOOLSBIN}gcc"
 CCPP = "#{TOOLSBIN}g++"
 LD = "#{TOOLSBIN}g++"
 OBJCOPY = "#{TOOLSBIN}objcopy"
+SIZE = "#{TOOLSBIN}size"
 
+# set to true to eliminate all the network code
+NONETWORK= false
 # list of modules to exclude, include directory it is in
 EXCLUDE_MODULES= %w(tools/touchprobe)
 # e.g for a CNC machine
 #EXCLUDE_MODULES = %w(tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder)
 
-# regex of modules to exclude
-exclude_defines= []
-EXCLUDES = EXCLUDE_MODULES.collect do |e|
-  exclude_defines << e.tr('/', '_').upcase # create defines for modules to exclude
-  e.sub('/', '\/')
+# generate regex of modules to exclude and defines
+exclude_defines, excludes = EXCLUDE_MODULES.collect { |e|  [e.tr('/', '_').upcase, e.sub('/', '\/')] }.transpose
+
+# see if network is enabled
+if ENV['NONETWORK'] || NONETWORK
+  nonetwork= true
+  excludes << '\/libs\/Network\/'
+  puts "Excluding Network code"
+else
+  nonetwork= false
 end
 
-SRC = FileList['src/**/*.{c,cpp}'].exclude(/#{EXCLUDES.join('|')}/)
+SRC = FileList['src/**/*.{c,cpp}'].exclude(/#{excludes.join('|')}/)
 
 puts "WARNING Excluding modules: #{EXCLUDE_MODULES.join(' ')}" unless exclude_defines.empty?
 
@@ -59,15 +67,17 @@ MBED_INCLUDE_DIRS = %W(#{MBED_DIR}/ #{MBED_DIR}/LPC1768/)
 
 INCLUDE = (INCLUDE_DIRS+MBED_INCLUDE_DIRS).collect { |d| "-I#{d}" }.join(" ")
 
-MRI_ENABLE = 1 # set to 0 to disable MRI
-MRI_LIB = MRI_ENABLE == 1 ? './mri/mri.ar' : ''
+MRI_ENABLE = true # set to false to disable MRI
+MRI_LIB = MRI_ENABLE ? './mri/mri.ar' : ''
 MBED_LIB = "#{MBED_DIR}/LPC1768/GCC_ARM/libmbed.a"
 SYS_LIBS = '-lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys'
 LIBS = [MBED_LIB, SYS_LIBS, MRI_LIB].join(' ')
 
-MRI_DEFINES = MRI_ENABLE == 1 ? %w(-DMRI_ENABLE=1 -DMRI_INIT_PARAMETERS=\'"MRI_UART_0 MRI_UART_SHARE"\' -DMRI_BREAK_ON_INIT=0 -DMRI_SEMIHOST_STDIO=0) : %w(-DMRI_ENABLE=0)
+MRI_DEFINES = MRI_ENABLE ? %w(-DMRI_ENABLE=1 -DMRI_INIT_PARAMETERS='"MRI_UART_0 MRI_UART_SHARE"' -DMRI_BREAK_ON_INIT=0 -DMRI_SEMIHOST_STDIO=0) : %w(-DMRI_ENABLE=0)
 defines = %w(-DCHECKSUM_USE_CPP -D__LPC17XX__  -DTARGET_LPC1768 -DWRITE_BUFFER_DISABLE=0 -DSTACK_SIZE=3072 -DCHECKSUM_USE_CPP) +
   exclude_defines.collect{|d| "-DNO_#{d}"} + MRI_DEFINES
+
+defines << '-DNONETWORK' if nonetwork
 
 DEFINES= defines.join(' ')
 
@@ -76,16 +86,17 @@ DEFINES= defines.join(' ')
 CFLAGS = '-Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align -O2 -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -ffunction-sections -fdata-sections  -fno-exceptions -fno-delete-null-pointer-checks'
 CPPFLAGS = CFLAGS + ' -fno-rtti -std=gnu++11'
 
-MRI_WRAPS = MRI_ENABLE == 1 ? ',--wrap=_read,--wrap=_write,--wrap=semihost_connected' : ''
+MRI_WRAPS = MRI_ENABLE ? ',--wrap=_read,--wrap=_write,--wrap=semihost_connected' : ''
 
 # Linker script to be used.  Indicates what code should be placed where in memory.
-#LSCRIPT = "mbed/src/vendor/NXP/cmsis/LPC1768/GCC_ARM/LPC1768.ld"
 LSCRIPT = "#{MBED_DIR}/LPC1768/GCC_ARM/LPC1768.ld"
 LDFLAGS = "-mcpu=cortex-m3 -mthumb -specs=./build/startfile.spec" +
     " -Wl,-Map=#{OBJDIR}/smoothie.map,--cref,--gc-sections,--wrap=_isatty,--wrap=malloc,--wrap=realloc,--wrap=free" +
     MRI_WRAPS +
     " -T#{LSCRIPT}" +
     " -u _scanf_float -u _printf_float"
+
+# tasks
 
 task :clean do
   FileUtils.rm_rf(OBJDIR)
@@ -97,7 +108,7 @@ end
 
 task :default => [:build]
 
-task :build => [MBED_LIB, :version, "#{PROG}.bin"]
+task :build => [MBED_LIB, :version, "#{PROG}.bin", :size]
 
 task :version do
   if is_windows?
@@ -108,6 +119,10 @@ task :version do
     VERSION = ' -D__GITVERSIONSTRING__=\"' + "#{v1[11..-1].chomp}-#{v2}".chomp + '\"'
     FileUtils.touch './src/version.cpp' # we want it compiled everytime
   end
+end
+
+task :size do
+  sh "#{SIZE} #{OBJDIR}/#{PROG}.elf"
 end
 
 file MBED_LIB do
@@ -135,7 +150,6 @@ end
 
 #arm-none-eabi-objcopy -R .stack -O ihex ../LPC1768/main.elf ../LPC1768/main.hex
 #arm-none-eabi-objdump -d -f -M reg-names-std --demangle ../LPC1768/main.elf >../LPC1768/main.disasm
-#arm-none-eabi-size ../LPC1768/main.elf
 
 rule '.o' => lambda{ |objfile| obj2src(objfile, 'cpp') } do |t|
   puts "Compiling #{t.source}"
