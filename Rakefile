@@ -145,6 +145,8 @@ LDFLAGS = "-mcpu=cortex-m3 -mthumb -specs=./build/startfile.spec" +
     " -T#{LSCRIPT}" +
     " -u _scanf_float -u _printf_float"
 
+HTTPD_FSDATA = './src/libs/Network/uip/webserver/httpd-fsdata2.h'
+
 # tasks
 
 # generate the header dependencies if they exist
@@ -157,6 +159,9 @@ end
 task :realclean => [:clean] do
   sh "cd ./mbed;make clean"
 end
+
+desc "Build the built-in web pages"
+task :webui => [HTTPD_FSDATA]
 
 task :default => [:build]
 
@@ -180,6 +185,19 @@ end
 
 task :size do
   sh "#{SIZE} #{OBJDIR}/#{PROG}.elf"
+end
+
+# build internal web page
+WEB_SOURCE_FILES= FileList['./src/libs/Network/uip/webserver/httpd-fs-src/**/*']
+WEBDIR = './src/libs/Network/uip/webserver/httpd-fs'
+file HTTPD_FSDATA => WEB_SOURCE_FILES do
+  FileUtils.rm_rf WEBDIR
+  FileUtils.mkdir WEBDIR
+  FileUtils.cp WEB_SOURCE_FILES, WEBDIR
+  # TODO minify some files
+  # sh 'java -jar yuicompressor-2.4.8.jar file -o file'
+  sh 'cd ./src/libs/Network/uip/webserver; perl makefsdata.pl'
+  sh 'cd ./src; make'
 end
 
 file MBED_LIB do
