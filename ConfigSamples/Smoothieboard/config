@@ -10,7 +10,7 @@ beta_steps_per_mm                            80               # Steps per mm for
 gamma_steps_per_mm                           1600             # Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
-planner_queue_size                           32               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
+planner_queue_size                           32               # Size of the planning queue DO NOT CHANGE THIS UNLESS YOU KNOW EXACLTY WHAT YOU ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
@@ -93,6 +93,9 @@ temperature_control.bed.thermistor           Honeywell100K    # see src/modules/
 temperature_control.bed.set_m_code           140              #
 temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
+
+#temperature_control.bed.bang_bang            false            # set to true to use bang bang control rather than PID
+#temperature_control.bed.hysteresis           2.0              # set to the temperature in degrees C to use as hysteresis when using bang bang
 
 # Switch module for fan control
 switch.fan.enable                            true             #
