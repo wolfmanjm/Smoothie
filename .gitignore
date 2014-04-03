@@ -27,3 +27,7 @@ smoothie.sublime-*
 .project
 .todo
 TAGS
+OBJ/
+.tags*
+configs
+stuff
