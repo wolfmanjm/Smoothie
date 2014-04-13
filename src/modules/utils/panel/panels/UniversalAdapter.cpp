@@ -98,14 +98,12 @@ uint8_t UniversalAdapter::readButtons()
 int UniversalAdapter::readEncoderDelta()
 {
     uint8_t e = sendReadCmd(READ_ENCODER);
-    //if(e == 0x40) return 0; // HACK as sometime SPI returns the command not the value
     //if(e != 0) THEKERNEL->streams->printf("e: %02X\n", e);
 
     // this is actually a signed number +/-127, so convert to int
     int d= e < 128 ? e : -(256-e);
-    // as upper layer expects only deltas of 1 we hack it here for now
-    // if(d < 0) d= -1;
-    // else if(d > 0) d= 1;
+    if(abs(d) > 10) return 0; // HACK as sometime SPI returns bogus data
+
     return d;
 }
 
