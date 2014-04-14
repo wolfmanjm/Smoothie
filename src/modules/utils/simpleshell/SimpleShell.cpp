@@ -492,11 +492,13 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 
 
 #if 0
-#include "mbed.h"
 #include "BaseSolution.h"
 #include "RostockSolution.h"
 #include "JohannKosselSolution.h"
+#include "Pin.h"
+#include "mbed.h"
 #endif
+
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
 #if 0
@@ -564,6 +566,73 @@ void time_idle()
 }
 static Timer timer;
 static int lastt = 0;
+#endif
+#if 0
+    stream->printf("Testing SPI\n");
+
+    // test SPI
+    Pin cs_pin;
+    cs_pin.from_string("0.16")->as_output();
+
+    Pin busy_pin;
+    busy_pin.from_string("2.13")->as_input();
+
+    mbed::SPI *spi = new mbed::SPI(P0_18, P0_17, P0_15);
+    cs_pin.set(1);
+
+    spi->frequency(500000);
+    int cnt= 0;
+    uint8_t r;
+    int a= 'A';
+    int d= 0;
+    wait_ms(100);
+    for (int i = 0; i < 10000000; ++i) {
+        cs_pin.set(0);
+        spi->write(2<<5);
+        wait_us(40);
+        r= spi->write(0);
+        cs_pin.set(1);
+        if(r > 1) {
+            stream->printf("%d - %02X\n", ++cnt, r);
+        }
+
+        cs_pin.set(0);
+        spi->write(1<<5);
+        wait_us(40);
+        r= spi->write(0);
+        cs_pin.set(1);
+        if(r != 0) {
+            stream->printf("%d - %02X\n", ++cnt, r);
+        }
+
+        if(d++ > 10) {
+            d= 0;
+            cs_pin.set(0);
+            uint8_t cmd = (3<<5) | ((20 + 1) & 0x1F);
+            uint8_t rc = 0;
+            spi->write(cmd);
+            wait_us(40);
+            spi->write(rc);
+            for (int i = 0; i < 20; ++i) {
+                wait_us(40);
+                spi->write(a+i);
+            }
+            if(++a > 'Z'-20) a= 'A';
+            wait_us(40);
+            cs_pin.set(1);
+        }
+        if(busy_pin.get() == 1) {
+            stream->printf("BUSY..............\n");
+        }
+        // wait 20ms
+        uint32_t start = us_ticker_read();
+        while ((us_ticker_read() - start) < 20*1000) {
+            THEKERNEL->call_event(ON_IDLE);
+        }
+
+    }
+    delete spi;
+    stream->printf("Done testing SPI\n");
 #endif
 }
 
