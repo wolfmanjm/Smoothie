@@ -580,45 +580,51 @@ static int lastt = 0;
     mbed::SPI *spi = new mbed::SPI(P0_18, P0_17, P0_15);
     cs_pin.set(1);
 
-    spi->frequency(500000);
+    spi->frequency(1000000);
     int cnt= 0;
     uint8_t r;
     int a= 'A';
     int d= 0;
     wait_ms(100);
-    for (int i = 0; i < 10000000; ++i) {
-        cs_pin.set(0);
-        spi->write(2<<5);
-        wait_us(40);
-        r= spi->write(0);
-        cs_pin.set(1);
-        if(r > 1) {
-            stream->printf("%d - %02X\n", ++cnt, r);
-        }
+    for (int j = 0; j < 10000000; ++j) {
+        // cs_pin.set(0);
+        // spi->write(0x21);
+        // wait_us(40);
+        // r= spi->write(0);
+        // cs_pin.set(1);
+        // if(r > 0) {
+        //     stream->printf("%d - %02X\n", ++cnt, r);
+        // }
 
-        cs_pin.set(0);
-        spi->write(1<<5);
-        wait_us(40);
-        r= spi->write(0);
-        cs_pin.set(1);
-        if(r != 0) {
-            stream->printf("%d - %02X\n", ++cnt, r);
-        }
+        // cs_pin.set(0);
+        // spi->write(0x20);
+        // wait_us(40);
+        // r= spi->write(0);
+        // cs_pin.set(1);
+        // if(r != 0) {
+        //     stream->printf("%d - %02X\n", ++cnt, r);
+        // }
 
-        if(d++ > 10) {
+        if(d++ > 25) {
             d= 0;
             cs_pin.set(0);
-            uint8_t cmd = (3<<5) | ((20 + 1) & 0x1F);
-            uint8_t rc = 0;
-            spi->write(cmd);
+            spi->write(4<<5); // lcd clear
             wait_us(40);
-            spi->write(rc);
-            for (int i = 0; i < 20; ++i) {
+            for (int k = 0; k < 4; ++k) {
+                spi->write((2<<5) | 1); // lcd setcursor
                 wait_us(40);
-                spi->write(a+i);
+                spi->write( (k << 5) | (0 & 0x1F));
+                wait_us(40);
+
+                uint8_t cmd = (3<<5) | (10 & 0x1F);
+                spi->write(cmd);
+                wait_us(40);
+                for (int i = 0; i < 10; ++i) {
+                    spi->write(a+i);
+                    wait_us(40);
+                }
             }
             if(++a > 'Z'-20) a= 'A';
-            wait_us(40);
             cs_pin.set(1);
         }
         if(busy_pin.get() == 1) {
