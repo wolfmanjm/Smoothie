@@ -3,6 +3,8 @@
 DIRS = mbed src
 DIRSCLEAN = $(addsuffix .clean,$(DIRS))
 
+export DEFAULT_SERIAL_BAUD_RATE=115200
+
 all:
 	@echo Building mbed SDK
 	@ $(MAKE) -C mbed
