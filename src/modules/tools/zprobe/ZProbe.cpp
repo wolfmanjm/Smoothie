@@ -145,7 +145,7 @@ void ZProbe::on_gcode_received(void *argument)
             }
             int steps[3];
             if(run_probe(steps)){
-                gcode->stream->printf("Z:%1.4f C:%d\n", steps[2]/this->steps_per_mm[Z_AXIS], steps[Z_AXIS]);
+                gcode->stream->printf("Z:%1.4f C:%d\n", steps[Z_AXIS]/this->steps_per_mm[Z_AXIS], steps[Z_AXIS]);
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z')) {
                     // set Z to the specified value, and leave probe where it is

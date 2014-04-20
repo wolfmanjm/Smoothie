@@ -118,6 +118,10 @@ gamma_max                                    200              #
 
 #probe endstop
 #probe_pin                                   1.29             # optional pin for probe
+zprobe.enable                                false            # set to true to enable a zprobe
+zprobe.probe_pin                             1.29!^           # if NC remove the !
+zprobe.feedrate                              5                # mm/sec probe feed rate
+#zprobe.debounce_count                       100              # set if noisy
 
 alpha_fast_homing_rate_mm_s                  50               # feedrates in mm/second
 beta_fast_homing_rate_mm_s                   50               # "

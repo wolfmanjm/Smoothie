@@ -172,6 +172,12 @@ gamma_trim                                   0                 # software trim f
 
 #endstop_debounce_count                       100              # uncomment if you get noise on your endstops
 
+# optional Z probe
+#zprobe.enable                                false            # set to true to enable a zprobe
+#zprobe.probe_pin                             1.28!^           # pin prob eis attached to if NC remove the !
+#zprobe.feedrate                              5                # mm/sec probe feed rate
+#zprobe.debounce_count                        100              # set if noisy
+
 # Pause button
 pause_button_enable                          true             #
 
