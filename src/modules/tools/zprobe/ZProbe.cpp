@@ -22,6 +22,7 @@
 #include "Planner.h"
 
 #include <tuple>
+#include <algorithm>
 
 #define zprobe_checksum          CHECKSUM("zprobe")
 #define enable_checksum          CHECKSUM("enable")
@@ -133,7 +134,7 @@ void ZProbe::on_config_reload(void *argument)
     this->is_delta =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 }
 
-bool ZProbe::wait_for_probe(int steps[])
+bool ZProbe::wait_for_probe(int steps[3])
 {
     unsigned int debounce = 0;
     while(true) {
@@ -172,7 +173,7 @@ void ZProbe::on_idle(void *argument)
 }
 
 // single probe and report amount moved
-bool ZProbe::run_probe(int *steps, bool fast)
+bool ZProbe::run_probe(int& steps, bool fast)
 {
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
@@ -190,24 +191,28 @@ bool ZProbe::run_probe(int *steps, bool fast)
         this->steppers[Y_AXIS]->move(true, 1000 * this->steps_per_mm[Y_AXIS]);
     }
 
-    bool r = wait_for_probe(steps);
+    int s[3];
+    bool r = wait_for_probe(s);
+    steps= s[2]; // only need z
     this->running = false;
     return r;
 }
 
-bool ZProbe::return_probe(int *steps)
+bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
     this->current_feedrate = this->fast_feedrate * this->steps_per_mm[Z_AXIS]; // feedrate in steps/sec
+    bool dir= steps < 0;
+    steps= abs(steps);
 
     this->running = true;
     this->steppers[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    this->steppers[Z_AXIS]->move(false, steps[Z_AXIS]);
+    this->steppers[Z_AXIS]->move(dir, steps);
     if(this->is_delta) {
         this->steppers[X_AXIS]->set_speed(0);
-        this->steppers[X_AXIS]->move(false, steps[X_AXIS]);
+        this->steppers[X_AXIS]->move(dir, steps);
         this->steppers[Y_AXIS]->set_speed(0);
-        this->steppers[Y_AXIS]->move(false, steps[Y_AXIS]);
+        this->steppers[Y_AXIS]->move(dir, steps);
     }
     while(this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving || this->steppers[Z_AXIS]->moving) {
         // wait for it to complete
@@ -230,31 +235,16 @@ static std::tuple<float, float, float, float, float, float> getCoordinates(float
     return std::make_tuple(t1x, t1y, t2x, t2y, t3x, t3y);
 }
 
-bool ZProbe::probe_delta_towers(int steps[3][3], StreamOutput *stream)
+bool ZProbe::probe_delta_tower(int& steps, float x, float y)
 {
-    // need to calculate test points from probe radius
-    float t1x, t1y, t2x, t2y, t3x, t3y;
-    std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
+    int s;
+    // move to tower
+    coordinated_move(x, y, NAN, this->fast_feedrate);
+    if(!run_probe(s)) return false;
 
-    // X tower
-    coordinated_move(t1x, t1y, NAN, this->fast_feedrate);
-    if(!run_probe(steps[0])) return false;
-    stream->printf("T1 Z:%1.4f C:%d\n", steps[0][Z_AXIS] / this->steps_per_mm[Z_AXIS], steps[0][Z_AXIS]);
     // return to original Z
-    return_probe(steps[0]);
-
-    // Y tower
-    coordinated_move(t2x, t2y, NAN, this->fast_feedrate);
-    if(!run_probe(steps[1])) return false;
-    stream->printf("T2 Z:%1.4f C:%d\n", steps[1][Z_AXIS] / this->steps_per_mm[Z_AXIS], steps[1][Z_AXIS]);
-    return_probe(steps[1]);
-
-    // Z tower
-    coordinated_move(t3x, t3y, NAN, this->fast_feedrate);
-    if(!run_probe(steps[2])) return false;
-    stream->printf("T3 Z:%1.4f C:%d\n", steps[2][Z_AXIS] / this->steps_per_mm[Z_AXIS], steps[2][Z_AXIS]);
-    return_probe(steps[2]);
-
+    return_probe(s);
+    steps= s;
 
     return true;
 }
@@ -262,12 +252,12 @@ bool ZProbe::probe_delta_towers(int steps[3][3], StreamOutput *stream)
 /* Run a calibration routine for a delta
     1. Home
     2. probe for z bed
-    3. move to base of each tower at 5mm above bed
-    4. probe down to bed
-    5. probe next tower
-    6. calculate trim offsets and apply them
-    7. Home
-    8. Probe center
+    3. probe initial tower positions
+    4. set initial trims such that trims will be minimal negative values
+    5. home, probe three towers again
+    6. calculate trim offset and apply to all trims
+    7. repeat 5, 6 4 times to converge on a solution
+    8. home, Probe center
     9. calculate delta radius and apply it
     10. check level
 */
@@ -281,98 +271,108 @@ bool ZProbe::calibrate_delta(Gcode *gcode)
     home();
 
     // find bed, run at fast rate
-    int steps[3][3];
-    if(!run_probe(steps[0], true)) return false;
+    int s;
+    if(!run_probe(s, true)) return false;
 
-    float zl = steps[0][Z_AXIS] / this->steps_per_mm[Z_AXIS];
-    gcode->stream->printf("Probe ht is %f mm\n", zl);
+    // how far to move down from home before probe
+    int probestart = s - (this->probe_height*this->steps_per_mm[Z_AXIS]);
+    gcode->stream->printf("Probe start ht is %f mm\n", probestart/this->steps_per_mm[Z_AXIS]);
 
-    // nominal Z == 0
-    THEKERNEL->robot->reset_axis_position(0.0F, Z_AXIS);
-
-    float zht = this->probe_height; // height above bed
-    coordinated_move(NAN, NAN, zht, this->fast_feedrate);
-
-    // probe the base of the three towers
-    if(!probe_delta_towers(steps, gcode->stream)) return false;
-
-    // gcode->stream->printf("%d, %d, %d\n", steps[0][0], steps[0][1], steps[0][2]);
-    // gcode->stream->printf("%d, %d, %d\n", steps[1][0], steps[1][1], steps[1][2]);
-    // gcode->stream->printf("%d, %d, %d\n", steps[2][0], steps[2][1], steps[2][2]);
-
-    // set new trim values
-    // this is funky, basically the head moves in a plane parallel to a plane defined by the three endstops
-    // when we probe the bed we find another plane that should be parallel to that plane.
-    // to make the head move in a plane parallel to the bed (ie TRAM) we change the endstops to adjust that plane to be parallel
-    // Yea!
-
-    float d1 = zht - (steps[0][Z_AXIS] / this->steps_per_mm[X_AXIS]); // All three steps should be the same so we just use the Z one
-    float d2 = zht - (steps[1][Z_AXIS] / this->steps_per_mm[Y_AXIS]);
-    float d3 = zht - (steps[2][Z_AXIS] / this->steps_per_mm[Z_AXIS]);
-
+    // get probe points
     float t1x, t1y, t2x, t2y, t3x, t3y;
     std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
 
-    gcode->stream->printf("DEBUG: T1: X:%f Y:%f\n", t1x, t1y);
-    gcode->stream->printf("DEBUG: T2: X:%f Y:%f\n", t2x, t2y);
-    gcode->stream->printf("DEBUG: T3: X:%f Y:%f\n", t3x, t3y);
-
-
-    // define the plane of the bed (relative to the endstop plane)
-    Vector3 v1(t1x, t1y, d1);
-    Vector3 v2(t2x, t2y, d2);
-    Vector3 v3(t3x, t3y, d3);
-    Plane plane(v1, v2, v3);
-
-    gcode->stream->printf("DEBUG: normal= %f, %f, %f\n", plane.getNormal()[0], plane.getNormal()[1], plane.getNormal()[2]);
-
-    // now find endstops positions
-    float e1x, e1y, e2x, e2y, e3x, e3y;
-    std::tie(e1x, e1y, e2x, e2y, e3x, e3y) = getCoordinates(this->endstop_radius);
-
-    gcode->stream->printf("DEBUG: E1: X:%f Y:%f\n", e1x, e1y);
-    gcode->stream->printf("DEBUG: E2: X:%f Y:%f\n", e2x, e2y);
-    gcode->stream->printf("DEBUG: E3: X:%f Y:%f\n", e3x, e3y);
-
-    float t1= plane.getz(e1x, e1y);
-    float t2= plane.getz(e2x, e2y);
-    float t3= plane.getz(e3x, e3y);
-    gcode->stream->printf("DEBUG: d1,2,3= %f, %f, %f\n", d1, d2, d3);
-    gcode->stream->printf("DEBUG: t1,2,3= %f, %f, %f\n", t1, t2, t3);
-
-    // find the smallest one and make that the normal, offset the other two from that
-    // if(d1 <= d2 && d1 <= d3) {
-    //     d2= d1 - d2;
-    //     d3= d1 - d3;
-    //     d1= 0.0F;
-    // }else if(d2 <= d1 && d2 <= d3) {
-    //     d1= d2 - d1;
-    //     d3= d2 - d3;
-    //     d2= 0.0F;
-    // }else {
-    //     d1= d3 - d1;
-    //     d2= d3 - d2;
-    //     d3= 0.0F;
-    // }
-    set_trim(t1, t2, t3, gcode->stream);
-
+    // move to start position
     home();
+    return_probe(-probestart);
 
-    // move probe back to just above the bed
-    if(!run_probe(steps[0], true)) return false;
-    THEKERNEL->robot->reset_axis_position(0.0F, Z_AXIS);
-    coordinated_move(NAN, NAN, zht, this->fast_feedrate);
+    // get initial probes
+    // probe the base of the X tower
+    if(!probe_delta_tower(s, t1x, t1y)) return false;
+    float t1z= s / this->steps_per_mm[Z_AXIS];
+    gcode->stream->printf("T1-1 Z:%1.4f C:%d\n", t1z, s);
+
+    // probe the base of the Y tower
+    if(!probe_delta_tower(s, t2x, t2y)) return false;
+    float t2z= s / this->steps_per_mm[Z_AXIS];
+    gcode->stream->printf("T2-1 Z:%1.4f C:%d\n", t2z, s);
+
+    // probe the base of the Z tower
+    if(!probe_delta_tower(s, t3x, t3y)) return false;
+    float t3z= s / this->steps_per_mm[Z_AXIS];
+    gcode->stream->printf("T3-1 Z:%1.4f C:%d\n", t3z, s);
+
+    float trimscale= 1.2522F; // empirically determined
+
+    // set initial trims to worst case so we always have a negative trim
+    float min= std::min({t1z, t2z, t3z});
+    float trimx= (min-t1z)*trimscale, trimy= (min-t2z)*trimscale, trimz= (min-t3z)*trimscale;
+
+    // set initial trim
+    set_trim(trimx, trimy, trimz, gcode->stream);
+
+    for (int i = 1; i <= 4; ++i) {
+        // home and move probe to start position just above the bed
+        home();
+        return_probe(-probestart);
+
+        // probe the base of the X tower
+        if(!probe_delta_tower(s, t1x, t1y)) return false;
+        t1z= s / this->steps_per_mm[Z_AXIS];
+        gcode->stream->printf("T1-2-%d Z:%1.4f C:%d\n", i, t1z, s);
+
+        // probe the base of the Y tower
+        if(!probe_delta_tower(s, t2x, t2y)) return false;
+        t2z= s / this->steps_per_mm[Z_AXIS];
+        gcode->stream->printf("T2-2-%d Z:%1.4f C:%d\n", i, t2z, s);
+
+        // probe the base of the Z tower
+        if(!probe_delta_tower(s, t3x, t3y)) return false;
+        t3z= s / this->steps_per_mm[Z_AXIS];
+        gcode->stream->printf("T3-2-%d Z:%1.4f C:%d\n", i, t3z, s);
+
+        auto mm= std::minmax({t1z, t2z, t3z});
+        if((mm.second-mm.first) < 0.03F) break; // probably as good as it gets, TODO set 0.02 as config value
+
+        // set new trim values based on min difference
+        min= mm.first;
+        trimx += (min-t1z)*trimscale;
+        trimy += (min-t2z)*trimscale;
+        trimz += (min-t3z)*trimscale;
+
+        // set trim
+        set_trim(trimx, trimy, trimz, gcode->stream);
+
+        // flush the output
+        THEKERNEL->call_event(ON_IDLE);
+    }
+
+    // move probe to start position just above the bed
+    home();
+    return_probe(-probestart);
 
     // probe the base of the three towers again to see if we are level
-    if(!probe_delta_towers(steps, gcode->stream)) return false;
-    // TODO maybe test the three and warn if too far out
+    int dx= 0, dy= 0, dz= 0;
+    if(!probe_delta_tower(dx, t1x, t1y)) return false;
+    gcode->stream->printf("T1-final Z:%1.4f C:%d\n", dx / this->steps_per_mm[Z_AXIS], dx);
+    if(!probe_delta_tower(dy, t2x, t2y)) return false;
+    gcode->stream->printf("T2-final Z:%1.4f C:%d\n", dy / this->steps_per_mm[Z_AXIS], dy);
+    if(!probe_delta_tower(dz, t3x, t3y)) return false;
+    gcode->stream->printf("T3-final Z:%1.4f C:%d\n", dz / this->steps_per_mm[Z_AXIS], dz);
+
+    // compare the three and report
+    auto mm= std::minmax({dx, dy, dz});
+    gcode->stream->printf("max endstop delta= %f\n", (mm.second-mm.first)/this->steps_per_mm[Z_AXIS]);
 
     // probe center
-    coordinated_move(0.0F, 0.0F, NAN, this->fast_feedrate);
-    if(!run_probe(steps[0])) return false;
+    int dc;
+    if(!probe_delta_tower(dc, 0, 0)) return false;
 
     // TODO adjust delta radius
-    gcode->stream->printf("Center Z:%1.4f C:%d\n", steps[0][Z_AXIS] / this->steps_per_mm[Z_AXIS], steps[0][Z_AXIS]);
+    gcode->stream->printf("Center Z:%1.4f C:%d\n", dc / this->steps_per_mm[Z_AXIS], dc);
+
+    mm= std::minmax({dx, dy, dz, dc});
+    gcode->stream->printf("max delta= %f\n", (mm.second-mm.first)/this->steps_per_mm[Z_AXIS]);
 
     return true;
 }
@@ -388,9 +388,9 @@ void ZProbe::on_gcode_received(void *argument)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
-            int steps[3];
+            int steps;
             if(run_probe(steps)) {
-                gcode->stream->printf("Z:%1.4f C:%d\n", steps[Z_AXIS] / this->steps_per_mm[Z_AXIS], steps[Z_AXIS]);
+                gcode->stream->printf("Z:%1.4f C:%d\n", steps / this->steps_per_mm[Z_AXIS], steps);
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z')) {
                     // set Z to the specified value, and leave probe where it is
@@ -427,24 +427,6 @@ void ZProbe::on_gcode_received(void *argument)
             gcode->mark_as_taken();
 
         }
-        else if (gcode->m == 999) {
-            float t1x, t1y, t2x, t2y, t3x, t3y;
-            std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
-
-            gcode->stream->printf("DEBUG: T1: X:%f Y:%f\n", t1x, t1y);
-            gcode->stream->printf("DEBUG: T2: X:%f Y:%f\n", t2x, t2y);
-            gcode->stream->printf("DEBUG: T3: X:%f Y:%f\n", t3x, t3y);
-
-
-            // define the plane of the bed (relative to the endstop plane)
-            Vector3 v1(t1x, t1y, 0);
-            Vector3 v2(t2x, t2y, 0);
-            Vector3 v3(t3x, t3y, 0);
-            Plane plane(v1, v2, v3);
-
-            gcode->stream->printf("DEBUG: normal= %f, %f, %f\n", plane.getNormal()[0], plane.getNormal()[1], plane.getNormal()[2]);
-
-        }
     }
 }
 
@@ -477,7 +459,7 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
 }
 
 // issue a coordinated move directly to robot, and return when done
-// Only move the coordintaes that are passed in as not nan
+// Only move the coordinates that are passed in as not nan
 void ZProbe::coordinated_move(float x, float y, float z, float feedrate)
 {
     char buf[32];

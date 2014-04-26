@@ -27,10 +27,10 @@ public:
 
 
 private:
-    bool wait_for_probe(int distance[]);
-    bool run_probe(int *steps, bool fast= false);
-    bool probe_delta_towers(int steps[3][3], StreamOutput *stream);
-    bool return_probe(int *steps);
+    bool wait_for_probe(int steps[3]);
+    bool run_probe(int& steps, bool fast= false);
+    bool probe_delta_tower(int& steps, float x, float y);
+    bool return_probe(int steps);
     bool calibrate_delta(Gcode *gcode);
     void coordinated_move(float x, float y, float z, float feedrate);
     void home();
