@@ -27,6 +27,7 @@
 
 #include <tuple>
 #include <algorithm>
+#include <cmath>
 
 #define zprobe_checksum          CHECKSUM("zprobe")
 #define enable_checksum          CHECKSUM("enable")
@@ -47,7 +48,10 @@
 #define STEPS_PER_MM(a) (this->steppers[a]->steps_per_mm)
 #define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
 
-#define abs(a) ((a<0) ? -a : a)
+#define abs std::abs
+
+//#define DEBUG_PRINTF(...)
+#define DEBUG_PRINTF gcode->stream->printf
 
 void ZProbe::on_module_loaded()
 {
@@ -180,7 +184,7 @@ bool ZProbe::return_probe(int steps)
 
     this->running = false;
 
-    return true;
+    return !this->pin.get(); // make probe is not triggered
 }
 
 // calculate the X and Y positions for the three towers given the radius from the center
@@ -202,10 +206,10 @@ bool ZProbe::probe_delta_tower(int& steps, float x, float y)
     if(!run_probe(s)) return false;
 
     // return to original Z
-    return_probe(s);
+    bool b= return_probe(s);
     steps= s;
 
-    return true;
+    return b;
 }
 
 /* Run a calibration routine for a delta
@@ -350,6 +354,29 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
 
     gcode->stream->printf("Calibrating delta radius: target %f, radius %f\n", target, this->probe_radius);
 
+    // get current radius offsets
+    bool keep= false;
+    if(gcode->has_letter('K')) keep= true; // keep current settings
+
+    // delta radius offsets
+    float drx= 0.0F, dry= 0.0F, drz= 0.0F;
+
+    BaseSolution::arm_options_t options;
+    if(keep) {
+        if(THEKERNEL->robot->arm_solution->get_optional(options)) {
+            drx= options['A'];
+            dry= options['B'];
+            drz= options['C'];
+        }
+    }else{
+        options['A']= drx;
+        options['B']= dry;
+        options['C']= drz;
+        THEKERNEL->robot->arm_solution->set_optional(options);
+        gcode->stream->printf("Setting delta radius offsets to: A: %1.4f B: %1.4f C: %1.4f\n", drx, dry, drz);
+    }
+    options.clear();
+
     // get probe points
     float t1x, t1y, t2x, t2y, t3x, t3y;
     std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
@@ -372,7 +399,6 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
 
     // get current delta radius
     float delta_radius= 0.0F;
-    BaseSolution::arm_options_t options;
     if(THEKERNEL->robot->arm_solution->get_optional(options)) {
         delta_radius= options['R'];
     }
@@ -382,20 +408,28 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
     }
     options.clear();
 
+    // remember last good probes
+    float t1z, t2z, t3z;
+    int sx, sy, sz;
+    float d;
+
+    // first do the regular in front of tower points
     float drinc= 2.5F; // approx
     for (int i = 1; i <= 10; ++i) {
         // probe t1, t2, t3 and get average, but use coordinated moves, probing center won't change
-        int dx, dy, dz;
-        if(!probe_delta_tower(dx, t1x, t1y)) return false;
-        gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, dx / Z_STEPS_PER_MM, dx);
-        if(!probe_delta_tower(dy, t2x, t2y)) return false;
-        gcode->stream->printf("T2-%d Z:%1.3f C:%d\n", i, dy / Z_STEPS_PER_MM, dy);
-        if(!probe_delta_tower(dz, t3x, t3y)) return false;
-        gcode->stream->printf("T3-%d Z:%1.3f C:%d\n", i, dz / Z_STEPS_PER_MM, dz);
+        if(!probe_delta_tower(sx, t1x, t1y)) return false;
+        t1z= sx/Z_STEPS_PER_MM;
+        gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, t1z, sx);
+        if(!probe_delta_tower(sy, t2x, t2y)) return false;
+        t2z= sy/Z_STEPS_PER_MM;
+        gcode->stream->printf("T2-%d Z:%1.3f C:%d\n", i, t2z, sy);
+        if(!probe_delta_tower(sz, t3x, t3y)) return false;
+        t3z= sz/Z_STEPS_PER_MM;
+        gcode->stream->printf("T3-%d Z:%1.3f C:%d\n", i, t3z, sz);
 
         // now look at the difference and reduce it by adjusting delta radius
-        float m= ((dx+dy+dz)/3.0F) / Z_STEPS_PER_MM;
-        float d= cmm-m;
+        float m= (t1z+t2z+t3z)/3.0F;
+        d= cmm-m;
         gcode->stream->printf("C-%d Z-ave:%1.4f delta: %1.3f\n", i, m, d);
 
         if(abs(d) <= target) break; // resolution of success
@@ -415,6 +449,95 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
         // flush the output
         THEKERNEL->call_event(ON_IDLE);
     }
+
+    if(abs(d) > target) {
+        gcode->stream->printf("WARNING: delta radius did not resolve to within required parameters: delta %f\n", d);
+        return true;
+    }
+
+    gcode->stream->printf("delta radius set to within required parameters: delta %f\n", d);
+
+    if(!gcode->has_letter('O')) return true;
+
+    gcode->stream->printf("Calibrating delta radius offsets: target %f, radius %f\n", target, this->probe_radius);
+
+    // Next do the opposite points to determine if individual tower radius needs to be done
+    // This code is derived from Rich Cattells autocalibration work for Marlin - https://github.com/RichCattell/Marlin.git
+    // Thank you for the diligent work
+    for (int i = 1; i <= 10; ++i) {
+        // probe the opposite points
+        float o1z, o2z, o3z;
+        if(!probe_delta_tower(sx, -t1x, -t1y)) return false;
+        o1z= sx / Z_STEPS_PER_MM;
+        gcode->stream->printf("OT1-%d Z:%1.4f C:%d Delta: %1.4f\n", i, o1z, sx, t1z-o1z);
+        if(!probe_delta_tower(sy, -t2x, -t2y)) return false;
+        o2z= sy / Z_STEPS_PER_MM;
+        gcode->stream->printf("OT2-%d Z:%1.4f C:%d Delta: %1.4f\n", i, o2z, sy, t2z-o2z);
+        if(!probe_delta_tower(sz, -t3x, -t3y)) return false;
+        o3z= sz / Z_STEPS_PER_MM;
+        gcode->stream->printf("OT3-%d Z:%1.4f C:%d Delta: %1.4f\n", i, o3z, sz, t3z-o3z);
+
+        // differential between the diagonals
+        float d1= t1z-o1z;
+        float d2= t2z-o2z;
+        float d3= t3z-o3z;
+
+        // compare with other towers differentials
+        bool d12= (abs(d1-d2) <= target);
+        bool d23= (abs(d2-d3) <= target);
+        bool d31= (abs(d3-d1) <= target);
+
+        DEBUG_PRINTF("DEBUG: d1 %f, d2 %f, d3 %f, d12 %d, d23 %d, d32 %d\n", d1, d2, d3, d12, d23, d31);
+
+
+        // determine which towers needs adjusting
+        if(d12 && d23 && d31) {
+            gcode->stream->printf("No tower radius errors detected: %1.4f %1.4f %1.4f\n", d1, d2, d3);
+            break;
+        }else if (!d12 && !d23 && !d31) {
+            gcode->stream->printf("Cannot determine which tower is in error: %1.4f %1.4f %1.4f\n", d1, d2, d3);
+            break;
+        }
+
+        if(d23 && !d12 && !d31) { // X Tower radius error
+            DEBUG_PRINTF("DEBUG: X tower radius error\n");
+            drx += (d1*drinc);
+        }
+        if(d31 && !d12 && !d23) { // Y Tower radius error
+            DEBUG_PRINTF("DEBUG: Y tower radius error\n");
+            dry += (d2*drinc);
+        }
+        if(d12 && !d23 && !d31) { // Z Tower radius error
+            DEBUG_PRINTF("DEBUG: Z tower radius error\n");
+            drz += (d3*drinc);
+        }
+
+        // set the new delta radius offsets
+        options.clear();
+        options['A']= drx;
+        options['B']= dry;
+        options['C']= drz;
+        THEKERNEL->robot->arm_solution->set_optional(options);
+        gcode->stream->printf("Setting delta radius offsets to: A: %1.4f B: %1.4f C: %1.4f\n", drx, dry, drz);
+
+        home();
+        coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // needs to be a relative coordinated move
+
+        // re probe the towers
+        if(!probe_delta_tower(sx, t1x, t1y)) return false;
+        t1z= sx/Z_STEPS_PER_MM;
+        gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, t1z, sx);
+        if(!probe_delta_tower(sy, t2x, t2y)) return false;
+        t2z= sy/Z_STEPS_PER_MM;
+        gcode->stream->printf("T2-%d Z:%1.3f C:%d\n", i, t2z, sy);
+        if(!probe_delta_tower(sz, t3x, t3y)) return false;
+        t3z= sz/Z_STEPS_PER_MM;
+        gcode->stream->printf("T3-%d Z:%1.3f C:%d\n", i, t3z, sz);
+
+        // flush the output
+        THEKERNEL->call_event(ON_IDLE);
+    }
+
     return true;
 }
 
@@ -464,7 +587,7 @@ void ZProbe::on_gcode_received(void *argument)
 
             } else {
                 // TODO create Z height map for bed
-                gcode->stream->printf("Not supported yet\n");
+                gcode->stream->printf("Cartesian bed probe not supported yet\n");
             }
         }
 
