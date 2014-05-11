@@ -14,10 +14,14 @@
 #define tower1_offset_checksum      CHECKSUM("delta_tower1_offset")
 #define tower2_offset_checksum      CHECKSUM("delta_tower2_offset")
 #define tower3_offset_checksum      CHECKSUM("delta_tower3_offset")
+#define tower1_angle_checksum      CHECKSUM("delta_tower1_angle")
+#define tower2_angle_checksum      CHECKSUM("delta_tower2_angle")
+#define tower3_angle_checksum      CHECKSUM("delta_tower3_angle")
 
 
 #define SQ(x) powf(x, 2)
 #define ROUND(x, y) (roundf(x * 1e ## y) / 1e ## y)
+#define PIOVER180   0.01745329251994329576923690768489F
 
 JohannKosselSolution::JohannKosselSolution(Config *config)
 {
@@ -26,6 +30,9 @@ JohannKosselSolution::JohannKosselSolution(Config *config)
     // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
     arm_radius = config->value(arm_radius_checksum)->by_default(124.0f)->as_number();
 
+    tower1_angle = config->value(tower1_angle_checksum)->by_default(0.0f)->as_number();
+    tower2_angle = config->value(tower2_angle_checksum)->by_default(0.0f)->as_number();
+    tower3_angle = config->value(tower3_angle_checksum)->by_default(0.0f)->as_number();
     tower1_offset = config->value(tower1_offset_checksum)->by_default(0.0f)->as_number();
     tower2_offset = config->value(tower2_offset_checksum)->by_default(0.0f)->as_number();
     tower3_offset = config->value(tower3_offset_checksum)->by_default(0.0f)->as_number();
@@ -40,17 +47,12 @@ void JohannKosselSolution::init()
     // Effective X/Y positions of the three vertical towers.
     float delta_radius = arm_radius;
 
-    const float SIN_60   = 0.8660254037844386F;
-    const float COS_60   = 0.5F;
-
-    delta_tower1_x = -SIN_60 * (delta_radius + tower1_offset); // front left tower
-    delta_tower1_y = -COS_60 * (delta_radius + tower1_offset);
-
-    delta_tower2_x =  SIN_60 * (delta_radius + tower2_offset); // front right tower
-    delta_tower2_y = -COS_60 * (delta_radius + tower2_offset);
-
-    delta_tower3_x = 0.0F; // back middle tower
-    delta_tower3_y = delta_radius + tower3_offset;
+    delta_tower1_x = (delta_radius + tower1_offset) * cosf((210.0F + tower1_angle) * PIOVER180); // front left tower
+    delta_tower1_y = (delta_radius + tower1_offset) * sinf((210.0F + tower1_angle) * PIOVER180);
+    delta_tower2_x = (delta_radius + tower2_offset) * cosf((330.0F + tower2_angle) * PIOVER180); // front right tower
+    delta_tower2_y = (delta_radius + tower2_offset) * sinf((330.0F + tower2_angle) * PIOVER180);
+    delta_tower3_x = (delta_radius + tower3_offset) * cosf((90.0F  + tower3_angle) * PIOVER180);  // back middle tower
+    delta_tower3_y = (delta_radius + tower3_offset) * sinf((90.0F  + tower3_angle) * PIOVER180);
 }
 
 void JohannKosselSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] )
@@ -135,6 +137,18 @@ bool JohannKosselSolution::set_optional(const arm_options_t &options)
     if(i != options.end()) {
         tower3_offset = i->second;
     }
+    i = options.find('D');
+    if(i != options.end()) {
+        tower1_angle = i->second;
+    }
+    i = options.find('E');
+    if(i != options.end()) {
+        tower2_angle = i->second;
+    }
+    i = options.find('F');
+    if(i != options.end()) {
+        tower3_angle = i->second;
+    }
 
     init();
     return true;
@@ -147,6 +161,9 @@ bool JohannKosselSolution::get_optional(arm_options_t &options)
     options['A'] = this->tower1_offset;
     options['B'] = this->tower2_offset;
     options['C'] = this->tower3_offset;
+    options['D'] = this->tower1_angle;
+    options['E'] = this->tower2_angle;
+    options['F'] = this->tower3_angle;
 
     return true;
 };

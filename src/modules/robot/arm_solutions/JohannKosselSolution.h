@@ -30,5 +30,8 @@ class JohannKosselSolution : public BaseSolution {
         float tower1_offset;
         float tower2_offset;
         float tower3_offset;
+        float tower1_angle;
+        float tower2_angle;
+        float tower3_angle;
 };
 #endif // JOHANNKOSSELSOLUTION_H
