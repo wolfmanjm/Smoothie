@@ -133,7 +133,7 @@ void ZProbe::on_idle(void *argument)
 {
 }
 
-// single probe and report amount moved
+// single probe and report steps moved down
 bool ZProbe::run_probe(int &steps, bool fast)
 {
     // Enable the motors
@@ -504,11 +504,12 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
     float pos[3];
     THEKERNEL->robot->get_axis_position(pos);
     int s;
-    if(!run_probe(s, true)) return false;
-    float bedht = s / Z_STEPS_PER_MM - this->probe_height; // distance to move from home to 5mm abioove bed
+    if(!run_probe(s, true)) return false; // returns the number of steps moved down
+    float bedht = s / Z_STEPS_PER_MM - this->probe_height; // distance in mm to move from home to 5mm above bed
     float absbedht = pos[Z_AXIS] - bedht; // absolute Z to probe from
     gcode->stream->printf("Bed ht from home is %f mm, absolute Z: %f\n", bedht, absbedht);
     home();
+    coordinated_move(0.0F, 0.0F, absbedht, this->fast_feedrate); // needs to be a coordinated move
 
     float t1z, t2z, t3z;
     float o1z, o2z, o3z;
@@ -519,9 +520,9 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
     // Seems that first homes and adjusts endstops, then adjusts delta radu=ius and offsets without homing until done then homes and tests again
     // probe all points
     for (int i = 1; i <= 100; ++i) {
-        coordinated_move(0.0F, 0.0F, absbedht, this->fast_feedrate); // needs to be a coordinated move
+        coordinated_move(0.0F, 0.0F, absbedht, this->fast_feedrate/2); // needs to be a coordinated move
 
-        // probe the towers
+        // probe the towers, gets mm moved down, NOTE this is reversed from RichC where the probe is the actual z height
         if(!probe_delta_tower(sx, t1x, t1y)) return false;
         t1z = sx / Z_STEPS_PER_MM;
         gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, t1z, sx);
@@ -567,8 +568,9 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
         float dave = oave - tave;
 
         // set inital direction and magnitude for delta radius & diagonal rod adjustment
-        if(drinc == 0) drinc = (tave > cz) ? 1 : -1;
-        if(dalinc == 0) dalinc = (tave > oave) ? 1 : -1;
+        // NOTE a bigger value it moved further therefore is a smsaller absolute Z
+        if(drinc == 0) drinc = (tave > cz) ? -1 : 1;
+        if(dalinc == 0) dalinc = (tave > oave) ? -1 : 1;
 
         bool set_dr = false;
         if(abs(dc) > target) {
@@ -595,12 +597,10 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
         bool d23 = (abs(d2 - d3) <= (target * 2));
         bool d31 = (abs(d3 - d1) <= (target * 2));
 
-        if(i > 2) {
-            // tower position adjustment after second iteration
-            da1 -= (o2z - o3z);
-            da2 -= (o3z - o1z);
-            da3 -= (o1z - o2z);
-        }
+        // tower position adjustment
+        da1 += (o2z - o3z);
+        da2 += (o3z - o1z);
+        da3 += (o1z - o2z);
 
         DEBUG_PRINTF("DEBUG: d1 %f, d2 %f, d3 %f, d12 %d, d23 %d, d32 %d, da1 %f, da2 %f, da3 %f, tave %f, oave %f, dave %f\n",
                      d1, d2, d3, d12, d23, d31, da1, da2, da3, tave, oave, dave);
@@ -608,25 +608,23 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
         // determine which towers needs adjusting
         if(d12 && d23 && d31) {
             gcode->stream->printf("No tower radius errors detected: %1.4f %1.4f %1.4f\n", d1, d2, d3);
-        } else if (!d12 && !d23 && !d31) {
-            gcode->stream->printf("Not adjusting tower radius: %1.4f %1.4f %1.4f\n", d1, d2, d3);
         }
 
         bool set_dro = false;
         if(d23 && !d12 && !d31) { // X Tower radius error
-            if(d1inc == 0) d1inc = (t1z < o1z) ? 0.5F : -0.5F;
+            if(d1inc == 0) d1inc = (t1z < o1z) ? -0.5F : 0.5F;
             DEBUG_PRINTF("DEBUG: X tower radius error: %f\n", d1inc);
             drx += d1inc;
             set_dro = true;
         }
         if(d31 && !d12 && !d23) { // Y Tower radius error
-            if(d2inc == 0) d2inc = (t2z < o2z) ? 0.5F : -0.5F;
+            if(d2inc == 0) d2inc = (t2z < o2z) ? -0.5F : 0.5F;
             DEBUG_PRINTF("DEBUG: Y tower radius error: %f\n", d2inc);
             dry += d2inc;
             set_dro = true;
         }
         if(d12 && !d23 && !d31) { // Z Tower radius error
-            if(d3inc == 0) d3inc = (t3z < o3z) ? 0.5F : -0.5F;
+            if(d3inc == 0) d3inc = (t3z < o3z) ? -0.5F : 0.5F;
             DEBUG_PRINTF("DEBUG: Z tower radius error: %f\n", d3inc);
             drz += d3inc;
             set_dro = true;
@@ -638,8 +636,11 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
             options['A'] = drx;
             options['B'] = dry;
             options['C'] = drz;
-            gcode->stream->printf("Setting delta radius offsets to: A: %1.4f B: %1.4f C: %1.4f\n", drx, dry, drz);
+            gcode->stream->printf("Setting tower radius offsets to: A: %1.4f B: %1.4f C: %1.4f\n", drx, dry, drz);
+        }else{
+            gcode->stream->printf("Not adjusting tower radius\n");
         }
+
         if(da1 != 0.0F || da2 != 0.0F || da3 != 0.0F) {
             options['D'] = da1;
             options['E'] = da2;
@@ -663,13 +664,13 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
         }
 
         // adjust the increments for overshoot the way Rich does it
-        if( ((drinc > 0) && (cz > tave)) || ((drinc < 0) && (cz < tave)) ) drinc = -(drinc / 2);
-        if( ((dalinc > 0) && (oave > tave)) || ((dalinc < 0) && (oave < tave)) ) dalinc = -(dalinc / 2);
+        if( ((drinc > 0) && (cz < tave)) || ((drinc < 0) && (cz > tave)) ) drinc = -(drinc / 2);
+        if( ((dalinc > 0) && (oave < tave)) || ((dalinc < 0) && (oave > tave)) ) dalinc = -(dalinc / 2);
 
         // Tower radius overshot targets?
-        if( ((d1inc > 0) && (t1z > o1z)) || ((d1inc < 0) && (t1z < o1z)) ) d1inc = -(d1inc / 2);
-        if( ((d2inc > 0) && (t2z > o2z)) || ((d2inc < 0) && (t2z < o2z)) ) d2inc = -(d2inc / 2);
-        if( ((d3inc > 0) && (t3z > o3z)) || ((d3inc < 0) && (t3z < o3z)) ) d3inc = -(d3inc / 2);
+        if( ((d1inc > 0) && (t1z < o1z)) || ((d1inc < 0) && (t1z > o1z)) ) d1inc = -(d1inc / 2);
+        if( ((d2inc > 0) && (t2z < o2z)) || ((d2inc < 0) && (t2z > o2z)) ) d2inc = -(d2inc / 2);
+        if( ((d3inc > 0) && (t3z < o3z)) || ((d3inc < 0) && (t3z > o3z)) ) d3inc = -(d3inc / 2);
 
         // flush the output
         THEKERNEL->call_event(ON_IDLE);
