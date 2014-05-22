@@ -575,7 +575,7 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
         float dave = oave - tave;
 
         // set inital direction and magnitude for delta radius & diagonal rod adjustment
-        // NOTE a bigger value it moved further therefore is a smsaller absolute Z
+        // NOTE a bigger value it moved further therefore is a smaller absolute Z
         if(drinc == 0) drinc = (tave > cz) ? -1 : 1;
         if(dalinc == 0) dalinc = (tave > oave) ? -1 : 1;
 
@@ -605,13 +605,12 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
         bool d31 = (abs(d3 - d1) <= (target * 2));
 
         // tower position adjustment, Rich always sets these, but I think they only need to be adjusted if they are out of range
-        float do1,do2, do3;
-        do1 = (o2z - o3z);
-        do2 = (o3z - o1z);
-        do3 = (o1z - o2z);
-        if(abs(do1) > (target * 2)) da1= do1;
-        if(abs(do2) > (target * 2)) da2= do2;
-        if(abs(do3) > (target * 2)) da3= do3;
+        float do1 = (o2z - o3z);
+        float do2 = (o3z - o1z);
+        float do3 = (o1z - o2z);
+        da1= (abs(do1) > (target * 2)) ? do1 : 0.0F;
+        da2= (abs(do2) > (target * 2)) ? do2 : 0.0F;
+        da3= (abs(do3) > (target * 2)) ? do3 : 0.0F;
 
         DEBUG_PRINTF("DEBUG: d1 %f, d2 %f, d3 %f, d12 %d, d23 %d, d32 %d, do1 %f, do2 %f, do3 %f, da1 %f, da2 %f, da3 %f, tave %f, oave %f, dave %f\n",
                      d1, d2, d3, d12, d23, d31, do1, do2, do3, da1, da2, da3, tave, oave, dave);
@@ -643,6 +642,13 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
 
         // set the new delta radius offsets and arm offset if needed
         options.clear();
+
+        if(da1 != 0.0F) options['D'] = da1;
+        if(da2 != 0.0F) options['E'] = da2;
+        if(da3 != 0.0F) options['F'] = da3;
+        if(!options.empty())
+            gcode->stream->printf("Setting tower position offsets to: D: %1.4f E: %1.4f F: %1.4f\n", da1, da2, da3);
+
         if(set_dro) {
             options['A'] = drx;
             options['B'] = dry;
@@ -652,12 +658,6 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
             gcode->stream->printf("Not adjusting tower radius\n");
         }
 
-        if(da1 != 0.0F || da2 != 0.0F || da3 != 0.0F) {
-            options['D'] = da1;
-            options['E'] = da2;
-            options['F'] = da3;
-            gcode->stream->printf("Setting tower position offsets to: D: %1.4f E: %1.4f F: %1.4f\n", da1, da2, da3);
-        }
         if(set_al) {
             options['L'] = arm_length;
             gcode->stream->printf("Setting arm length to: %1.4f\n", arm_length);
