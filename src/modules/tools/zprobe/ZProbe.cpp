@@ -563,6 +563,13 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
         o3z = sz / Z_STEPS_PER_MM;
         gcode->stream->printf("OT3-%d Z:%1.4f C:%d Delta: %1.4f\n", i, o3z, sz, t3z - o3z);
 
+        // see if we are calibrated yet, if all deltas are within target range
+        auto mm = std::minmax({t1z, t2z, t3z, o1z, o2z, o3z, cz});
+        if((mm.second - mm.first) <= target*2.0F) {
+            gcode->stream->printf("All Calibration points are within target range: %f\n", (mm.second - mm.first)/2.0F);
+            return true;
+        }
+
         bool set_al = false;
         float oave = (o1z + o2z + o3z) / 3.0F;
         float dave = oave - tave;
@@ -597,13 +604,17 @@ bool ZProbe::calibrate_delta_RichCMethod(Gcode *gcode)
         bool d23 = (abs(d2 - d3) <= (target * 2));
         bool d31 = (abs(d3 - d1) <= (target * 2));
 
-        // tower position adjustment
-        da1 += (o2z - o3z);
-        da2 += (o3z - o1z);
-        da3 += (o1z - o2z);
+        // tower position adjustment, Rich always sets these, but I think they only need to be adjusted if they are out of range
+        float do1,do2, do3;
+        do1 = (o2z - o3z);
+        do2 = (o3z - o1z);
+        do3 = (o1z - o2z);
+        if(abs(do1) > (target * 2)) da1= do1;
+        if(abs(do2) > (target * 2)) da2= do2;
+        if(abs(do3) > (target * 2)) da3= do3;
 
-        DEBUG_PRINTF("DEBUG: d1 %f, d2 %f, d3 %f, d12 %d, d23 %d, d32 %d, da1 %f, da2 %f, da3 %f, tave %f, oave %f, dave %f\n",
-                     d1, d2, d3, d12, d23, d31, da1, da2, da3, tave, oave, dave);
+        DEBUG_PRINTF("DEBUG: d1 %f, d2 %f, d3 %f, d12 %d, d23 %d, d32 %d, do1 %f, do2 %f, do3 %f, da1 %f, da2 %f, da3 %f, tave %f, oave %f, dave %f\n",
+                     d1, d2, d3, d12, d23, d31, do1, do2, do3, da1, da2, da3, tave, oave, dave);
 
         // determine which towers needs adjusting
         if(d12 && d23 && d31) {
