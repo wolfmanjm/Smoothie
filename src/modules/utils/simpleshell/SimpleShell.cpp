@@ -492,14 +492,29 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 
 #if 0
 #include "BaseSolution.h"
-#include "RostockSolution.h"
-#include "JohannKosselSolution.h"
+#include "LinearDeltaSolution.h"
+#include "Config.h"
 #include "Pin.h"
 #include "mbed.h"
 #endif
 
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+#if 0
+    THEKERNEL->config->config_cache_load();
+    float millimeters[3]= {10.0, 20.0, 2.0};
+    float a[3], m[3];
+    BaseSolution* k= new LinearDeltaSolution(THEKERNEL->config);
+    k->cartesian_to_actuator(millimeters, a);
+    k->actuator_to_cartesian(a, m);
+    stream->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
+        millimeters[0], millimeters[1], millimeters[2],
+        a[0], a[1], a[2],
+        m[0], m[1], m[2]);
+    delete k;
+    THEKERNEL->config->config_cache_clear();
+#endif
+
 #if 0
     Timer timer;
     double a= 100.0, b= 200.0, f, x= 0.0;
