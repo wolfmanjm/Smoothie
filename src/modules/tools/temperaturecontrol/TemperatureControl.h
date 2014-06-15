@@ -60,18 +60,20 @@ class TemperatureControl : public Module {
 
         Pwm  heater_pin;
 
-        bool use_bangbang;
-        bool waiting;
-        bool min_temp_violated;
-        bool link_to_tool;
-        bool active;
+        struct {
+            bool use_bangbang:1;
+            bool waiting:1;
+            bool min_temp_violated:1;
+            bool link_to_tool:1;
+            bool active:1;
+        };
 
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;
         uint16_t get_m_code;
         struct pad_temperature public_data_return;
 
-        string designator;
+        std::string designator;
 
         void setPIDp(float p);
         void setPIDi(float i);

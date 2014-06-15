@@ -429,6 +429,12 @@ void ZProbe::on_gcode_received(void *argument)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
+            // make sure the probe is not already triggered before moving motors
+            if(this->pin.get()) {
+                gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+                return;
+            }
+
             int steps;
             if(run_probe(steps)) {
                 gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
@@ -447,6 +453,13 @@ void ZProbe::on_gcode_received(void *argument)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
             gcode->mark_as_taken();
+
+            // make sure the probe is not already triggered before moving motors
+            if(this->pin.get()) {
+                gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+                return;
+            } 
+            
             if(is_delta) {
                 if(!gcode->has_letter('R')){
                     if(!calibrate_delta_endstops(gcode)) {
@@ -560,7 +573,7 @@ void ZProbe::home()
 bool ZProbe::set_trim(float x, float y, float z, StreamOutput *stream)
 {
     float t[3]{x, y, z};
-    bool ok= THEKERNEL->public_data->set_value( endstops_checksum, trim_checksum, t);
+    bool ok= PublicData::set_value( endstops_checksum, trim_checksum, t);
 
     if (ok) {
         stream->printf("set trim to X:%f Y:%f Z:%f\n", x, y, z);
@@ -574,7 +587,7 @@ bool ZProbe::set_trim(float x, float y, float z, StreamOutput *stream)
 bool ZProbe::get_trim(float& x, float& y, float& z)
 {
     void *returned_data;
-    bool ok = THEKERNEL->public_data->get_value( endstops_checksum, trim_checksum, &returned_data );
+    bool ok = PublicData::get_value( endstops_checksum, trim_checksum, &returned_data );
 
     if (ok) {
         float *trim = static_cast<float *>(returned_data);
