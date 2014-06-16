@@ -496,10 +496,49 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 #include "Config.h"
 #include "Pin.h"
 #include "mbed.h"
+#include "Pin.h"
+#include "Extruder.h"
+#endif
+
+#if 0
+class TestModule : public Module
+{
+public:
+    TestModule() {i=0;}
+    ~TestModule() {}
+    int test() { return 1;}
+    void on_main_loop(void * argument) { i++; }
+    int i;
+};
 #endif
 
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+#if 0
+    mem_command("", stream);
+    Module *m= new Extruder(1);
+    mem_command("", stream);
+    stream->printf("\n");
+
+    m->on_block_end(0);
+    mem_command("", stream);
+    stream->printf("\n");
+
+    stream->printf("%p, %d\n", m, sizeof(Extruder));
+    stream->printf("%d\n", sizeof(Pin));
+
+    Module *t= new TestModule();
+    stream->printf("%p, %d\n", t, sizeof(TestModule));
+    mem_command("", stream);
+    stream->printf("\n");
+
+    delete m;
+    delete t;
+
+    // 72 data actual allocated is 112, sizeof= 104, 40 overhead vtable around 32
+    // empty module is 4 bytes
+#endif
+
 #if 0
     THEKERNEL->config->config_cache_load();
     float millimeters[3]= {10.0, 20.0, 2.0};
