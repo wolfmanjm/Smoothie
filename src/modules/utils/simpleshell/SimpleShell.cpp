@@ -506,15 +506,42 @@ class TestModule : public Module
 public:
     TestModule() {i=0;}
     ~TestModule() {}
-    int test() { return 1;}
+    uint32_t test(uint32_t p) { return p;}
     void on_main_loop(void * argument) { i++; }
     int i;
 };
+TestModule t;
+
+class DoFunc {
+public:
+    void dofunc(StreamOutput *stream) {
+        using std::placeholders::_1;
+        func= std::bind(&TestModule::test, &t, _1);
+        int i= func(10);
+        stream->printf("%d\n", i);
+    }
+    std::function<uint32_t(uint32_t)> func;
+};
 #endif
 
+
+#include <functional>
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
 #if 0
+    mem_command("", stream);
+    stream->printf("\n");
+
+    DoFunc *df= new DoFunc();
+    df->dofunc(stream);
+
+    mem_command("", stream);
+    stream->printf("%d\n", sizeof(DoFunc));
+    // 36 bytes of heap used, 4 when no func, func uses 32 bytes
+    delete df;
+
+    mem_command("", stream);
+    stream->printf("\n");
     mem_command("", stream);
     Module *m= new Extruder(1);
     mem_command("", stream);

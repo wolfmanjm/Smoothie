@@ -27,7 +27,7 @@ public:
     void on_gcode_received(void *argument);
     void on_second_tick(void *);
 
-private:
+//private:
     static void ls_command(string parameters, StreamOutput *stream );
     static void cd_command(string parameters, StreamOutput *stream );
     static void delete_file_command(string parameters, StreamOutput *stream );
