@@ -85,7 +85,6 @@ void Extruder::on_module_loaded()
     this->on_config_reload(this);
 
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
-    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_RECEIVED);
@@ -273,7 +272,6 @@ void Extruder::on_gcode_execute(void *argument)
     if( gcode->has_g ) {
         // G92: Reset extruder position
         if( gcode->g == 92 && this->enabled ) {
-            gcode->mark_as_taken();
             if( gcode->has_letter('E') ) {
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;

@@ -26,6 +26,7 @@
 #include "modules/robot/RobotPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
+#include "SwitchPublicAccess.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -57,6 +58,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"mem",      SimpleShell::mem_command},
     {"get",      SimpleShell::get_command},
     {"set_temp", SimpleShell::set_temp_command},
+    {"switch",   SimpleShell::switch_command},
     {"net",      SimpleShell::net_command},
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
@@ -157,7 +159,7 @@ string SimpleShell::handle_bs(string cmd) {
 void SimpleShell::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
-    string args= get_arguments(gcode->command);
+    string args= get_arguments(gcode->get_command());
 
     if (gcode->has_m) {
         if (gcode->m == 20) { // list sd card
@@ -489,6 +491,54 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
+// used to test out the get public data events for switch
+void SimpleShell::switch_command( string parameters, StreamOutput *stream)
+{
+    string type = shift_parameter( parameters );
+    string value = shift_parameter( parameters );
+    bool ok= false;
+    if(value == "on" || value == "off") {
+        bool b= value == "on";
+        ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
+    }else{
+        float v = strtof(value.c_str(), NULL);
+        ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
+    }
+    if (ok) {
+        stream->printf("switch %s set to: %s\r\n", type.c_str(), value.c_str());
+    } else {
+        stream->printf("%s is not a known switch device\r\n", type.c_str());
+    }
+}
+
+void SimpleShell::help_command( string parameters, StreamOutput *stream )
+{
+    stream->printf("Commands:\r\n");
+    stream->printf("version\r\n");
+    stream->printf("mem [-v]\r\n");
+    stream->printf("ls [folder]\r\n");
+    stream->printf("cd folder\r\n");
+    stream->printf("pwd\r\n");
+    stream->printf("cat file [limit]\r\n");
+    stream->printf("rm file\r\n");
+    stream->printf("play file [-v]\r\n");
+    stream->printf("progress - shows progress of current play\r\n");
+    stream->printf("abort - abort currently playing file\r\n");
+    stream->printf("reset - reset smoothie\r\n");
+    stream->printf("dfu - enter dfu boot loader\r\n");
+    stream->printf("break - break into debugger\r\n");
+    stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
+    stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
+    stream->printf("get temp [bed|hotend]\r\n");
+    stream->printf("set_temp bed|hotend 185\r\n");
+    stream->printf("get pos\r\n");
+    stream->printf("net\r\n");
+    stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
+    stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
+}
+
+
+
 
 #if 0
 #include "BaseSolution.h"
@@ -498,6 +548,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 #include "mbed.h"
 #include "Pin.h"
 #include "Extruder.h"
+#include <functional>
 #endif
 
 #if 0
@@ -525,7 +576,6 @@ public:
 #endif
 
 
-#include <functional>
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
 #if 0
@@ -722,29 +772,4 @@ static int lastt = 0;
 #endif
 }
 
-void SimpleShell::help_command( string parameters, StreamOutput *stream )
-{
-    stream->printf("Commands:\r\n");
-    stream->printf("version\r\n");
-    stream->printf("mem [-v]\r\n");
-    stream->printf("ls [folder]\r\n");
-    stream->printf("cd folder\r\n");
-    stream->printf("pwd\r\n");
-    stream->printf("cat file [limit]\r\n");
-    stream->printf("rm file\r\n");
-    stream->printf("play file [-v]\r\n");
-    stream->printf("progress - shows progress of current play\r\n");
-    stream->printf("abort - abort currently playing file\r\n");
-    stream->printf("reset - reset smoothie\r\n");
-    stream->printf("dfu - enter dfu boot loader\r\n");
-    stream->printf("break - break into debugger\r\n");
-    stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
-    stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
-    stream->printf("get temp [bed|hotend]\r\n");
-    stream->printf("set_temp bed|hotend 185\r\n");
-    stream->printf("get pos\r\n");
-    stream->printf("net\r\n");
-    stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
-    stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
-}
 
