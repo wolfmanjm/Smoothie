@@ -9,6 +9,9 @@
 #ifndef GCODE_H
 #define GCODE_H
 #include <string>
+#include <vector>
+#include <tuple>
+
 using std::string;
 
 class StreamOutput;
@@ -21,17 +24,19 @@ class Gcode {
         Gcode& operator= (const Gcode& to_copy);
         ~Gcode();
 
-        const char* get_command() const { return command; }
         bool has_letter ( char letter ) const;
-        float get_value ( char letter, char **ptr= nullptr ) const;
-        int get_int ( char letter, char **ptr= nullptr ) const;
+        float get_value ( char letter ) const;
         int get_num_args() const;
         void mark_as_taken();
         void strip_parameters();
+        bool is_valid() { return valid; }
 
         // FIXME these should be private
-        unsigned int m;
-        unsigned int g;
+        union {
+            unsigned int m;
+            unsigned int g;
+        };
+
         float millimeters_of_travel;
 
         struct {
@@ -39,13 +44,15 @@ class Gcode {
             bool has_m:1;
             bool has_g:1;
             bool accepted_by_module:1;
+            bool valid:1;
         };
 
         StreamOutput* stream;
         string txt_after_ok;
 
     private:
-        void prepare_cached_values(bool strip=true);
-        char *command;
+        void parse_gcode_words(const string&);
+
+        std::vector<std::tuple<char,float>> words;
 };
 #endif

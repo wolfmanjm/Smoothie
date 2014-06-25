@@ -16,27 +16,21 @@
 // It gets passed around in events, and attached to the queue ( that'll change )
 Gcode::Gcode(const string &command, StreamOutput *stream, bool strip)
 {
-    this->command= strdup(command.c_str());
     this->m= 0;
     this->g= 0;
     this->add_nl= false;
     this->stream= stream;
     this->millimeters_of_travel = 0.0F;
     this->accepted_by_module = false;
-    prepare_cached_values(strip);
+    this->valid= false;
+    parse_gcode_words(command);
 }
 
-Gcode::~Gcode()
-{
-    if(command != nullptr) {
-        // TODO we can reference count this so we share copies, may save more ram than the extra count we need to store
-        free(command);
-    }
-}
+Gcode::~Gcode(){}
 
 Gcode::Gcode(const Gcode &to_copy)
 {
-    this->command               = strdup(to_copy.command); // TODO we can reference count this so we share copies, may save more ram than the extra count we need to store
+    this->words                 = to_copy.words;
     this->millimeters_of_travel = to_copy.millimeters_of_travel;
     this->has_m                 = to_copy.has_m;
     this->has_g                 = to_copy.has_g;
@@ -51,7 +45,7 @@ Gcode::Gcode(const Gcode &to_copy)
 Gcode &Gcode::operator= (const Gcode &to_copy)
 {
     if( this != &to_copy ) {
-        this->command               = strdup(to_copy.command); // TODO we can reference count this so we share copies, may save more ram than the extra count we need to store
+        this->words                 = to_copy.words;
         this->millimeters_of_travel = to_copy.millimeters_of_travel;
         this->has_m                 = to_copy.has_m;
         this->has_g                 = to_copy.has_g;
@@ -65,12 +59,11 @@ Gcode &Gcode::operator= (const Gcode &to_copy)
     return *this;
 }
 
-
 // Whether or not a Gcode has a letter
 bool Gcode::has_letter( char letter ) const
 {
-    for (size_t i = 0; i < strlen(this->command); ++i) {
-        if( command[i] == letter ) {
+    for (auto a : words) {
+        if( std::get<0>(a) == letter ) {
             return true;
         }
     }
@@ -78,76 +71,72 @@ bool Gcode::has_letter( char letter ) const
 }
 
 // Retrieve the value for a given letter
-float Gcode::get_value( char letter, char **ptr ) const
+float Gcode::get_value( char letter) const
 {
-    const char *cs = command;
-    char *cn = NULL;
-    for (; *cs; cs++) {
-        if( letter == *cs ) {
-            cs++;
-            float r = strtof(cs, &cn);
-            if(ptr != nullptr) *ptr= cn;
-            if (cn > cs)
-                return r;
+    for (auto a : words) {
+        if( std::get<0>(a) == letter ) {
+            return std::get<1>(a);
         }
     }
-    if(ptr != nullptr) *ptr= nullptr;
-    return 0;
-}
-
-int Gcode::get_int( char letter, char **ptr ) const
-{
-    const char *cs = command;
-    char *cn = NULL;
-    for (; *cs; cs++) {
-        if( letter == *cs ) {
-            cs++;
-            int r = strtol(cs, &cn, 10);
-            if(ptr != nullptr) *ptr= cn;
-            if (cn > cs)
-                return r;
-        }
-    }
-    if(ptr != nullptr) *ptr= nullptr;
     return 0;
 }
 
 int Gcode::get_num_args() const
 {
-    int count = 0;
-    for(size_t i = 1; i < strlen(command); i++) {
-        if( this->command[i] >= 'A' && this->command[i] <= 'Z' ) {
-            count++;
-        }
-    }
-    return count;
+    return words.size();
 }
 
-// Cache some of this command's properties, so we don't have to parse the string every time we want to look at them
-void Gcode::prepare_cached_values(bool strip)
+// extract the next gcode word
+bool get_next_word(string &line, string::iterator& next, char& letter, float& value)
 {
-    char *p= nullptr;
-    if( this->has_letter('G') ) {
-        this->has_g = true;
-        this->g = this->get_int('G', &p);
-    } else {
-        this->has_g = false;
+    if(next == line.end()) return false;
+
+    char c= *next++;
+    if(c < 'A' || c > 'Z') return false; // must be a command or parameter character
+    letter= c;
+    // extract float number [+|-]nnn[.yyy]
+    string::iterator pos= next;
+    while(next != line.end()) {
+        c= *next;
+        if(::isdigit(c) || c == '-' || c == '+' || c == '.') {
+            next++;
+        }else{
+            break;
+        }
     }
-    if( this->has_letter('M') ) {
-        this->has_m = true;
-        this->m = this->get_int('M', &p);
-    } else {
-        this->has_m = false;
+    if(next == pos) return false; // no number
+
+    // convert number into float
+    string v(pos, next-1);
+    value = strtof(v.c_str(), nullptr);
+    return true;
+}
+
+// split the command into gcode words.. X12.34 E43.21 F100 etc
+// store in the words vector as a tuple<char, float>
+// also split off the Gxxx and Mxxx
+void Gcode::parse_gcode_words(const string& command)
+{
+    string newcmd(command);
+    // strip all whitespace from command line (comments are expected to already have been removed)
+    newcmd.erase(std::remove_if(newcmd.begin(), newcmd.end(), ::isspace), newcmd.end());
+
+    char letter;
+    float value;
+    string::iterator next= newcmd.begin();
+    while(get_next_word(newcmd, next, letter, value)) {
+        if( letter == 'G' ) {
+            this->has_g = true;
+            this->g = value;
+        } else if( letter == 'M' ) {
+            this->has_m = true;
+            this->m = value;
+        } else {
+            words.push_back(std::make_tuple(letter, value));
+        }
     }
 
-    if(!strip) return;
-
-    // remove the Gxxx or Mxxx from string
-    if (p != nullptr) {
-        char *n= strdup(p); // create new string starting at end of the numeric value
-        free(command);
-        command= n;
-    }
+    valid= (next == newcmd.end()); // make sure we processed the entire line
 }
 
 void Gcode::mark_as_taken()
@@ -159,31 +148,16 @@ void Gcode::mark_as_taken()
 void Gcode::strip_parameters()
 {
     if(has_g && g < 4){
-        // strip the command of the XYZIJK parameters
-        string newcmd;
-        char *cn= command;
-        // find the start of each parameter
-        char *pch= strpbrk(cn, "XYZIJK");
-        while (pch != nullptr) {
-            if(pch > cn) {
-                // copy non parameters to new string
-                newcmd.append(cn, pch-cn);
+        // strip the words of the XYZIJK parameters
+        std::vector<std::tuple<char,float>> new_words;
+        for (auto a : words) {
+            char c= std::get<0>(a);
+            if( (c >= 'X' && c <= 'Z') || (c >= 'I' && c <= 'K') ) {
+                continue;
+            }else{
+                new_words.push_back(a);
             }
-            // find the end of the parameter and its value
-            char *eos;
-            strtof(pch+1, &eos);
-            cn= eos; // point to end of last parameter
-            pch= strpbrk(cn, "XYZIJK"); // find next parameter
         }
-        // append anything left on the line
-        newcmd.append(cn);
-
-        // strip whitespace to save even more, this causes problems so don't do it
-        //newcmd.erase(std::remove_if(newcmd.begin(), newcmd.end(), ::isspace), newcmd.end());
-
-        // release the old one
-        free(command);
-        // copy the new shortened one
-        command= strdup(newcmd.c_str());
+        new_words.swap(words);
     }
 }

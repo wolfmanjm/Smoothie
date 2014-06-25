@@ -147,7 +147,7 @@ void SimpleShell::on_second_tick(void *)
 void SimpleShell::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
-    string args= get_arguments(gcode->get_command());
+    string args= ""; // FIXME get_arguments(gcode->get_command());
 
     if (gcode->has_m) {
         if (gcode->m == 20) { // list sd card

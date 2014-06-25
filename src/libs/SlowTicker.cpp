@@ -166,11 +166,11 @@ void SlowTicker::on_gcode_execute(void* argument){
             bool updated = false;
             if (gcode->has_letter('P')) {
                 updated = true;
-                g4_ticks += gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
+                g4_ticks += gcode->get_value('P') * ((SystemCoreClock >> 2) / 1000UL);
             }
             if (gcode->has_letter('S')) {
                 updated = true;
-                g4_ticks += gcode->get_int('S') * (SystemCoreClock >> 2);
+                g4_ticks += gcode->get_value('S') * (SystemCoreClock >> 2);
             }
             if (updated){
                 // G4 Smm Pnn should pause for mm seconds + nn milliseconds

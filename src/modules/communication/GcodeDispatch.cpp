@@ -109,6 +109,12 @@ try_again:
                 if(!uploading) {
                     //Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
+                    if(!gcode->is_valid()){
+                        // invalid G code returns an error
+                        new_message.stream->printf("error: Invalid gcode\r\n");
+                        delete gcode;
+                        return;
+                    }
 
                     if(gcode->has_g) {
                         last_g= gcode->g;
