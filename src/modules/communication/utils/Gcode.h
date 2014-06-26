@@ -50,6 +50,7 @@ class Gcode {
         StreamOutput* stream;
         string txt_after_ok;
 
+        void dump();
     private:
         void parse_gcode_words(const string&);
 

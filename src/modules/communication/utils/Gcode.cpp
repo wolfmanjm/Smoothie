@@ -12,10 +12,12 @@
 #include <stdlib.h>
 #include <algorithm>
 
-// This is a gcode object. It reprensents a GCode string/command, an caches some important values about that command for the sake of performance.
+// This is a gcode object. It reprensents a GCode string/command, and caches some important values about that command for the sake of performance.
 // It gets passed around in events, and attached to the queue ( that'll change )
 Gcode::Gcode(const string &command, StreamOutput *stream, bool strip)
 {
+    this->has_g= false;
+    this->has_m= false;
     this->m= 0;
     this->g= 0;
     this->add_nl= false;
@@ -32,14 +34,13 @@ Gcode::Gcode(const Gcode &to_copy)
 {
     this->words                 = to_copy.words;
     this->millimeters_of_travel = to_copy.millimeters_of_travel;
-    this->has_m                 = to_copy.has_m;
-    this->has_g                 = to_copy.has_g;
-    this->m                     = to_copy.m;
-    this->g                     = to_copy.g;
     this->add_nl                = to_copy.add_nl;
     this->stream                = to_copy.stream;
     this->accepted_by_module    = false;
     this->txt_after_ok.assign( to_copy.txt_after_ok );
+
+    if((this->has_m= to_copy.has_m)) this->m= to_copy.m;
+    if((this->has_g= to_copy.has_g)) this->g= to_copy.g;
 }
 
 Gcode &Gcode::operator= (const Gcode &to_copy)
@@ -47,13 +48,11 @@ Gcode &Gcode::operator= (const Gcode &to_copy)
     if( this != &to_copy ) {
         this->words                 = to_copy.words;
         this->millimeters_of_travel = to_copy.millimeters_of_travel;
-        this->has_m                 = to_copy.has_m;
-        this->has_g                 = to_copy.has_g;
-        this->m                     = to_copy.m;
-        this->g                     = to_copy.g;
         this->add_nl                = to_copy.add_nl;
         this->stream                = to_copy.stream;
         this->txt_after_ok.assign( to_copy.txt_after_ok );
+        if((this->has_m= to_copy.has_m)) this->m= to_copy.m;
+        if((this->has_g= to_copy.has_g)) this->g= to_copy.g;
     }
     this->accepted_by_module = false;
     return *this;
@@ -107,7 +106,7 @@ bool get_next_word(string &line, string::iterator& next, char& letter, float& va
     if(next == pos) return false; // no number
 
     // convert number into float
-    string v(pos, next-1);
+    string v(pos, next);
     value = strtof(v.c_str(), nullptr);
     return true;
 }
@@ -135,7 +134,7 @@ void Gcode::parse_gcode_words(const string& command)
             words.push_back(std::make_tuple(letter, value));
         }
     }
-
+    words.shrink_to_fit();
     valid= (next == newcmd.end()); // make sure we processed the entire line
 }
 
@@ -159,5 +158,17 @@ void Gcode::strip_parameters()
             }
         }
         new_words.swap(words);
+        words.shrink_to_fit();
     }
+}
+
+void Gcode::dump()
+{
+    stream->printf("Size: %d - %d\n", sizeof(words), words.capacity());
+    for(auto a : words) {
+        stream->printf("%c %f\n", std::get<0>(a), std::get<1>(a));
+    }
+    if(has_m) stream->printf("M%d\n", m);
+    if(has_g) stream->printf("G%d\n", g);
+
 }

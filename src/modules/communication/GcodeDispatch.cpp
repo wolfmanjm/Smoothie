@@ -115,7 +115,7 @@ try_again:
                         delete gcode;
                         return;
                     }
-
+                    gcode->dump(); // FIXME remove after debugging
                     if(gcode->has_g) {
                         last_g= gcode->g;
                     }
