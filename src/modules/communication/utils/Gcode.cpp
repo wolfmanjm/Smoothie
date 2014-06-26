@@ -32,7 +32,8 @@ Gcode::~Gcode(){}
 
 Gcode::Gcode(const Gcode &to_copy)
 {
-    this->words                 = to_copy.words;
+    this->keys                  = to_copy.keys;
+    this->values                = to_copy.values;
     this->millimeters_of_travel = to_copy.millimeters_of_travel;
     this->add_nl                = to_copy.add_nl;
     this->stream                = to_copy.stream;
@@ -46,7 +47,8 @@ Gcode::Gcode(const Gcode &to_copy)
 Gcode &Gcode::operator= (const Gcode &to_copy)
 {
     if( this != &to_copy ) {
-        this->words                 = to_copy.words;
+        this->keys                  = to_copy.keys;
+        this->values                = to_copy.values;
         this->millimeters_of_travel = to_copy.millimeters_of_travel;
         this->add_nl                = to_copy.add_nl;
         this->stream                = to_copy.stream;
@@ -61,8 +63,8 @@ Gcode &Gcode::operator= (const Gcode &to_copy)
 // Whether or not a Gcode has a letter
 bool Gcode::has_letter( char letter ) const
 {
-    for (auto a : words) {
-        if( std::get<0>(a) == letter ) {
+    for (auto a : keys) {
+        if( a == letter ) {
             return true;
         }
     }
@@ -72,17 +74,19 @@ bool Gcode::has_letter( char letter ) const
 // Retrieve the value for a given letter
 float Gcode::get_value( char letter) const
 {
-    for (auto a : words) {
-        if( std::get<0>(a) == letter ) {
-            return std::get<1>(a);
+    int i= 0;
+    for (auto a : keys) {
+        if( a == letter ) {
+            return values[i];
         }
+        ++i;
     }
     return 0;
 }
 
 int Gcode::get_num_args() const
 {
-    return words.size();
+    return keys.size();
 }
 
 // extract the next gcode word
@@ -131,10 +135,12 @@ void Gcode::parse_gcode_words(const string& command)
             this->has_m = true;
             this->m = value;
         } else {
-            words.push_back(std::make_tuple(letter, value));
+            keys.push_back(letter);
+            values.push_back(value);
         }
     }
-    words.shrink_to_fit();
+    keys.shrink_to_fit();
+    values.shrink_to_fit();
     valid= (next == newcmd.end()); // make sure we processed the entire line
 }
 
@@ -148,25 +154,27 @@ void Gcode::strip_parameters()
 {
     if(has_g && g < 4){
         // strip the words of the XYZIJK parameters
-        std::vector<std::tuple<char,float>> new_words;
-        for (auto a : words) {
-            char c= std::get<0>(a);
+        size_t i= 0;
+        while(i < keys.size()) {
+            char c= keys[i];
             if( (c >= 'X' && c <= 'Z') || (c >= 'I' && c <= 'K') ) {
-                continue;
+                keys.erase(keys.begin()+i);
+                values.erase(values.begin()+i);
             }else{
-                new_words.push_back(a);
+                ++i;
             }
         }
-        new_words.swap(words);
-        words.shrink_to_fit();
+        keys.shrink_to_fit();
+        values.shrink_to_fit();
     }
 }
 
 void Gcode::dump()
 {
-    stream->printf("Size: %d - %d\n", sizeof(words), words.capacity());
-    for(auto a : words) {
-        stream->printf("%c %f\n", std::get<0>(a), std::get<1>(a));
+    int i= 0;
+    for(auto a : keys) {
+        stream->printf("%c %f\n", a, values[i]);
+        ++i;
     }
     if(has_m) stream->printf("M%d\n", m);
     if(has_g) stream->printf("G%d\n", g);

@@ -10,7 +10,6 @@
 #define GCODE_H
 #include <string>
 #include <vector>
-#include <tuple>
 
 using std::string;
 
@@ -54,6 +53,7 @@ class Gcode {
     private:
         void parse_gcode_words(const string&);
 
-        std::vector<std::tuple<char,float>> words;
+        std::vector<char> keys;
+        std::vector<float> values;
 };
 #endif
