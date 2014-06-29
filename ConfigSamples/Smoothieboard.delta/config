@@ -12,7 +12,7 @@ delta_segments_per_second                    100              # for deltas only 
 
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-arm_solution                                 kossel           # selects the kossel arm solution
+arm_solution                                 linear_delta     # selects the delta arm solution
 alpha_steps_per_mm                           100              # Steps per mm for alpha stepper
 beta_steps_per_mm                            100              # Steps per mm for beta stepper
 gamma_steps_per_mm                           100              # Steps per mm for gamma stepper
@@ -172,6 +172,14 @@ switch.fan.output_type                       pwm              # pwm output setta
 #switch.misc.input_off_command                M43              #
 #switch.misc.output_pin                       2.4              #
 #switch.misc.output_type                      digital          # just an on or off pin
+
+# automatically toggle a switch at a specified temperature
+# useful to turn on a fan or water pump to cool the hotend
+#temperatureswitch.hotend.enable	          true             #
+#temperatureswitch.hotend.type                misc             # select which MOSFET to use, fan or misc (small MOSFETs)
+#temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
+#temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
+#temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
 
 # Switch module for spindle control
 #switch.spindle.enable                        false            #

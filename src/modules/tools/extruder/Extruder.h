@@ -36,6 +36,8 @@ class Extruder : public Tool {
         Block*   append_empty_block();
 
     private:
+        void on_get_public_data(void* argument);
+        void update_steps_per_millimeter();
 
         Pin             step_pin;                     // Step pin for the stepper driver
         Pin             dir_pin;                      // Dir pin for the stepper driver
@@ -44,8 +46,16 @@ class Extruder : public Tool {
         float          target_position;              // End point ( in mm ) for the current move
         float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
         float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
-        Block*          current_block;                // Current block we are stepping, same as Stepper's one
+        Block*         current_block;                // Current block we are stepping, same as Stepper's one
+
         float          steps_per_millimeter;         // Steps to travel one millimeter
+
+        // kept together so they can be passed as public data
+        struct {
+            float          steps_per_millimeter_setting; // original steps to travel one millimeter as set in config, saved while in volumetric mode
+            float          filament_diameter;            // filament diameter
+        };
+
         float          feed_rate;                    //
         float          acceleration;                 //
         float          max_speed;
@@ -53,10 +63,12 @@ class Extruder : public Tool {
         float          travel_ratio;
         float          travel_distance;
 
-        char mode;                                    // extruder motion mode,  OFF, SOLO, or FOLLOW
-        bool absolute_mode;                           // absolute/relative coordinate mode switch
-        bool paused;
-        bool single_config;
+        char mode;        // extruder motion mode,  OFF, SOLO, or FOLLOW
+        struct {
+            bool absolute_mode:1; // absolute/relative coordinate mode switch
+            bool paused:1;
+            bool single_config:1;
+        };
 
         StepperMotor* stepper_motor;
 
