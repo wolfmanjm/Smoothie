@@ -49,7 +49,7 @@ try_again:
 
         //Get linenumber
         if ( first_char == 'N' ) {
-            Gcode full_line = Gcode(possible_command, new_message.stream);
+            Gcode full_line = Gcode(possible_command, new_message.stream, false);
             ln = (int) full_line.get_value('N');
             int chksum = (int) full_line.get_value('*');
 
@@ -96,7 +96,7 @@ try_again:
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GMT") + 1);
+                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GM") + 1);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;

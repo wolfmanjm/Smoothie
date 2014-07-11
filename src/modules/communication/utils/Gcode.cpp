@@ -14,7 +14,7 @@
 
 // This is a gcode object. It reprensents a GCode string/command, an caches some important values about that command for the sake of performance.
 // It gets passed around in events, and attached to the queue ( that'll change )
-Gcode::Gcode(const string &command, StreamOutput *stream)
+Gcode::Gcode(const string &command, StreamOutput *stream, bool strip)
 {
     this->command= strdup(command.c_str());
     this->m= 0;
@@ -23,7 +23,7 @@ Gcode::Gcode(const string &command, StreamOutput *stream)
     this->stream= stream;
     this->millimeters_of_travel = 0.0F;
     this->accepted_by_module = false;
-    prepare_cached_values();
+    prepare_cached_values(strip);
 }
 
 Gcode::~Gcode()
@@ -124,7 +124,7 @@ int Gcode::get_num_args() const
 }
 
 // Cache some of this command's properties, so we don't have to parse the string every time we want to look at them
-void Gcode::prepare_cached_values()
+void Gcode::prepare_cached_values(bool strip)
 {
     char *p= nullptr;
     if( this->has_letter('G') ) {
@@ -140,6 +140,8 @@ void Gcode::prepare_cached_values()
         this->has_m = false;
     }
 
+    if(!strip) return;
+
     // remove the Gxxx or Mxxx from string
     if (p != nullptr) {
         char *n= strdup(p); // create new string starting at end of the numeric value
@@ -153,10 +155,10 @@ void Gcode::mark_as_taken()
     this->accepted_by_module = true;
 }
 
-// strip off X Y Z I J parameters if G0/1/2/3
+// strip off X Y Z I J K parameters if G0/1/2/3
 void Gcode::strip_parameters()
 {
-    if(has_g && g <= 4){
+    if(has_g && g < 4){
         // strip the command of the XYZIJK parameters
         string newcmd;
         char *cn= command;
@@ -171,12 +173,13 @@ void Gcode::strip_parameters()
             char *eos;
             strtof(pch+1, &eos);
             cn= eos; // point to end of last parameter
-            pch= strpbrk(cn, "XYZIJ"); // find next parameter
+            pch= strpbrk(cn, "XYZIJK"); // find next parameter
         }
         // append anything left on the line
         newcmd.append(cn);
-        // strip whitespace to save even more
-        newcmd.erase(std::remove_if(newcmd.begin(), newcmd.end(), ::isspace), newcmd.end());
+
+        // strip whitespace to save even more, this causes problems so don't do it
+        //newcmd.erase(std::remove_if(newcmd.begin(), newcmd.end(), ::isspace), newcmd.end());
 
         // release the old one
         free(command);
