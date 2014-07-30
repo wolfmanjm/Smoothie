@@ -575,9 +575,39 @@ public:
 };
 #endif
 
+#if 0
+#include "StreamOutputPool.h"
+class TestMem
+{
+public:
+    TestMem(){
+        THEKERNEL->streams->printf("ctor %p - %p:\n", this, a);
+        for (unsigned i = 0; i < sizeof a; ++i) {
+            THEKERNEL->streams->printf("%d ", a[i]);
+        }
+        THEKERNEL->streams->printf("\n");
+    }
+    virtual ~TestMem() {
+        THEKERNEL->streams->printf("dtor %p\n", this);
+    }
+
+private:
+    uint8_t a[10];
+};
+#endif
 
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+#if 0
+    // test memory allocation
+    size_t n= sizeof(TestMem);
+    void *v = AHB0.alloc(n);
+    memset(v, 0, n);
+    TestMem *a= new(v) TestMem;
+    delete a;
+    stream->printf("%d\n", n);
+#endif
+
 #if 0
     mem_command("", stream);
     stream->printf("\n");
