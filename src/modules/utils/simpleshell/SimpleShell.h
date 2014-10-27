@@ -10,6 +10,7 @@
 #define simpleshell_h
 
 #include "Module.h"
+#include "SerialMessage.h"
 
 #include <functional>
 #include <string>
@@ -63,6 +64,10 @@ private:
 
     static const ptentry_t commands_table[];
     static int reset_delay_secs;
+    static FILE *upload_fd;
+    static uint32_t upload_cnt;
+    static string upload_filename;
+    static bool on_uploaded_data(pserialmessage_t msg);
 };
 
 

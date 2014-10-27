@@ -292,11 +292,15 @@ void USBSerial::on_main_loop(void *argument)
             char c = _getc();
             if( c == '\n' || c == '\r')
             {
-                struct SerialMessage message;
+                serialmessage_t message;
                 message.message = received;
                 message.stream = this;
                 iprintf("USBSerial Received: %s\n", message.message.c_str());
-                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                if(input_hook) {
+                    input_hook(&message);
+                }else{
+                    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                }
                 return;
             }
             else

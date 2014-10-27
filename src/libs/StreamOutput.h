@@ -8,9 +8,12 @@
 #ifndef STREAMOUTPUT_H
 #define STREAMOUTPUT_H
 
+#include "SerialMessage.h"
+
 #include <cstdarg>
 #include <cstring>
 #include <stdio.h>
+#include <functional>
 
 // This is a base class for all StreamOutput objects.
 // StreamOutputs are basically "things you can sent strings to". They are passed along with gcodes for example so modules can answer to those gcodes.
@@ -18,23 +21,26 @@
 
 class NullStreamOutput;
 
-class StreamOutput {
-    public:
-        StreamOutput(){}
-        virtual ~StreamOutput(){}
+class StreamOutput
+{
+public:
+    StreamOutput() { input_hook= nullptr; }
+    virtual ~StreamOutput() {}
 
-        virtual int printf(const char *format, ...) __attribute__ ((format(printf, 2, 3)));
-        virtual int _putc(int c) { return 1; }
-        virtual int _getc(void) { return 0; }
-        virtual int puts(const char* str) = 0;
-        virtual bool ready() { return true; };
+    virtual int printf(const char *format, ...) __attribute__ ((format(printf, 2, 3)));
+    virtual int _putc(int c) { return 1; }
+    virtual int _getc(void) { return 0;  }
+    virtual int puts(const char *str) = 0;
+    virtual bool ready() { return true; };
 
-        static NullStreamOutput NullStream;
+    static NullStreamOutput NullStream;
+    std::function<bool(pserialmessage_t)> input_hook;
 };
 
-class NullStreamOutput : public StreamOutput {
-    public:
-        int puts(const char* str) { return strlen(str); }
+class NullStreamOutput : public StreamOutput
+{
+public:
+    int puts(const char *str) { return strlen(str); }
 };
 
 #endif

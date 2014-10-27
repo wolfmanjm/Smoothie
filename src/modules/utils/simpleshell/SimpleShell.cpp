@@ -71,7 +71,11 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {NULL, NULL}
 };
 
+// declare statics
 int SimpleShell::reset_delay_secs = 0;
+FILE *SimpleShell::upload_fd= nullptr;
+uint32_t SimpleShell::upload_cnt= 0;
+string SimpleShell::upload_filename;
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
 static uint32_t heapWalk(StreamOutput *stream, bool verbose)
@@ -136,6 +140,7 @@ void SimpleShell::on_module_loaded()
     this->register_for_event(ON_SECOND_TICK);
 
     reset_delay_secs = 0;
+    upload_fd= nullptr;
 }
 
 void SimpleShell::on_second_tick(void *)
@@ -340,71 +345,74 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     fclose(lp);
 }
 
+// this gets called directrly from the input stream if the hook is set
+// static
+bool SimpleShell::on_uploaded_data(pserialmessage_t msg)
+{
+    // line without the \n or \r
+    string line= msg->message;
+
+    // see if we have an EOF
+    size_t eof= line.find_first_of("\004\032"); // ctrl-D or ctrl-Z
+
+    if(upload_fd == nullptr) { // we are in an error state so ignore everything until EOF
+        if(eof != string::npos) {
+            msg->stream->input_hook= nullptr; // cancel hook
+        }
+        return true;
+    }
+
+    // see if we have an EOF in the message, and truncate upto and not including that
+    if(eof != string::npos) {
+        line= line.substr(0, eof);
+    }
+
+    if(!line.empty()) {
+        line.append("\n");
+        upload_cnt += line.size();
+        // write line to file
+        if(fputs(line.c_str(), upload_fd) < 0) {
+            // error writing to file
+            msg->stream->printf("error writing to file. ignoring all characters until EOF\r\n");
+            fclose(upload_fd);
+            upload_fd = nullptr;
+
+        } else if ((upload_cnt%400) == 0) {
+            // HACK ALERT to get around fwrite corruption close and re open for append
+            fclose(upload_fd);
+            upload_fd = fopen(upload_filename.c_str(), "a");
+        }
+    }
+
+    if(eof != string::npos) {
+        // upload completed close file, cancel input hook
+        fclose(upload_fd);
+        upload_fd= nullptr;
+        msg->stream->input_hook= nullptr; // cancel hook
+        msg->stream->printf("uploaded %lu bytes\n", upload_cnt);
+    }
+
+    return true;
+}
+
 void SimpleShell::upload_command( string parameters, StreamOutput *stream )
 {
-    // this needs to be a hack. it needs to read direct from serial and not allow on_main_loop run until done
-    // NOTE this will block all operation until the upload is complete, so do not do while printing
+    // NOTE this will block all operation on the stream until the upload is complete, so do not do while printing
     if(!THEKERNEL->conveyor->is_queue_empty()) {
         stream->printf("upload not allowed while printing or busy\n");
         return;
     }
 
     // open file to upload to
-    string upload_filename = absolute_from_relative( parameters );
-    FILE *fd = fopen(upload_filename.c_str(), "w");
-    if(fd != NULL) {
+    upload_filename = absolute_from_relative( parameters );
+    upload_fd = fopen(upload_filename.c_str(), "w");
+    if(upload_fd != nullptr) {
         stream->printf("uploading to file: %s, send control-D or control-Z to finish\r\n", upload_filename.c_str());
+        upload_cnt= 0;
+        stream->input_hook= on_uploaded_data;
     } else {
         stream->printf("failed to open file: %s.\r\n", upload_filename.c_str());
-        return;
     }
-
-    int cnt = 0;
-    bool uploading = true;
-    while(uploading) {
-        if(!stream->ready()) {
-            // we need to kick things or they die
-            THEKERNEL->call_event(ON_IDLE);
-            continue;
-        }
-
-        char c = stream->_getc();
-        if( c == 4 || c == 26) { // ctrl-D or ctrl-Z
-            uploading = false;
-            // close file
-            fclose(fd);
-            stream->printf("uploaded %d bytes\n", cnt);
-            return;
-
-        } else {
-            // write character to file
-            cnt++;
-            if(fputc(c, fd) != c) {
-                // error writing to file
-                stream->printf("error writing to file. ignoring all characters until EOF\r\n");
-                fclose(fd);
-                fd = NULL;
-                uploading= false;
-
-            } else {
-                if ((cnt%400) == 0) {
-                    // HACK ALERT to get around fwrite corruption close and re open for append
-                    fclose(fd);
-                    fd = fopen(upload_filename.c_str(), "a");
-                }
-            }
-        }
-    }
-    // we got an error so ignore everything until EOF
-    char c;
-    do {
-        if(stream->ready()) {
-            c= stream->_getc();
-        }else{
-            THEKERNEL->call_event(ON_IDLE);
-            c= 0;
-        }
-    } while(c != 4 && c != 26);
 }
 
 // loads the specified config-override file
