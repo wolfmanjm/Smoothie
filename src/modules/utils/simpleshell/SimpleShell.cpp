@@ -79,6 +79,7 @@ FILE *SimpleShell::upload_fd= nullptr;
 uint32_t SimpleShell::upload_cnt= 0;
 string SimpleShell::upload_filename;
 MD5 *SimpleShell::md5= nullptr;
+uint16_t SimpleShell::flush_cnt= 0; //needed for write hack
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
 static uint32_t heapWalk(StreamOutput *stream, bool verbose)
@@ -353,7 +354,10 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 bool SimpleShell::on_uploaded_data(pserialmessage_t msg)
 {
     // start MD5 to checksum the file
-    if(upload_cnt == 0) md5= new MD5();
+    if(upload_cnt == 0){
+        md5= new MD5();
+        flush_cnt= 0;
+    }
 
     // line without the \n or \r
     string line= msg->message;
@@ -368,14 +372,17 @@ bool SimpleShell::on_uploaded_data(pserialmessage_t msg)
         return true;
     }
 
+    // serial driver removed \n
+    line.append("\n");
+
     // see if we have an EOF in the message, and truncate upto and not including that
     if(eof != string::npos) {
         line= line.substr(0, eof);
     }
 
     if(!line.empty()) {
-        line.append("\n");
         upload_cnt += line.size();
+        flush_cnt += line.size();
         md5->update(line);
         // write line to file
         if(fputs(line.c_str(), upload_fd) < 0) {
@@ -387,10 +394,11 @@ bool SimpleShell::on_uploaded_data(pserialmessage_t msg)
             md5= nullptr;
             return true;
 
-        } else if ((upload_cnt%400) == 0) {
+        } else if (flush_cnt >= 400) {
             // HACK ALERT to get around fwrite corruption close and re open for append
             fclose(upload_fd);
             upload_fd = fopen(upload_filename.c_str(), "a");
+            flush_cnt= 0;
         }
     }
 
@@ -401,6 +409,8 @@ bool SimpleShell::on_uploaded_data(pserialmessage_t msg)
         msg->stream->input_hook= nullptr; // cancel hook
         md5->finalize();
         msg->stream->printf("uploaded %lu bytes, md5: %s\n", upload_cnt, md5->hexdigest().c_str());
+        delete md5;
+        md5= nullptr;
     }
 
     return true;
