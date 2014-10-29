@@ -55,6 +55,7 @@ public:
     MD5(const std::string &text);
     void update(const unsigned char *buf, size_type length);
     void update(const char *buf, size_type length);
+    void update(const std::string& buf);
     MD5 &finalize();
     std::string hexdigest() const;
     void bindigest(void *buf, int len) const;
@@ -87,6 +88,6 @@ private:
     static inline void II(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac);
 };
 
-std::string md5(const std::string str);
+//std::string md5(const std::string str);
 
 #endif

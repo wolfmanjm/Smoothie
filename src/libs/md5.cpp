@@ -33,6 +33,7 @@ documentation and/or software.
 /* interface header */
 #include "md5.h"
 
+#include <stdio.h>
 /* system implementation headers */
 #include <string.h>
 
@@ -297,6 +298,10 @@ void MD5::update(const char input[], size_type length)
     update((const unsigned char *)input, length);
 }
 
+void MD5::update(const std::string& input)
+{
+    update((const unsigned char *)input.c_str(), input.size());
+}
 //////////////////////////////
 
 // MD5 finalization. Ends an MD5 message-digest operation, writing the
@@ -338,18 +343,18 @@ MD5 &MD5::finalize()
 //////////////////////////////
 
 // return hex representation of digest as string
-// std::string MD5::hexdigest() const
-// {
-//     if (!finalized)
-//         return "";
+std::string MD5::hexdigest() const
+{
+    if (!finalized)
+        return "";
 
-//     char buf[33];
-//     for (int i = 0; i < 16; i++)
-//         sprintf(buf + i * 2, "%02x", digest[i]);
-//     buf[32] = 0;
+    char buf[33];
+    for (int i = 0; i < 16; i++)
+        sprintf(buf + i * 2, "%02x", digest[i]);
+    buf[32] = 0;
 
-//     return std::string(buf);
-// }
+    return std::string(buf);
+}
 
 // return the slected number of bytes from the digest
 void MD5::bindigest(void *buf, int len) const
@@ -359,9 +364,9 @@ void MD5::bindigest(void *buf, int len) const
 
 //////////////////////////////
 
-std::string md5(const std::string str)
-{
-    MD5 md5 = MD5(str);
+// std::string md5(const std::string str)
+// {
+//     MD5 md5 = MD5(str);
 
-    return md5.hexdigest();
-}
+//     return md5.hexdigest();
+// }

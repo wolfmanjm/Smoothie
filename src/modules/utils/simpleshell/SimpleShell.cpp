@@ -28,6 +28,7 @@
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
 #include "SDFAT.h"
+#include "md5.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -66,6 +67,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
     {"remount",  SimpleShell::remount_command},
+    {"md5sum",   SimpleShell::md5sum_command},
 
     // unknown command
     {NULL, NULL}
@@ -76,6 +78,7 @@ int SimpleShell::reset_delay_secs = 0;
 FILE *SimpleShell::upload_fd= nullptr;
 uint32_t SimpleShell::upload_cnt= 0;
 string SimpleShell::upload_filename;
+MD5 *SimpleShell::md5= nullptr;
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
 static uint32_t heapWalk(StreamOutput *stream, bool verbose)
@@ -345,10 +348,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     fclose(lp);
 }
 
-// this gets called directrly from the input stream if the hook is set
+// this gets called directly from the input stream if the hook is set
 // static
 bool SimpleShell::on_uploaded_data(pserialmessage_t msg)
 {
+    // start MD5 to checksum the file
+    if(upload_cnt == 0) md5= new MD5();
+
     // line without the \n or \r
     string line= msg->message;
 
@@ -370,12 +376,16 @@ bool SimpleShell::on_uploaded_data(pserialmessage_t msg)
     if(!line.empty()) {
         line.append("\n");
         upload_cnt += line.size();
+        md5->update(line);
         // write line to file
         if(fputs(line.c_str(), upload_fd) < 0) {
             // error writing to file
             msg->stream->printf("error writing to file. ignoring all characters until EOF\r\n");
             fclose(upload_fd);
             upload_fd = nullptr;
+            delete md5;
+            md5= nullptr;
+            return true;
 
         } else if ((upload_cnt%400) == 0) {
             // HACK ALERT to get around fwrite corruption close and re open for append
@@ -389,7 +399,8 @@ bool SimpleShell::on_uploaded_data(pserialmessage_t msg)
         fclose(upload_fd);
         upload_fd= nullptr;
         msg->stream->input_hook= nullptr; // cancel hook
-        msg->stream->printf("uploaded %lu bytes\n", upload_cnt);
+        md5->finalize();
+        msg->stream->printf("uploaded %lu bytes, md5: %s\n", upload_cnt, md5->hexdigest().c_str());
     }
 
     return true;
@@ -413,6 +424,29 @@ void SimpleShell::upload_command( string parameters, StreamOutput *stream )
     } else {
         stream->printf("failed to open file: %s.\r\n", upload_filename.c_str());
     }
+}
+
+void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
+{
+    string filename = absolute_from_relative(parameters);
+
+    // Open file
+    FILE *lp = fopen(filename.c_str(), "r");
+    if (lp == NULL) {
+        stream->printf("File not found: %s\r\n", filename.c_str());
+        return;
+    }
+    md5= new MD5();
+    uint8_t buf[64];
+    do {
+        size_t n= fread(buf, 1, sizeof buf, lp);
+        if(n > 0) md5->update(buf, n);
+    } while(!feof(lp));
+
+    stream->printf("%s %s\n", md5->hexdigest().c_str(), filename.c_str());
+    delete md5;
+    md5= nullptr;
+    fclose(lp);
 }
 
 // loads the specified config-override file
@@ -639,5 +673,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("net\r\n");
     stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
+    stream->printf("download file - saves all sent ascii data to the given file until EOF, must not be binary\r\n");
+    stream->printf("md5sum file - prints md5 sum of the given file\r\n");
 }
 

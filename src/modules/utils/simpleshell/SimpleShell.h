@@ -17,6 +17,7 @@
 using std::string;
 
 class StreamOutput;
+class MD5;
 
 class SimpleShell : public Module
 {
@@ -37,6 +38,7 @@ private:
     static void rm_command(string parameters, StreamOutput *stream );
     static void mv_command(string parameters, StreamOutput *stream );
     static void upload_command(string parameters, StreamOutput *stream );
+    static void md5sum_command(string parameters, StreamOutput *stream );
     static void break_command(string parameters, StreamOutput *stream );
     static void reset_command(string parameters, StreamOutput *stream );
     static void dfu_command(string parameters, StreamOutput *stream );
@@ -67,6 +69,7 @@ private:
     static FILE *upload_fd;
     static uint32_t upload_cnt;
     static string upload_filename;
+    static MD5 *md5;
     static bool on_uploaded_data(pserialmessage_t msg);
 };
 
