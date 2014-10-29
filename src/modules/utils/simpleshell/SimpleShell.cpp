@@ -443,7 +443,7 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
         if(n > 0) md5->update(buf, n);
     } while(!feof(lp));
 
-    stream->printf("%s %s\n", md5->hexdigest().c_str(), filename.c_str());
+    stream->printf("%s %s\n", md5->finalize().hexdigest().c_str(), filename.c_str());
     delete md5;
     md5= nullptr;
     fclose(lp);
@@ -673,7 +673,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("net\r\n");
     stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
-    stream->printf("download file - saves all sent ascii data to the given file until EOF, must not be binary\r\n");
+    stream->printf("upload file - saves all sent ascii data to the given file until EOF, must not be binary\r\n");
     stream->printf("md5sum file - prints md5 sum of the given file\r\n");
 }
 
