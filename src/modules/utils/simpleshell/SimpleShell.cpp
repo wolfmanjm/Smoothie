@@ -707,8 +707,22 @@ private:
 };
 #endif
 
+//#include "mbed.h"
+//#include "PwmOut.h" // mbed.h lib
+
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+#if 0
+    mbed::PwmOut led(LED3);
+    while(1) {
+      led = led + 0.01;
+      wait_ms(200);
+      if(led == 1.0) {
+          led = 0;
+      }
+  }
+#endif
+
 #if 0
     // test memory allocation
     size_t n= sizeof(TestMem);
