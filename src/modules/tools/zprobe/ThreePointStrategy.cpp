@@ -127,6 +127,12 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
         } else if( gcode->g == 32 ) { // three point probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
+            if(!gcode->has_letter('K')) { // K will keep current compensation to test plane
+                // clear any existing plane and compensation
+                delete this->plane;
+                this->plane= nullptr;
+                setAdjustFunction(false);
+            }
             if(!doProbing(gcode->stream)) {
                 gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             } else {
@@ -201,8 +207,8 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 
         }
         #if 0
-         else if(gcode->m == 999) {
-            // DEBUG run a test M999 A B C X Y set Z to A B C and test for point at X Y
+         else if(gcode->m == 9999) {
+            // DEBUG run a test M9999 A B C X Y set Z to A B C and test for point at X Y
             Vector3 v[3];
             float x, y, z, a= 0, b= 0, c= 0;
             if(gcode->has_letter('A')) a = gcode->get_value('A');

@@ -17,10 +17,12 @@
 #include "mri.h"
 #include "version.h"
 #include "PublicDataRequest.h"
+#include "AppendFileStream.h"
 #include "FileStream.h"
 #include "checksumm.h"
 #include "PublicData.h"
 #include "Gcode.h"
+//#include "StepTicker.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
@@ -458,12 +460,13 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
         filename = THEKERNEL->config_override_filename();
     }
 
+    remove(filename.c_str());
     // replace stream with one that writes to config-override file
-    FileStream *gs = new FileStream(filename.c_str());
-    if(!gs->is_open()) {
-        stream->printf("Unable to open File %s for write\n", filename.c_str());
-        return;
-    }
+    AppendFileStream *gs = new AppendFileStream(filename.c_str());
+    // if(!gs->is_open()) {
+    //     stream->printf("Unable to open File %s for write\n", filename.c_str());
+    //     return;
+    // }
 
     // issue a M500 which will store values in the file stream
     Gcode *gcode = new Gcode("M500", gs);

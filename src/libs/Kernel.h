@@ -30,6 +30,7 @@ class Planner;
 class StepTicker;
 class Adc;
 class PublicData;
+class TemperatureControlPool;
 
 class Kernel {
     public:
@@ -42,17 +43,17 @@ class Kernel {
         void call_event(_EVENT_ENUM id_event);
         void call_event(_EVENT_ENUM id_event, void * argument);
 
-        // These modules are aviable to all other modules
+        // These modules are available to all other modules
         SerialConsole*    serial;
         StreamOutputPool* streams;
 
-        GcodeDispatch*    gcode_dispatch;
         Robot*            robot;
         Stepper*          stepper;
         Planner*          planner;
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;
+        TemperatureControlPool* temperature_control_pool;
 
         int debug;
         SlowTicker*       slow_ticker;
@@ -60,7 +61,8 @@ class Kernel {
         Adc*              adc;
         bool              use_leds;
         std::string       current_path;
-        int               base_stepping_frequency;
+        uint32_t          base_stepping_frequency;
+        uint32_t          acceleration_ticks_per_second;
 
     private:
         // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

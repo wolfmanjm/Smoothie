@@ -7,8 +7,6 @@ using namespace std;
 #include <vector>
 using std::string;
 
-extern volatile bool _isr_context;
-
 string lc(const string& str);
 
 bool is_alpha( int );
@@ -16,6 +14,9 @@ bool is_digit( int );
 bool is_numeric( int );
 bool is_alphanum( int );
 bool is_whitespace( int );
+
+vector<string> split(const char *str, char c = ',');
+vector<float> parse_number_list(const char *str);
 
 string remove_non_number( string str );
 
