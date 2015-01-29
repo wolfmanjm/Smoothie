@@ -5,11 +5,12 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef thermistor_h
-#define thermistor_h
+#ifndef THERMISTOR_H
+#define THERMISTOR_H
 
 #include "TempSensor.h"
 #include "RingBuffer.h"
+#include "Pin.h"
 
 #define QUEUE_LEN 32
 
@@ -40,7 +41,7 @@ class Thermistor : public TempSensor
         float j;
         float k;
 
-        Pin  thermistor_pin;
+        Pin thermistor_pin;
 
         RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
 };

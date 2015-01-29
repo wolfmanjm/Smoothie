@@ -212,7 +212,6 @@ void TemperatureControl::on_gcode_received(void *argument)
             }
             gcode->mark_as_taken();
             return;
-
         }
 
         if (gcode->m == 305) { // set or get sensor settings
@@ -220,7 +219,7 @@ void TemperatureControl::on_gcode_received(void *argument)
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
                 this->sensor_settings= true;
                 TempSensor::sensor_options_t options;
-                if(sensor->get_optional(options)) {
+                if(this->sensor->get_optional(options)) {
                     for(auto &i : options) {
                         // foreach optional value
                         char c = i.first;
@@ -229,13 +228,13 @@ void TemperatureControl::on_gcode_received(void *argument)
                         }
                     }
                     // set the new options
-                    sensor->set_optional(options);
+                    this->sensor->set_optional(options);
                 }
 
             }else if(!gcode->has_letter('S')) {
                 // just print them
                 TempSensor::sensor_options_t options;
-                if(sensor->get_optional(options)) {
+                if(this->sensor->get_optional(options)) {
                     for(auto &i : options) {
                         // foreach optional value
                         gcode->stream->printf("%s(S%d): %c, %f\n", this->designator.c_str(), this->pool_index, i.first, i.second);

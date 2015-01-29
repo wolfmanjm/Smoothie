@@ -5,21 +5,21 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "Thermistor.h"
 #include "libs/Kernel.h"
-#include <math.h>
 #include "libs/Pin.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "Adc.h"
 #include "ConfigValue.h"
 #include "libs/Median.h"
-#include "Thermistor.h"
 #include "libs/platform_memory.h"
 
 // a const list of predefined thermistors
 #include "predefined_thermistors.h"
 
 #include "MRI_Hooks.h"
+#include <math.h>
 
 #define UNDEFINED -1
 
@@ -85,7 +85,7 @@ float Thermistor::get_temperature()
 }
 
 float Thermistor::get_raw() {
-    return THEKERNEL->adc->read(&thermistor_pin);
+    return new_thermistor_reading();
 }
 
 float Thermistor::adc_value_to_temperature(int adc_value)

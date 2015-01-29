@@ -5,8 +5,8 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef max31855_h
-#define max31855_h
+#ifndef MAX31855_H
+#define MAX31855_H
 
 #include "TempSensor.h"
 #include <string>
