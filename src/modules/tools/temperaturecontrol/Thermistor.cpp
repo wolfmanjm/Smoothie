@@ -33,13 +33,7 @@
 #define r2_checksum                        CHECKSUM("r2")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
 
-Thermistor::Thermistor()
-{
-}
-
-Thermistor::~Thermistor()
-{
-}
+Thermistor::Thermistor() {}
 
 // Get configuration from the config file
 void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
@@ -88,6 +82,10 @@ void Thermistor::calc_jk()
 float Thermistor::get_temperature()
 {
     return adc_value_to_temperature(new_thermistor_reading());
+}
+
+float Thermistor::get_raw() {
+    return THEKERNEL->adc->read(&thermistor_pin);
 }
 
 float Thermistor::adc_value_to_temperature(int adc_value)

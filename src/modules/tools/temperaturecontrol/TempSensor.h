@@ -13,18 +13,21 @@
 class TempSensor
 {
 public:
+    // Make sure the interface provides a destructor.
+    virtual ~TempSensor(){}
+
     // Load config parameters using provided "base" names.
-    virtual void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum) {};
+    virtual void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)= 0;
 
     // Return temperature in degrees Celsius.
-    virtual float get_temperature() { return -1.f; };
-
-    // Make sure the interface provides a destructor.
-    virtual ~TempSensor() {}
+    virtual float get_temperature()= 0;
 
     typedef std::map<char, float> sensor_options_t;
-    virtual bool set_optional(const sensor_options_t& options) { return false; };
-    virtual bool get_optional(sensor_options_t& options) { return false; };
+    virtual bool set_optional(const sensor_options_t &options) { return false; }
+    virtual bool get_optional(sensor_options_t &options) const { return false; }
+
+    // return raw value
+    virtual float get_raw() { return 0.0F; }
 };
 
 #endif

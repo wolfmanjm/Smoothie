@@ -18,13 +18,13 @@ class Thermistor : public TempSensor
 {
     public:
         Thermistor();
-        ~Thermistor();
 
         // TempSensor interface.
         void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
         float get_temperature();
         bool set_optional(const sensor_options_t& options);
         bool get_optional(sensor_options_t& options);
+        float get_raw();
 
     private:
         int new_thermistor_reading();

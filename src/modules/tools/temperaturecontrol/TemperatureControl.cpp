@@ -145,16 +145,16 @@ void TemperatureControl::load_config()
     std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();
 
     // Instantiate correct sensor (TBD: TempSensor factory?)
-    delete sensor;
-    sensor = nullptr; // In case we fail to create a new sensor.
-    if(sensor_type.compare("thermistor") == 0) {
-        sensor = new Thermistor();
-    } else if(sensor_type.compare("max31855") == 0) {
-        sensor = new Max31855();
+    delete this->sensor;
+    this->sensor = nullptr; // In case we fail to create a new sensor.
+    if(sensor_type == "thermistor") {
+        this->sensor = new Thermistor();
+    } else if(sensor_type == "max31855") {
+        this->sensor = new Max31855();
     } else {
-        sensor = new TempSensor(); // A dummy implementation
+        this->sensor = new Thermistor(); // default implementation
     }
-    sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
+    this->sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
 
     this->preset1 = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
     this->preset2 = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
@@ -204,7 +204,44 @@ void TemperatureControl::on_gcode_received(void *argument)
             char buf[32]; // should be big enough for any status
             int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
+
+            if(gcode->has_letter('X')) {
+                // return raw data too
+                n= snprintf(buf, sizeof(buf), "RAW%s:%f ", this->designator.c_str(), this->sensor->get_raw());
+                gcode->txt_after_ok.append(buf, n);
+            }
             gcode->mark_as_taken();
+            return;
+
+        }
+
+        if (gcode->m == 305) { // set or get sensor settings
+            gcode->mark_as_taken();
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
+                this->sensor_settings= true;
+                TempSensor::sensor_options_t options;
+                if(sensor->get_optional(options)) {
+                    for(auto &i : options) {
+                        // foreach optional value
+                        char c = i.first;
+                        if(gcode->has_letter(c)) { // set new value
+                            i.second = gcode->get_value(c);
+                        }
+                    }
+                    // set the new options
+                    sensor->set_optional(options);
+                }
+
+            }else if(!gcode->has_letter('S')) {
+                // just print them
+                TempSensor::sensor_options_t options;
+                if(sensor->get_optional(options)) {
+                    for(auto &i : options) {
+                        // foreach optional value
+                        gcode->stream->printf("%s(S%d): %c, %f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
+                    }
+                }
+            }
             return;
         }
 
@@ -227,24 +264,6 @@ void TemperatureControl::on_gcode_received(void *argument)
 
             }else if(!gcode->has_letter('S')) {
                 gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g max pwm: %d O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm(), o);
-            }
-
-        } else if (gcode->m == 305) { // set sensor settings
-            gcode->mark_as_taken();
-            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
-                this->sensor_settings= true;
-                TempSensor::sensor_options_t options;
-                if(sensor->get_optional(options)) {
-                    for(auto &i : options) {
-                        // foreach optional value
-                        char c = i.first;
-                        if(gcode->has_letter(c)) { // set new value
-                            i.second = gcode->get_value(c);
-                        }
-                    }
-                    // set the new options
-                    sensor->set_optional(options);
-                }
             }
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
