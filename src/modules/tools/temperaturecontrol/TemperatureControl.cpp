@@ -26,6 +26,8 @@
 #include "Pauser.h"
 #include "ConfigValue.h"
 #include "PID_Autotuner.h"
+#include "SerialMessage.h"
+#include "utils.h"
 
 // Temp sensor implementations:
 #include "Thermistor.h"
@@ -145,16 +147,16 @@ void TemperatureControl::load_config()
     std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();
 
     // Instantiate correct sensor (TBD: TempSensor factory?)
-    delete this->sensor;
-    this->sensor = nullptr; // In case we fail to create a new sensor.
-    if(sensor_type == "thermistor") {
-        this->sensor = new Thermistor();
-    } else if(sensor_type == "max31855") {
-        this->sensor = new Max31855();
+    delete sensor;
+    sensor = nullptr; // In case we fail to create a new sensor.
+    if(sensor_type.compare("thermistor") == 0) {
+        sensor = new Thermistor();
+    } else if(sensor_type.compare("max31855") == 0) {
+        sensor = new Max31855();
     } else {
-        this->sensor = new Thermistor(); // default implementation
+        sensor = new TempSensor(); // A dummy implementation
     }
-    this->sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
+    sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
 
     this->preset1 = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
     this->preset2 = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
@@ -204,12 +206,6 @@ void TemperatureControl::on_gcode_received(void *argument)
             char buf[32]; // should be big enough for any status
             int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
-
-            if(gcode->has_letter('X')) {
-                // return raw data too
-                n= snprintf(buf, sizeof(buf), "RAW%s:%f ", this->designator.c_str(), this->sensor->get_raw());
-                gcode->txt_after_ok.append(buf, n);
-            }
             gcode->mark_as_taken();
             return;
         }
@@ -217,30 +213,32 @@ void TemperatureControl::on_gcode_received(void *argument)
         if (gcode->m == 305) { // set or get sensor settings
             gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
-                this->sensor_settings= true;
-                TempSensor::sensor_options_t options;
-                if(this->sensor->get_optional(options)) {
-                    for(auto &i : options) {
-                        // foreach optional value
-                        char c = i.first;
-                        if(gcode->has_letter(c)) { // set new value
-                            i.second = gcode->get_value(c);
-                        }
-                    }
+                TempSensor::sensor_options_t args= gcode->get_args();
+                args.erase('S'); // don't include the S
+                if(args.size() > 0) {
                     // set the new options
-                    this->sensor->set_optional(options);
+                    if(sensor->set_optional(args)) {
+                        this->sensor_settings= true;
+                    }else{
+                        gcode->stream->printf("Unable to properly set sensor settings, make sure you specify all required values\n");
+                    }
+                }else{
+                    // don't override
+                    this->sensor_settings= false;
                 }
 
             }else if(!gcode->has_letter('S')) {
-                // just print them
+                gcode->stream->printf("%s(S%d): using %s\n", this->designator.c_str(), this->pool_index, this->readonly?"Readonly" : this->use_bangbang?"Bangbang":"PID");
+                sensor->get_raw();
                 TempSensor::sensor_options_t options;
-                if(this->sensor->get_optional(options)) {
+                if(sensor->get_optional(options)) {
                     for(auto &i : options) {
                         // foreach optional value
-                        gcode->stream->printf("%s(S%d): %c, %f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
+                        gcode->stream->printf("%s(S%d): %c%1.18f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
                     }
                 }
             }
+
             return;
         }
 
@@ -274,7 +272,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                 if(sensor->get_optional(options) && !options.empty()) {
                     gcode->stream->printf(";Optional temp sensor specific settings:\nM305 S%d", this->pool_index);
                     for(auto &i : options) {
-                        gcode->stream->printf(" %c%1.4f", i.first, i.second);
+                        gcode->stream->printf(" %c%1.18f", i.first, i.second);
                     }
                     gcode->stream->printf("\n");
                 }

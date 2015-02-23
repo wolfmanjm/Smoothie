@@ -15,6 +15,7 @@
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "libs/StreamOutputPool.h"
+#include "libs/FileStream.h"
 #include "libs/AppendFileStream.h"
 #include "libs/FileStream.h"
 #include "Config.h"
