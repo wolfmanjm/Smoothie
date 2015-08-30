@@ -23,13 +23,17 @@ public:
     void on_config_reload(void *argument);
 
     void on_gcode_received(void *argument);
-//    void on_idle(void *argument);
 
 
 private:
     void home();
     bool set_trim(float x, float y, float z, StreamOutput *stream);
     bool get_trim(float& x, float& y, float& z);
+
+    bool set_home_offset(float x, float y, float z, StreamOutput *stream);
+    bool get_home_offset(float& x, float& y, float& z);
+
+    bool translate_trim(StreamOutput *stream);
 
     void SCARA_ang_move(float theta, float psi, float z, float feedrate);
 

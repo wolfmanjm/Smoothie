@@ -22,11 +22,13 @@ using std::string;
 #include "StepperMotor.h"
 #include "Gcode.h"
 #include "PublicDataRequest.h"
+#include "PublicData.h"
 #include "RobotPublicAccess.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/LinearDeltaSolution.h"
+#include "arm_solutions/RotatableDeltaSolution.h"
 #include "arm_solutions/HBotSolution.h"
 #include "arm_solutions/MorganSCARASolution.h"
 #include "StepTicker.h"
@@ -35,6 +37,7 @@ using std::string;
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
 #include "StreamOutputPool.h"
+#include "ExtruderPublicAccess.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -52,6 +55,7 @@ using std::string;
 #define  rotatable_cartesian_checksum        CHECKSUM("rotatable_cartesian")
 #define  rostock_checksum                    CHECKSUM("rostock")
 #define  linear_delta_checksum               CHECKSUM("linear_delta")
+#define  rotatable_delta_checksum            CHECKSUM("rotatable_delta")
 #define  delta_checksum                      CHECKSUM("delta")
 #define  hbot_checksum                       CHECKSUM("hbot")
 #define  corexy_checksum                     CHECKSUM("corexy")
@@ -92,7 +96,6 @@ using std::string;
 #define  beta_checksum                       CHECKSUM("beta")
 #define  gamma_checksum                      CHECKSUM("gamma")
 
-
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
 #define NEXT_ACTION_GO_HOME 2
@@ -113,6 +116,8 @@ using std::string;
 
 #define SPINDLE_DIRECTION_CW 0
 #define SPINDLE_DIRECTION_CCW 1
+
+#define ARC_ANGULAR_TRAVEL_EPSILON 5E-7 // Float (radians)
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
@@ -162,6 +167,10 @@ void Robot::on_config_reload(void *argument)
 
     } else if(solution_checksum == rotatable_cartesian_checksum) {
         this->arm_solution = new RotatableCartesianSolution(THEKERNEL->config);
+
+    } else if(solution_checksum == rotatable_delta_checksum) {
+        this->arm_solution = new RotatableDeltaSolution(THEKERNEL->config);
+
 
     } else if(solution_checksum == morgan_checksum) {
         this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
@@ -333,10 +342,10 @@ void Robot::on_gcode_received(void *argument)
     //G-letter Gcodes are mostly what the Robot module is interrested in, other modules also catch the gcode event and do stuff accordingly
     if( gcode->has_g) {
         switch( gcode->g ) {
-            case 0:  this->motion_mode = MOTION_MODE_SEEK; gcode->mark_as_taken(); break;
-            case 1:  this->motion_mode = MOTION_MODE_LINEAR; gcode->mark_as_taken();  break;
-            case 2:  this->motion_mode = MOTION_MODE_CW_ARC; gcode->mark_as_taken();  break;
-            case 3:  this->motion_mode = MOTION_MODE_CCW_ARC; gcode->mark_as_taken();  break;
+            case 0:  this->motion_mode = MOTION_MODE_SEEK;  break;
+            case 1:  this->motion_mode = MOTION_MODE_LINEAR;   break;
+            case 2:  this->motion_mode = MOTION_MODE_CW_ARC;   break;
+            case 3:  this->motion_mode = MOTION_MODE_CCW_ARC;   break;
             case 4: {
                 uint32_t delay_ms= 0;
                 if (gcode->has_letter('P')) {
@@ -354,15 +363,15 @@ void Robot::on_gcode_received(void *argument)
                         THEKERNEL->call_event(ON_IDLE, this);
                     }
                 }
-                gcode->mark_as_taken();
             }
-            case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); gcode->mark_as_taken();  break;
-            case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); gcode->mark_as_taken();  break;
-            case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;
-            case 20: this->inch_mode = true; gcode->mark_as_taken();  break;
-            case 21: this->inch_mode = false; gcode->mark_as_taken();  break;
-            case 90: this->absolute_mode = true; gcode->mark_as_taken();  break;
-            case 91: this->absolute_mode = false; gcode->mark_as_taken();  break;
+            break;
+            case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);   break;
+            case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS);   break;
+            case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS);   break;
+            case 20: this->inch_mode = true;   break;
+            case 21: this->inch_mode = false;   break;
+            case 90: this->absolute_mode = true;   break;
+            case 91: this->absolute_mode = false;   break;
             case 92: {
                 if(gcode->get_num_args() == 0) {
                     for (int i = X_AXIS; i <= Z_AXIS; ++i) {
@@ -376,8 +385,6 @@ void Robot::on_gcode_received(void *argument)
                         }
                     }
                 }
-
-                gcode->mark_as_taken();
                 return;
             }
         }
@@ -395,7 +402,6 @@ void Robot::on_gcode_received(void *argument)
 
                 gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm, seconds_per_minute);
                 gcode->add_nl = true;
-                gcode->mark_as_taken();
                 check_max_actuator_speeds();
                 return;
 
@@ -409,12 +415,10 @@ void Robot::on_gcode_received(void *argument)
                                  actuators[Y_AXIS]->get_current_position(),
                                  actuators[Z_AXIS]->get_current_position() );
                 gcode->txt_after_ok.append(buf, n);
-                gcode->mark_as_taken();
             }
             return;
 
             case 120: { // push state
-                gcode->mark_as_taken();
                 bool b= this->absolute_mode;
                 saved_state_t s(this->feed_rate, this->seek_rate, b);
                 state_stack.push(s);
@@ -422,7 +426,6 @@ void Robot::on_gcode_received(void *argument)
             break;
 
             case 121: // pop state
-                gcode->mark_as_taken();
                 if(!state_stack.empty()) {
                     auto s= state_stack.top();
                     state_stack.pop();
@@ -448,16 +451,16 @@ void Robot::on_gcode_received(void *argument)
 
                 check_max_actuator_speeds();
 
-                gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
-                                      this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                      alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
-                gcode->add_nl = true;
-                gcode->mark_as_taken();
+                if(gcode->get_num_args() == 0) {
+                    gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
+                                          this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
+                                          alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
+                    gcode->add_nl = true;
+                }
+
                 break;
 
             case 204: // M204 Snnn - set acceleration to nnn, Znnn sets z acceleration
-                gcode->mark_as_taken();
-
                 if (gcode->has_letter('S')) {
                     float acc = gcode->get_value('S'); // mm/s^2
                     // enforce minimum
@@ -475,7 +478,6 @@ void Robot::on_gcode_received(void *argument)
                 break;
 
             case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed, Ynnn - set minimum step rate
-                gcode->mark_as_taken();
                 if (gcode->has_letter('X')) {
                     float jd = gcode->get_value('X');
                     // enforce minimum
@@ -503,7 +505,6 @@ void Robot::on_gcode_received(void *argument)
                 break;
 
             case 220: // M220 - speed override percentage
-                gcode->mark_as_taken();
                 if (gcode->has_letter('S')) {
                     float factor = gcode->get_value('S');
                     // enforce minimum 10% speed
@@ -514,11 +515,12 @@ void Robot::on_gcode_received(void *argument)
                         factor = 1000.0F;
 
                     seconds_per_minute = 6000.0F / factor;
+                }else{
+                    gcode->stream->printf("Speed factor at %6.2f %%\n", 6000.0F / seconds_per_minute);
                 }
                 break;
 
             case 400: // wait until all moves are done up to this point
-                gcode->mark_as_taken();
                 THEKERNEL->conveyor->wait_for_empty_queue();
                 break;
 
@@ -540,12 +542,11 @@ void Robot::on_gcode_received(void *argument)
                     }
                     gcode->stream->printf("\n");
                 }
-                gcode->mark_as_taken();
+
                 break;
             }
 
             case 665: { // M665 set optional arm solution variables based on arm solution.
-                gcode->mark_as_taken();
                 // the parameter args could be any letter each arm solution only accepts certain ones
                 BaseSolution::arm_options_t options= gcode->get_args();
                 options.erase('S'); // don't include the S
@@ -671,7 +672,7 @@ void Robot::reset_position_from_current_actuator_position()
 }
 
 // Convert target from millimeters to steps, and append this to the planner
-void Robot::append_milestone( float target[], float rate_mm_s )
+void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s )
 {
     float deltas[3];
     float unit_vec[3];
@@ -715,12 +716,28 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // find actuator position given cartesian position, use actual adjusted target
     arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
 
+    float isecs= rate_mm_s / millimeters_of_travel;
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++) {
-        float actuator_rate  = fabs(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * rate_mm_s / millimeters_of_travel;
-
-        if (actuator_rate > actuators[actuator]->get_max_rate())
+        float actuator_rate  = fabsf(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * isecs;
+        if (actuator_rate > actuators[actuator]->get_max_rate()){
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
+        }
+    }
+
+    // if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit
+    // Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
+    // We also check we are not exceeding the E max_speed for the current extruder
+    // We ask Extruder to do all the work, but as Extruder won't even see this gcode until after it has been planned
+    // we need to ask it now passing in the relevant data.
+    if(gcode->has_letter('E')) {
+        float data[2];
+        data[0]= gcode->get_value('E'); // E target (maybe absolute or relative)
+        data[1]= isecs; // inverted seconds for the move
+        if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
+            rate_mm_s *= data[1];
+            //THEKERNEL->streams->printf("Extruder has changed the rate by %f to %f\n", data[1], rate_mm_s);
+        }
     }
 
     // Append the block to the planner
@@ -786,12 +803,12 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
                 segment_end[axis] = last_milestone[axis] + segment_delta[axis];
 
             // Append the end of this segment to the queue
-            this->append_milestone(segment_end, rate_mm_s);
+            this->append_milestone(gcode, segment_end, rate_mm_s);
         }
     }
 
     // Append the end of this full move to the queue
-    this->append_milestone(target, rate_mm_s);
+    this->append_milestone(gcode, target, rate_mm_s);
 
     // if adding these blocks didn't start executing, do that now
     THEKERNEL->conveyor->ensure_running();
@@ -811,13 +828,13 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
     float rt_axis0 = target[this->plane_axis_0] - center_axis0;
     float rt_axis1 = target[this->plane_axis_1] - center_axis1;
 
+    // Patch from GRBL Firmware - Christoph Baumann 04072015
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-    float angular_travel = atan2(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-    if (angular_travel < 0) {
-        angular_travel += 2 * M_PI;
-    }
-    if (is_clockwise) {
-        angular_travel -= 2 * M_PI;
+    float angular_travel = atan2(r_axis0*rt_axis1-r_axis1*rt_axis0, r_axis0*rt_axis0+r_axis1*rt_axis1);
+    if (is_clockwise) { // Correct atan2 output per direction
+        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= 2*M_PI; }
+    } else {
+        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += 2*M_PI; }
     }
 
     // Find the distance for this gcode
@@ -899,12 +916,12 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
         arc_target[this->plane_axis_2] += linear_per_segment;
 
         // Append this segment to the queue
-        this->append_milestone(arc_target, this->feed_rate / seconds_per_minute);
+        this->append_milestone(gcode, arc_target, this->feed_rate / seconds_per_minute);
 
     }
 
     // Ensure last segment arrives at target location.
-    this->append_milestone(target, this->feed_rate / seconds_per_minute);
+    this->append_milestone(gcode, target, this->feed_rate / seconds_per_minute);
 }
 
 // Do the math for an arc and add it to the queue

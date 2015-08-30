@@ -21,8 +21,14 @@
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "PublicDataRequest.h"
+#include "PublicData.h"
+#include "SimpleShell.h"
+#include "utils.h"
 
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+#define panel_display_message_checksum CHECKSUM("display_message")
+#define panel_checksum             CHECKSUM("panel")
 
 // goes in Flash, list of Mxxx codes that are allowed when in Halted state
 static const int allowed_mcodes[]= {105,114}; // get temp, get pos
@@ -44,7 +50,6 @@ GcodeDispatch::GcodeDispatch()
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded()
 {
-    return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_HALT);
 }
@@ -119,7 +124,8 @@ try_again:
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GM") + 1);
+                // assumes G or M are always the first on the line
+                size_t nextcmd = possible_command.find_first_of("GM", 2);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;
@@ -163,9 +169,9 @@ try_again:
                                 upload_fd = fopen(this->upload_filename.c_str(), "w");
                                 if(upload_fd != NULL) {
                                     this->uploading = true;
-                                    new_message.stream->printf("Writing to file: %s\r\n", this->upload_filename.c_str());
+                                    new_message.stream->printf("Writing to file: %s\r\nok\r\n", this->upload_filename.c_str());
                                 } else {
-                                    new_message.stream->printf("open failed, File: %s.\r\n", this->upload_filename.c_str());
+                                    new_message.stream->printf("open failed, File: %s.\r\nok\r\n", this->upload_filename.c_str());
                                 }
                                 //printf("Start Uploading file: %s, %p\n", upload_filename.c_str(), upload_fd);
                                 continue;
@@ -177,6 +183,39 @@ try_again:
                                 THEKERNEL->streams->printf("ok Emergency Stop Requested - reset or M999 required to continue\r\n");
                                 delete gcode;
                                 return;
+
+                            case 117: // M117 is a special non compliant Gcode as it allows arbitrary text on the line following the command
+                            {    // concatenate the command again and send to panel if enabled
+                                string str= single_command.substr(4) + possible_command;
+                                PublicData::set_value( panel_checksum, panel_display_message_checksum, &str );
+                                delete gcode;
+                                new_message.stream->printf("ok\r\n");
+                                return;
+                            }
+
+                            case 1000: // M1000 is a special comanad that will pass thru the raw lowercased command to the simpleshell (for hosts that do not allow such things)
+                            {
+                                // reconstruct entire command line again
+                                string str= single_command.substr(5) + possible_command;
+                                while(is_whitespace(str.front())){ str= str.substr(1); } // strip leading whitespace
+
+                                delete gcode;
+
+                                if(str.empty()) {
+                                    SimpleShell::parse_command("help", "", new_message.stream);
+
+                                }else{
+                                    string args= lc(str);
+                                    string cmd = shift_parameter(args);
+                                    // find command and execute it
+                                    if(!SimpleShell::parse_command(cmd.c_str(), args, new_message.stream)) {
+                                        new_message.stream->printf("Command not found: %s\n", cmd.c_str());
+                                    }
+                                }
+
+                                new_message.stream->printf("ok\r\n");
+                                return;
+                            }
 
                             case 500: // M500 save volatile settings to config-override
                                 THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
@@ -222,9 +261,7 @@ try_again:
                     if(gcode->add_nl)
                         new_message.stream->printf("\r\n");
 
-                    if( return_error_on_unhandled_gcode == true && gcode->accepted_by_module == false)
-                        new_message.stream->printf("ok (command unclaimed)\r\n");
-                    else if(!gcode->txt_after_ok.empty()) {
+                    if(!gcode->txt_after_ok.empty()) {
                         new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
                         gcode->txt_after_ok.clear();
                     } else
@@ -240,7 +277,7 @@ try_again:
                         upload_fd = NULL;
                         uploading = false;
                         upload_filename.clear();
-                        new_message.stream->printf("Done saving file.\r\n");
+                        new_message.stream->printf("Done saving file.\r\nok\r\n");
                         continue;
                     }
 

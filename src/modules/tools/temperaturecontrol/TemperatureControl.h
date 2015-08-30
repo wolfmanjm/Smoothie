@@ -41,7 +41,7 @@ class TemperatureControl : public Module {
         int pool_index;
 
         float target_temperature;
-        float max_temp;
+        float max_temp, min_temp;
 
         float preset1;
         float preset2;
@@ -84,7 +84,7 @@ class TemperatureControl : public Module {
         struct {
             bool use_bangbang:1;
             bool waiting:1;
-            bool min_temp_violated:1;
+            bool temp_violated:1;
             bool link_to_tool:1;
             bool active:1;
             bool readonly:1;

@@ -35,6 +35,8 @@
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
 
+#include "mbed.h" // for wait_ms()
+
 extern unsigned int g_maximumHeapAddress;
 
 #include <malloc.h>
@@ -70,6 +72,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"save",     SimpleShell::save_command},
     {"remount",  SimpleShell::remount_command},
     {"calc_thermistor", SimpleShell::calc_thermistor_command},
+    {"thermistors", SimpleShell::print_thermistors_command},
 
 
     {"test",     SimpleShell::test_command},
@@ -171,17 +174,14 @@ void SimpleShell::on_gcode_received(void *argument)
 
     if (gcode->has_m) {
         if (gcode->m == 20) { // list sd card
-            gcode->mark_as_taken();
             gcode->stream->printf("Begin file list\r\n");
             ls_command("/sd", gcode->stream);
             gcode->stream->printf("End file list\r\n");
 
         } else if (gcode->m == 30) { // remove file
-            gcode->mark_as_taken();
             rm_command("/sd/" + args, gcode->stream);
 
         } else if(gcode->m == 501) { // load config override
-            gcode->mark_as_taken();
             if(args.empty()) {
                 load_command("/sd/config-override", gcode->stream);
             } else {
@@ -189,7 +189,6 @@ void SimpleShell::on_gcode_received(void *argument)
             }
 
         } else if(gcode->m == 504) { // save to specific config override file
-            gcode->mark_as_taken();
             if(args.empty()) {
                 save_command("/sd/config-override", gcode->stream);
             } else {
@@ -462,6 +461,8 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
         filename = THEKERNEL->config_override_filename();
     }
 
+    THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
+
     //remove(filename.c_str()); // seems to cause a hang every now and then
     {
         FileStream fs(filename.c_str());
@@ -469,18 +470,20 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
         // this also will truncate the existing file instead of deleting it
     }
 
-    // replace stream with one that writes to config-override file
+    // stream that appends to file
     AppendFileStream *gs = new AppendFileStream(filename.c_str());
     // if(!gs->is_open()) {
     //     stream->printf("Unable to open File %s for write\n", filename.c_str());
     //     return;
     // }
 
+    __disable_irq();
     // issue a M500 which will store values in the file stream
     Gcode *gcode = new Gcode("M500", gs);
     THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
     delete gs;
     delete gcode;
+    __enable_irq();
 
     stream->printf("Settings Stored to %s\r\n", filename.c_str());
 }
@@ -611,6 +614,11 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
+void SimpleShell::print_thermistors_command( string parameters, StreamOutput *stream)
+{
+    Thermistor::print_predefined_thermistors(stream);
+}
+
 void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stream)
 {
     string s = shift_parameter( parameters );
@@ -694,6 +702,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
     stream->printf("upload filename - saves a stream of text to the named file\r\n");
     stream->printf("calc_thermistor [-s0] T1,R1,T2,R2,T3,R3 - calculate the Steinhart Hart coefficients for a thermistor\r\n");
+    stream->printf("thermistors - print out the predefined thermistors\r\n");
 }
 
 
