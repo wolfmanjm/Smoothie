@@ -10,7 +10,7 @@
 class LedRing : public Module
 {
 public:
-    LedRing(){};
+    LedRing() : autorun(true) {};
     ~LedRing(){};
 
     void on_module_loaded();
@@ -29,6 +29,7 @@ private:
     std::vector<uint16_t> temp_controllers;
 
     struct {
+        bool autorun:1;
         bool reached_temp:1;
         bool fade_dir:1;
         bool halted:1;

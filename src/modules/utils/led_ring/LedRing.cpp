@@ -30,6 +30,30 @@
 #define aux_max_pwm_cs        CHECKSUM("aux_max_pwm")
 #define print_finished_timeout_cs CHECKSUM("print_finished_timeout")
 
+
+/*
+    Ready: Orange
+    Heating Up: Cool blue to red.
+    Heating Finished: Slow “thump” fade in and out red.
+    Printing: White
+    Print Finished: Slow “thump” white
+    Error: Blink red every 3 seconds
+    LED1 - P1.22 LED2 - P0.25 LED3 - P4.29 LED4 - P2.8
+
+    M150 Rnnn Unnn Bnnn override leds RGB
+    M150 set autorun
+*/
+
+/**
+    example config...
+
+    led_ring.enable        true         #
+    led_ring.red_led_pin   1.22         #
+    led_ring.green_led_pin 0.25         #
+    led_ring.blue_led_pin  4.29         #
+
+*/
+
 void LedRing::on_module_loaded()
 {
     // if the module is disabled -> do nothing
@@ -72,16 +96,6 @@ void LedRing::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 }
 
-/*
-    Ready: Orange
-    Heating Up: Cool blue to red.
-    Heating Finished: Slow “thump” fade in and out red.
-    Printing: White
-    Print Finished: Slow “thump” white
-    Error: Blink red every 3 seconds
-    LED1 - P1.22 LED2 - P0.25 LED3 - P4.29 LED4 - P2.8
-*/
-
 static struct pad_temperature getTemperatures(uint16_t heater_cs)
 {
     struct pad_temperature temp;
@@ -99,6 +113,8 @@ void LedRing::setLeds(uint8_t r, uint8_t g, uint8_t b)
 
 void LedRing::on_idle( void* argument )
 {
+    if(!autorun) return;
+
     if(THEKERNEL->is_halted()) {
         // when halted on_second_tick will flash red
         return;
@@ -205,12 +221,49 @@ void  LedRing::on_second_tick(void* argument)
         return;
     }
 
-    if(print_finished && seconds > blink_timeout) {
+    if(autorun && print_finished && seconds > blink_timeout) {
         print_finished= false;
     }
 }
 
 void  LedRing::on_gcode_received(void *argument)
 {
+    Gcode *gcode = static_cast<Gcode *>(argument);
+
+     if (gcode->has_m) {
+        if (gcode->m == 150) {
+
+            if(gcode->get_num_args() == 0) {
+                // M150 set leds to auto
+                autorun= true;
+                return;
+            }
+
+            // M150 Rnnn Unnn Bnnn override leds RGB
+            int r= red_pin.get_pwm();
+            int g= green_pin.get_pwm();
+            int b= blue_pin.get_pwm();
+
+            if(gcode->has_letter('R')){
+                r= gcode->get_value('R');
+                autorun= false;
+            }
+
+            if(gcode->has_letter('U')){
+                g= gcode->get_value('U');
+                autorun= false;
+            }
+
+            if(gcode->has_letter('B')){
+                b= gcode->get_value('B');
+                autorun= false;
+            }
+
+            r= confine(r, 0, 255);
+            g= confine(g, 0, 255);
+            b= confine(b, 0, 255);
+            setLeds(r, g, b);
+        }
+    }
 
 }
