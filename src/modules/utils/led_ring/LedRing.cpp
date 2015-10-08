@@ -23,12 +23,13 @@
 #define red_led_pin_cs        CHECKSUM("red_led_pin")
 #define green_led_pin_cs      CHECKSUM("green_led_pin")
 #define blue_led_pin_cs       CHECKSUM("blue_led_pin")
-#define aux_led_pin_cs        CHECKSUM("aux_led_pin")
+#define hot_led_pin_cs        CHECKSUM("hot_led_pin")
 #define red_max_pwm_cs        CHECKSUM("red_max_pwm")
 #define green_max_pwm_cs      CHECKSUM("green_max_pwm")
 #define blue_max_pwm_cs       CHECKSUM("blue_max_pwm")
-#define aux_max_pwm_cs        CHECKSUM("aux_max_pwm")
+#define hot_max_pwm_cs        CHECKSUM("hot_max_pwm")
 #define print_finished_timeout_cs CHECKSUM("print_finished_timeout")
+#define hot_temp_cs           CHECKSUM("hot_temp")
 
 
 /*
@@ -51,6 +52,7 @@
     led_ring.red_led_pin   1.22         #
     led_ring.green_led_pin 0.25         #
     led_ring.blue_led_pin  4.29         #
+    led_ring.hot_led_pin   2.8          #
 
 */
 
@@ -66,9 +68,9 @@ void LedRing::on_module_loaded()
     red_pin.from_string( THEKERNEL->config->value(led_ring_cs, red_led_pin_cs)->by_default("nc" )->as_string())->as_output();
     green_pin.from_string( THEKERNEL->config->value(led_ring_cs, green_led_pin_cs)->by_default("nc" )->as_string())->as_output();
     blue_pin.from_string( THEKERNEL->config->value(led_ring_cs, blue_led_pin_cs)->by_default("nc" )->as_string())->as_output();
-    //aux_pin.from_string( THEKERNEL->config->value(led_ring_cs, aux_led_pin_cs)->by_default("nc" )->as_string())->as_output();
+    hot_pin.from_string( THEKERNEL->config->value(led_ring_cs, hot_led_pin_cs)->by_default("nc" )->as_string())->as_output();
 
-    if(!red_pin.connected() && !green_pin.connected() && !blue_pin.connected() && !aux_pin.connected()) {
+    if(!red_pin.connected() && !green_pin.connected() && !blue_pin.connected() && !hot_pin.connected()) {
         // as this module has not defined any led pins free it up
         delete this;
         return;
@@ -77,9 +79,10 @@ void LedRing::on_module_loaded()
     red_pin.max_pwm(  THEKERNEL->config->value(led_ring_cs, red_max_pwm_cs  )->by_default(255)->as_number());
     green_pin.max_pwm(THEKERNEL->config->value(led_ring_cs, green_max_pwm_cs)->by_default(255)->as_number());
     blue_pin.max_pwm( THEKERNEL->config->value(led_ring_cs, blue_max_pwm_cs )->by_default(255)->as_number());
-    //aux_pin.max_pwm(  THEKERNEL->config->value(led_ring_cs, aux_max_pwm_cs  )->by_default(255)->as_number());
+    hot_pin.max_pwm(  THEKERNEL->config->value(led_ring_cs, hot_max_pwm_cs  )->by_default(255)->as_number());
 
     blink_timeout= THEKERNEL->config->value(led_ring_cs, print_finished_timeout_cs)->by_default(30)->as_number();
+    hot_temp= THEKERNEL->config->value(led_ring_cs, hot_temp_cs)->by_default(50)->as_number();
 
     // enumerate temperature controls
     temp_controllers.clear();
@@ -150,14 +153,20 @@ void LedRing::on_idle( void* argument )
     uint8_t r=255, g=165, b=0; // default ready color is orange
 
     // figure out percentage complete for all the things that are heating up
-    bool heating= false;
+    bool heating= false, is_hot= false;
     float pc= 1.0F;
     for(auto id : temp_controllers) {
         struct pad_temperature c= getTemperatures(id);
+        if(c.current_temperature > hot_temp) is_hot= true; // anything is hot
+
         if(c.target_temperature > 0){
             heating= true;
             pc= std::min(pc, c.current_temperature/c.target_temperature);
          }
+    }
+
+    if(hot_pin.connected()) {
+        hot_pin.pwm(is_hot?255:0);
     }
 
     if(heating) {

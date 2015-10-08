@@ -21,7 +21,8 @@ public:
 private:
     void setLeds(uint8_t r, uint8_t g, uint8_t b);
 
-    Pwm red_pin, blue_pin, green_pin, aux_pin;
+    Pwm red_pin, blue_pin, green_pin, hot_pin;
+    float hot_temp;
     uint32_t last_time_us{0};
     uint16_t blink_timeout;
     uint16_t seconds;
