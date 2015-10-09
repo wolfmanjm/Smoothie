@@ -31,7 +31,7 @@
 #define hot_max_pwm_cs        CHECKSUM("hot_max_pwm")
 #define print_finished_timeout_cs CHECKSUM("print_finished_timeout")
 #define hot_temp_cs           CHECKSUM("hot_temp")
-
+#define ready_rgb_cs          CHECKSUM("ready_rgb")
 
 /*
     Ready: Orange
@@ -42,8 +42,8 @@
     Error: Blink red every 3 seconds
     LED1 - P1.22 LED2 - P0.25 LED3 - P4.29 LED4 - P2.8
 
-    M150 Rnnn Unnn Bnnn override leds RGB
-    M150 set autorun
+    M150 Rnnn Unnn Bnnn override leds R G B disables autoset for leds
+    M150 set autoset
 */
 
 /**
@@ -54,6 +54,16 @@
     led_ring.green_led_pin 0.25         #
     led_ring.blue_led_pin  4.29         #
     led_ring.hot_led_pin   2.8          #
+    led_ring.ready_rgb     0,255,0      # set R,G,B of the ready light (green here orange by default)
+
+    # optional uncomment to set, values are the default
+    #led_ring.red_max_pwm   255        # max pwm for green
+    #led_ring.green_max_pwm 255        # max pwm for green
+    #led_ring.blue_max_pwm  255        # max pwm for green
+    #led_ring.hot_max_pwm   255        # max pwm for green
+
+    #led_ring.print_finished_timeout 30  # timeout in seconds for the print finished sequence
+    #led_ring.hot_temp               50  # temp at which things are considered hot
 
 */
 
@@ -86,6 +96,14 @@ void LedRing::on_module_loaded()
     green_pin.pwm(0);
     blue_pin.pwm(0);
     if(hot_pin.connected()) hot_pin.pwm(0);
+
+    string ready_rgb= THEKERNEL->config->value(led_ring_cs, ready_rgb_cs)->by_default("255,165,0")->as_string();
+    std::vector<float> rgb= parse_number_list(ready_rgb.c_str());
+    if(rgb.size() == 3) {
+        ready_r= confine(rgb[0], 0, 255);
+        ready_g= confine(rgb[1], 0, 255);
+        ready_b= confine(rgb[2], 0, 255);
+    }
 
     blink_timeout= THEKERNEL->config->value(led_ring_cs, print_finished_timeout_cs)->by_default(30)->as_number();
     hot_temp= THEKERNEL->config->value(led_ring_cs, hot_temp_cs)->by_default(50)->as_number();
@@ -161,7 +179,7 @@ void LedRing::on_idle( void* argument )
         queue_cnt= 0;
     }
 
-    uint8_t r=255, g=165, b=0; // default ready color is orange
+    uint8_t r=ready_r, g=ready_g, b=ready_b; // default ready color is orange
 
     // figure out percentage complete for all the things that are heating up
     bool heating= false, is_hot= false;

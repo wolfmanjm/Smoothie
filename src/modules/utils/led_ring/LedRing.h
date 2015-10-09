@@ -28,6 +28,7 @@ private:
     uint16_t seconds;
     uint16_t queue_cnt{0};
     std::vector<uint16_t> temp_controllers;
+    uint8_t ready_r, ready_g, ready_b;
 
     struct {
         bool autorun:1;
