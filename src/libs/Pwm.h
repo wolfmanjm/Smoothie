@@ -4,13 +4,11 @@
 #include <stdint.h>
 
 #include "Pin.h"
-#include "Module.h"
 
-class Pwm : public Module, public Pin {
+class Pwm : public Pin {
 public:
     Pwm();
 
-    void     on_module_load(void);
     uint32_t on_tick(uint32_t);
 
     Pwm*     max_pwm(int);

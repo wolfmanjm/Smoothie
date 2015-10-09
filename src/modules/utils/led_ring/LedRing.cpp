@@ -13,6 +13,7 @@
 #include "PublicData.h"
 #include "Pauser.h"
 #include "Conveyor.h"
+#include "SlowTicker.h"
 
 #include "us_ticker_api.h" // mbed
 
@@ -79,7 +80,12 @@ void LedRing::on_module_loaded()
     red_pin.max_pwm(  THEKERNEL->config->value(led_ring_cs, red_max_pwm_cs  )->by_default(255)->as_number());
     green_pin.max_pwm(THEKERNEL->config->value(led_ring_cs, green_max_pwm_cs)->by_default(255)->as_number());
     blue_pin.max_pwm( THEKERNEL->config->value(led_ring_cs, blue_max_pwm_cs )->by_default(255)->as_number());
-    hot_pin.max_pwm(  THEKERNEL->config->value(led_ring_cs, hot_max_pwm_cs  )->by_default(255)->as_number());
+    if(hot_pin.connected()) hot_pin.max_pwm(  THEKERNEL->config->value(led_ring_cs, hot_max_pwm_cs  )->by_default(255)->as_number());
+
+    red_pin.pwm(0);
+    green_pin.pwm(0);
+    blue_pin.pwm(0);
+    if(hot_pin.connected()) hot_pin.pwm(0);
 
     blink_timeout= THEKERNEL->config->value(led_ring_cs, print_finished_timeout_cs)->by_default(30)->as_number();
     hot_temp= THEKERNEL->config->value(led_ring_cs, hot_temp_cs)->by_default(50)->as_number();
@@ -97,6 +103,11 @@ void LedRing::on_module_loaded()
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_SECOND_TICK);
     this->register_for_event(ON_GCODE_RECEIVED);
+
+    THEKERNEL->slow_ticker->attach(1000, &red_pin, &Pwm::on_tick);
+    THEKERNEL->slow_ticker->attach(1000, &green_pin, &Pwm::on_tick);
+    THEKERNEL->slow_ticker->attach(1000, &blue_pin, &Pwm::on_tick);
+    if(hot_pin.connected()) THEKERNEL->slow_ticker->attach(1000, &hot_pin, &Pwm::on_tick);
 }
 
 static struct pad_temperature getTemperatures(uint16_t heater_cs)
@@ -110,8 +121,8 @@ void LedRing::setLeds(uint8_t r, uint8_t g, uint8_t b)
 {
     // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
     red_pin.pwm(roundf(r * red_pin.max_pwm() / 255.0F));
-    green_pin.pwm(roundf(r * green_pin.max_pwm() / 255.0F));
-    blue_pin.pwm(roundf(r * blue_pin.max_pwm() / 255.0F));
+    green_pin.pwm(roundf(g * green_pin.max_pwm() / 255.0F));
+    blue_pin.pwm(roundf(b * blue_pin.max_pwm() / 255.0F));
 }
 
 void LedRing::on_idle( void* argument )
@@ -165,6 +176,7 @@ void LedRing::on_idle( void* argument )
          }
     }
 
+    // If somethign is hot turn on the hot indicatior pin if defined
     if(hot_pin.connected()) {
         hot_pin.pwm(is_hot?255:0);
     }
@@ -174,7 +186,7 @@ void LedRing::on_idle( void* argument )
         g= 0;
         r= roundf(255*pc);
         b= roundf(255 - r);
-        if(r >= 254) {
+        if(!reached_temp && r >= 254) {
             reached_temp= true;
             fade_dir= false;
         }
@@ -183,36 +195,36 @@ void LedRing::on_idle( void* argument )
         reached_temp= false;
     }
 
-    if(reached_temp) {
+    if(print_finished){
+        // if we finished a print we fade the leds white on and off
+        int v= red_pin.get_pwm();
+        if(fade_dir) {
+            v += 2;
+            if(v >= 250) fade_dir= false;
+
+        }else{
+            v -= 2;
+            if(v <= 10) fade_dir= true;
+        }
+
+        v= confine(v, 0, 255);
+        setLeds(v, v, v);
+
+    } else if(reached_temp) {
         // fade in and out of red
         // TODO may need to time this, and set increment
         int r= red_pin.get_pwm();
         if(fade_dir) {
             r += 2;
-            if(r >= 255) fade_dir= false;
+            if(r >= 250) fade_dir= false;
 
         }else{
             r -= 2;
-            if(r <= 0) fade_dir= true;
+            if(r <= 10) fade_dir= true;
         }
 
         r= confine(r, 0, 255);
         setLeds(r, 0, 0);
-
-    }else if(print_finished){
-        // if we finished a print we fade the leds white on and off
-        int v= red_pin.get_pwm();
-        if(fade_dir) {
-            v += 2;
-            if(v >= 255) fade_dir= false;
-
-        }else{
-            v -= 2;
-            if(v <= 0) fade_dir= true;
-        }
-
-        v= confine(v, 0, 255);
-        setLeds(v, v, v);
 
     }else{
         setLeds(r, g, b);
