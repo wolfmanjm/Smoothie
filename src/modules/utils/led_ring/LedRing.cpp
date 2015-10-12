@@ -34,7 +34,7 @@
 #define ready_rgb_cs          CHECKSUM("ready_rgb")
 
 /*
-    Ready: Orange
+    Ready: Orange (configurable)
     Heating Up: Cool blue to red.
     Heating Finished: Slow “thump” fade in and out red.
     Printing: White
@@ -135,6 +135,11 @@ static struct pad_temperature getTemperatures(uint16_t heater_cs)
     return temp;
 }
 
+static int map2range(int x, int in_min, int in_max, int out_min, int out_max)
+{
+        return (((x - in_min) * (out_max - out_min + 1)) / (in_max - in_min + 1)) + out_min;
+}
+
 void LedRing::setLeds(uint8_t r, uint8_t g, uint8_t b)
 {
     // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
@@ -183,14 +188,16 @@ void LedRing::on_idle( void* argument )
 
     // figure out percentage complete for all the things that are heating up
     bool heating= false, is_hot= false;
-    float pc= 1.0F;
+    uint8_t rh= 255;
     for(auto id : temp_controllers) {
         struct pad_temperature c= getTemperatures(id);
         if(c.current_temperature > hot_temp) is_hot= true; // anything is hot
 
-        if(c.target_temperature > 0){
+        if(c.target_temperature > 0.1F){
             heating= true;
-            pc= std::min(pc, c.current_temperature/c.target_temperature);
+            //pc= std::min(pc, c.current_temperature/c.target_temperature);
+            int pc= map2range(c.current_temperature, 25, c.target_temperature, 0, 255);
+            rh= std::min(pc, (int)rh);
          }
     }
 
@@ -202,9 +209,9 @@ void LedRing::on_idle( void* argument )
     if(heating) {
         // fades from blue to red as they get closer to target temp
         g= 0;
-        r= roundf(255*pc);
-        b= roundf(255 - r);
-        if(!reached_temp && r >= 254) {
+        r= roundf(rh);
+        b= roundf(255 - rh);
+        if(!reached_temp && r >= 250) {
             reached_temp= true;
             fade_dir= false;
         }
