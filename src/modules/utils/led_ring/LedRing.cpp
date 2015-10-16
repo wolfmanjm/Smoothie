@@ -293,9 +293,6 @@ void  LedRing::on_gcode_received(void *argument)
             if(gcode->get_num_args() == 0) {
                 // M150 set leds to auto
                 autorun= true;
-                // FIXME remove these after testing
-                print_finished= true;
-                seconds= 0;
                 return;
             }
 
