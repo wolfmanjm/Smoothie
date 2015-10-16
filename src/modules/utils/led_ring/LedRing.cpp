@@ -140,12 +140,21 @@ static int map2range(int x, int in_min, int in_max, int out_min, int out_max)
         return (((x - in_min) * (out_max - out_min + 1)) / (in_max - in_min + 1)) + out_min;
 }
 
-void LedRing::setLeds(uint8_t r, uint8_t g, uint8_t b)
+void LedRing::setLeds(int r, int g, int b)
 {
+    r= confine(r, 0, 255);
+    g= confine(g, 0, 255);
+    b= confine(b, 0, 255);
     // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
     red_pin.pwm(roundf(r * red_pin.max_pwm() / 255.0F));
     green_pin.pwm(roundf(g * green_pin.max_pwm() / 255.0F));
     blue_pin.pwm(roundf(b * blue_pin.max_pwm() / 255.0F));
+}
+
+// take a value 0-255 and convert it to the logarithmic equivalent to get nicer fades
+static int fade(int v)
+{
+    return floorf((exp2f(v/255.0F)-1)*255.0F);
 }
 
 void LedRing::on_idle( void* argument )
@@ -178,6 +187,7 @@ void LedRing::on_idle( void* argument )
         if(printing) {
             // as we guessed it was printing, so now it must have finished so do the print finished thing
             print_finished= true;
+            current_value= 255;
             printing= false;
             seconds= 0;
         }
@@ -208,10 +218,13 @@ void LedRing::on_idle( void* argument )
 
     if(heating) {
         // fades from blue to red as they get closer to target temp
+        // rh is 0 to 255 but to get nice fades we need to make this logarithmic loge(rh/255)
+        int lr= fade(rh);
+        int lb= fade(255-rh);
         g= 0;
-        r= roundf(rh);
-        b= roundf(255 - rh);
-        if(!reached_temp && r >= 250) {
+        r= lr;
+        b= lb;
+        if(!reached_temp && lr >= 254) {
             reached_temp= true;
             fade_dir= false;
         }
@@ -222,17 +235,16 @@ void LedRing::on_idle( void* argument )
 
     if(print_finished){
         // if we finished a print we fade the leds white on and off
-        int v= red_pin.get_pwm();
         if(fade_dir) {
-            v += 2;
-            if(v >= 250) fade_dir= false;
+            current_value += 2;
+            if(current_value >= 255) fade_dir= false;
 
         }else{
-            v -= 2;
-            if(v <= 10) fade_dir= true;
+            current_value -= 2;
+            if(current_value <= 0) fade_dir= true;
         }
 
-        v= confine(v, 0, 255);
+        int v= fade(current_value);
         setLeds(v, v, v);
 
     } else if(reached_temp) {
@@ -248,7 +260,6 @@ void LedRing::on_idle( void* argument )
             if(r <= 10) fade_dir= true;
         }
 
-        r= confine(r, 0, 255);
         setLeds(r, 0, 0);
 
     }else{
@@ -282,6 +293,9 @@ void  LedRing::on_gcode_received(void *argument)
             if(gcode->get_num_args() == 0) {
                 // M150 set leds to auto
                 autorun= true;
+                // FIXME remove these after testing
+                print_finished= true;
+                seconds= 0;
                 return;
             }
 
@@ -305,9 +319,6 @@ void  LedRing::on_gcode_received(void *argument)
                 autorun= false;
             }
 
-            r= confine(r, 0, 255);
-            g= confine(g, 0, 255);
-            b= confine(b, 0, 255);
             setLeds(r, g, b);
         }
     }

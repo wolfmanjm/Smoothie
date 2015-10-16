@@ -19,15 +19,16 @@ public:
     void on_gcode_received(void *argument);
 
 private:
-    void setLeds(uint8_t r, uint8_t g, uint8_t b);
+    void setLeds(int r, int g, int b);
 
     Pwm red_pin, blue_pin, green_pin, hot_pin;
+    std::vector<uint16_t> temp_controllers;
     float hot_temp;
+    int current_value{0};
     uint32_t last_time_us{0};
     uint16_t blink_timeout;
     uint16_t seconds;
     uint16_t queue_cnt{0};
-    std::vector<uint16_t> temp_controllers;
     uint8_t ready_r, ready_g, ready_b;
 
     struct {
