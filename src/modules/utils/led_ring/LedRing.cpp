@@ -142,13 +142,13 @@ static int map2range(int x, int in_min, int in_max, int out_min, int out_max)
 
 void LedRing::setLeds(int r, int g, int b)
 {
-    r= confine(r, 0, 255);
-    g= confine(g, 0, 255);
-    b= confine(b, 0, 255);
+    r= confine(roundf(r * red_pin.max_pwm() / 255.0F), 0, 255);
+    g= confine(roundf(g * green_pin.max_pwm() / 255.0F), 0, 255);
+    b= confine(roundf(b * blue_pin.max_pwm() / 255.0F), 0, 255);
     // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
-    red_pin.pwm(roundf(r * red_pin.max_pwm() / 255.0F));
-    green_pin.pwm(roundf(g * green_pin.max_pwm() / 255.0F));
-    blue_pin.pwm(roundf(b * blue_pin.max_pwm() / 255.0F));
+    red_pin.pwm(r);
+    green_pin.pwm(g);
+    blue_pin.pwm(b);
 }
 
 // take a value 0-255 and convert it to the logarithmic equivalent to get nicer fades
@@ -194,29 +194,39 @@ void LedRing::on_idle( void* argument )
         queue_cnt= 0;
     }
 
-    uint8_t r=ready_r, g=ready_g, b=ready_b; // default ready color is orange
+    int r=ready_r, g=ready_g, b=ready_b; // default ready color is orange
 
     // figure out percentage complete for all the things that are heating up
     bool heating= false, is_hot= false;
-    uint8_t rh= 255;
+    int rh= 255;
+    int he_cnt= 0; // count of heaters being heated
+    int rt_cnt= 0; // how many reached temp count
     for(auto id : temp_controllers) {
         struct pad_temperature c= getTemperatures(id);
         if(c.current_temperature > hot_temp) is_hot= true; // anything is hot
 
         if(c.target_temperature > 0.1F){
             heating= true;
+            he_cnt++;
             //pc= std::min(pc, c.current_temperature/c.target_temperature);
             int pc= map2range(c.current_temperature, 25, c.target_temperature, 0, 255);
-            rh= std::min(pc, (int)rh);
+            rh= std::min(pc, rh);
+            if(c.current_temperature >= c.target_temperature) rt_cnt++; // if it reached temp increment cnt so we know if all have reached temp
          }
     }
 
-    // If somethign is hot turn on the hot indicatior pin if defined
+    if(heating && he_cnt == rt_cnt){
+        reached_temp= true;
+    }else{
+        reached_temp= false;
+    }
+
+    // If something is hot turn on the hot indicatior pin if defined
     if(hot_pin.connected()) {
         hot_pin.pwm(is_hot?255:0);
     }
 
-    if(heating) {
+    if(heating && !reached_temp) {
         // fades from blue to red as they get closer to target temp
         // rh is 0 to 255 but to get nice fades we need to make this logarithmic loge(rh/255)
         int lr= fade(rh);
@@ -224,13 +234,6 @@ void LedRing::on_idle( void* argument )
         g= 0;
         r= lr;
         b= lb;
-        if(!reached_temp && lr >= 254) {
-            reached_temp= true;
-            fade_dir= false;
-        }
-
-    }else{
-        reached_temp= false;
     }
 
     if(print_finished){
