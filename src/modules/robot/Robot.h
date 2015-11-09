@@ -26,9 +26,6 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
-        void on_get_public_data(void* argument);
-        void on_set_public_data(void* argument);
-        void on_halt(void *arg);
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
@@ -40,6 +37,8 @@ class Robot : public Module {
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
         void setToolOffset(const float offset[3]);
         float get_feed_rate() const { return feed_rate; }
+        void  push_state();
+        void  pop_state();
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
@@ -58,10 +57,7 @@ class Robot : public Module {
         void distance_in_gcode_is_known(Gcode* gcode);
         void append_milestone( Gcode *gcode, float target[], float rate_mm_s);
         void append_line( Gcode* gcode, float target[], float rate_mm_s);
-        //void append_arc(float theta_start, float angular_travel, float radius, float depth, float rate);
         void append_arc( Gcode* gcode, float target[], float offset[], float radius, bool is_clockwise );
-
-
         void compute_arc(Gcode* gcode, float offset[], float target[]);
 
         float theta(float x, float y);
@@ -69,7 +65,7 @@ class Robot : public Module {
         void clearToolOffset();
         void check_max_actuator_speeds();
 
-        typedef std::tuple<float, float, bool> saved_state_t; // save current feedrate and absolute mode
+        typedef std::tuple<float, float, bool, bool> saved_state_t; // save current feedrate and absolute mode, inch mode
         std::stack<saved_state_t> state_stack;               // saves state from M120
         float last_milestone[3];                             // Last position, in millimeters
         float transformed_last_milestone[3];                 // Last transformed position
@@ -99,10 +95,6 @@ class Robot : public Module {
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
-
-        struct {
-            bool halted:1;
-        };
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
