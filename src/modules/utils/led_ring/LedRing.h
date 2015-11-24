@@ -10,7 +10,7 @@
 class LedRing : public Module
 {
 public:
-    LedRing() : autorun(true) {};
+    LedRing() : autorun(true), reached_temp(false), halted(false), print_finished(false), printing(false) {};
     ~LedRing(){};
 
     void on_module_loaded();
@@ -27,11 +27,12 @@ private:
     int current_value{0};
     uint32_t last_time_us{0};
     uint16_t blink_timeout;
-    uint16_t seconds;
+    uint16_t seconds{0};
     uint16_t queue_cnt{0};
     uint8_t ready_r, ready_g, ready_b;
 
     struct {
+        uint16_t cooled_cnt:10;
         bool autorun:1;
         bool reached_temp:1;
         bool fade_dir:1;

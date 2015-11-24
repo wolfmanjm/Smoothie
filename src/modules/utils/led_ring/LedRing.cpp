@@ -11,7 +11,6 @@
 #include "PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "PublicData.h"
-#include "Pauser.h"
 #include "Conveyor.h"
 #include "SlowTicker.h"
 
@@ -122,9 +121,9 @@ void LedRing::on_module_loaded()
     this->register_for_event(ON_SECOND_TICK);
     this->register_for_event(ON_GCODE_RECEIVED);
 
-    THEKERNEL->slow_ticker->attach(1000, &red_pin, &Pwm::on_tick);
-    THEKERNEL->slow_ticker->attach(1000, &green_pin, &Pwm::on_tick);
-    THEKERNEL->slow_ticker->attach(1000, &blue_pin, &Pwm::on_tick);
+    THEKERNEL->slow_ticker->attach(2000, &red_pin, &Pwm::on_tick);
+    THEKERNEL->slow_ticker->attach(2000, &green_pin, &Pwm::on_tick);
+    THEKERNEL->slow_ticker->attach(2000, &blue_pin, &Pwm::on_tick);
     if(hot_pin.connected()) THEKERNEL->slow_ticker->attach(1000, &hot_pin, &Pwm::on_tick);
 }
 
@@ -215,8 +214,18 @@ void LedRing::on_idle( void* argument )
          }
     }
 
-    if(heating && he_cnt == rt_cnt){
-        reached_temp= true;
+    // when all heaters have reached temp flag it
+    // if temps drop a bit have some hysteresis before reverting to heating sequence
+    if(heating) {
+        if(he_cnt == rt_cnt){
+            reached_temp= true;
+            cooled_cnt= 0;
+
+        }else if(reached_temp && ++cooled_cnt > 300) {
+            // 10 second reset
+            reached_temp= false;
+        }
+
     }else{
         reached_temp= false;
     }
@@ -230,7 +239,7 @@ void LedRing::on_idle( void* argument )
         // fades from blue to red as they get closer to target temp
         // rh is 0 to 255 but to get nice fades we need to make this logarithmic loge(rh/255)
         int lr= fade(rh);
-        int lb= fade(255-rh);
+        int lb= 255-lr;
         g= 0;
         r= lr;
         b= lb;
