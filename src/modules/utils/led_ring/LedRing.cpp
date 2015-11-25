@@ -176,8 +176,8 @@ void LedRing::on_idle( void* argument )
     if (!THEKERNEL->conveyor->is_queue_empty()) {
         // white when printing
         setLeds(255, 255, 255);
-        if(!printing && queue_cnt++ > 300) {
-            // if it has been not empty for over 10 seconds we will guess it is printing
+        if(!printing && ++queue_cnt > 3600) {
+            // if it has been not empty for over 120 seconds we will guess it is printing
             printing= true;
         }
         return;

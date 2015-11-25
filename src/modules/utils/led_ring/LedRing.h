@@ -26,9 +26,9 @@ private:
     float hot_temp;
     int current_value{0};
     uint32_t last_time_us{0};
+    uint16_t queue_cnt{0};
     uint16_t blink_timeout;
     uint16_t seconds{0};
-    uint16_t queue_cnt{0};
     uint8_t ready_r, ready_g, ready_b;
 
     struct {
