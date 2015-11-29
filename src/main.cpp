@@ -19,6 +19,7 @@
 #include "modules/tools/drillingcycles/Drillingcycles.h"
 #include "FilamentDetector.h"
 #include "LedRing.h"
+#include "MotorDriverControl.h"
 
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -189,6 +190,9 @@ void init() {
     #endif
     #ifndef NO_UTILS_LEDRING
     kernel->add_module( new LedRing() );
+    #endif
+    #ifndef NO_UTILS_MOTORDRIVERCONTROL
+    kernel->add_module( new MotorDriverControl(0) );
     #endif
 
     // Create and initialize USB stuff
