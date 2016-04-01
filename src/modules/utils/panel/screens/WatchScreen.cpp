@@ -200,11 +200,6 @@ float WatchScreen::get_current_speed()
     return 6000.0F / THEKERNEL->robot->get_seconds_per_minute();
 }
 
-void WatchScreen::get_current_pos(float *cp)
-{
-    THEKERNEL->robot->get_axis_position(cp);
-}
-
 void WatchScreen::get_sd_play_info()
 {
     void *returned_data;

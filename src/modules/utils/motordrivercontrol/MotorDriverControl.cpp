@@ -140,20 +140,30 @@ bool MotorDriverControl::config_module(uint16_t cs)
     //decay_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, decay_mode_checksum )->by_default(1)->as_number();
 
     // setup the chip via SPI
-    initialize_chip();
+    initialize_chip(cs);
 
     // if raw registers are defined set them 1,2,3 etc in hex
     str= THEKERNEL->config->value( motor_driver_control_checksum, cs, raw_register_checksum)->by_default("")->as_string();
     if(!str.empty()) {
         rawreg= true;
         std::vector<uint32_t> regs= parse_number_list(str.c_str(), 16);
-        uint32_t reg= 0;
-        for(auto i : regs) {
+        if(!regs.empty()) {
+            uint32_t reg= 0;
+            for(auto i : regs) {
+                // this just sets the local storage, it does not write to the chip
+                switch(chip) {
+                    case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
+                    case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+                }
+            }
+
+            // write the stored registers
             switch(chip) {
-                case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
-                case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+                case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, 255, 0); break;
+                case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, 255, 0); break;
             }
         }
+
     }else{
         rawreg= false;
     }
@@ -305,16 +315,16 @@ void MotorDriverControl::on_gcode_received(void *argument)
     }
 }
 
-void MotorDriverControl::initialize_chip()
+void MotorDriverControl::initialize_chip(uint16_t cs)
 {
     // send initialization sequence to chips
     if(chip == DRV8711) {
-        drv8711->init();
+        drv8711->init(cs);
         set_current(current);
         set_microstep(microsteps);
 
     }else if(chip == TMC2660){
-        tmc26x->init();
+        tmc26x->init(cs);
         set_current(current);
         set_microstep(microsteps);
         //set_decay_mode(decay_mode);
