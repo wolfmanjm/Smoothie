@@ -5,7 +5,7 @@
     Summary
     -------
     Probes grid_size points in X and Y (total probes grid_size * grid_size) and stores the relative offsets from the 0,0 Z height
-    When enabled everymove will calcualte the Z offset based on interpolating the height offset within the grids nearest 4 points.
+    When enabled every move will calculate the Z offset based on interpolating the height offset within the grids nearest 4 points.
 
     Configuration
     -------------
@@ -304,7 +304,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             if(!doProbe(gcode)) {
-                gcode->stream->printf("Probe failed to complete\n");
+                gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed\n");
             }
@@ -401,12 +401,8 @@ float DeltaGridStrategy::findBed()
 
     // leave the probe zprobe->getProbeHeight() above bed
     zprobe->return_probe(s);
-    float dz= zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
-    if(dz >= 0) {
-        // probe was not started above bed
-        return NAN;
-    }
 
+    float dz= zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
     zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
 
     return zprobe->zsteps_to_mm(s) + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
@@ -414,6 +410,7 @@ float DeltaGridStrategy::findBed()
 
 bool DeltaGridStrategy::doProbe(Gcode *gc)
 {
+    gc->stream->printf("Delta Grid Probe...\n");
     setAdjustFunction(false);
     reset_bed_level();
 
@@ -427,7 +424,7 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
         return false;
     }
 
-    gc->stream->printf("Probe start ht is %f mm, probe radius is %f mm\n", initial_z, radius);
+    gc->stream->printf("Probe start ht is %f mm, probe radius is %f mm, grid size is %dx%d\n", initial_z, radius, grid_size, grid_size);
 
     // do first probe for 0,0
     int s;
