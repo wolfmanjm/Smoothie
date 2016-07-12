@@ -62,7 +62,7 @@
     #led_ring.blue_max_pwm  255        # max pwm for green
     #led_ring.hot_max_pwm   255        # max pwm for green
 
-    #led_ring.print_finished_timeout 30  # timeout in seconds for the print finished sequence
+    #led_ring.print_finished_timeout 30  # timeout in seconds for the print finished sequence, 0 to disable
     #led_ring.hot_temp               50  # temp at which things are considered hot
 
 */
