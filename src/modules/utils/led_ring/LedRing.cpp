@@ -254,7 +254,7 @@ void LedRing::on_idle( void* argument )
         b= lb;
     }
 
-    if(print_finished){
+    if(print_finished && blink_timeout != 0){
         // if we finished a print we fade the leds white on and off
         if(fade_dir) {
             current_value += 2;
