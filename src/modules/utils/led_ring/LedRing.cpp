@@ -31,13 +31,13 @@
 #define print_finished_timeout_cs CHECKSUM("print_finished_timeout")
 #define hot_temp_cs           CHECKSUM("hot_temp")
 #define ready_rgb_cs          CHECKSUM("ready_rgb")
+#define printing_rgb_cs       CHECKSUM("printing_rgb")
 
 /*
     Ready: Orange (configurable)
     Heating Up: Cool blue to red.
     Heating Finished: Slow “thump” fade in and out red.
-    Printing: White
-    Print Finished: Slow “thump” white
+    Printing: White (configurable)
     Error: Blink red every 3 seconds
     LED1 - P1.22 LED2 - P0.25 LED3 - P4.29 LED4 - P2.8
 
@@ -54,6 +54,7 @@
     led_ring.blue_led_pin  4.29         #
     led_ring.hot_led_pin   2.8          #
     led_ring.ready_rgb     0,255,0      # set R,G,B of the ready light (green here orange by default)
+    led_ring.printing_rgb  255,255,255  # set R,G,B of the printing light (white by default)
 
     # optional uncomment to set, values are the default
     #led_ring.red_max_pwm   255        # max pwm for green
@@ -104,7 +105,15 @@ void LedRing::on_module_loaded()
         ready_b= confine(rgb[2], 0, 255);
     }
 
-    blink_timeout= THEKERNEL->config->value(led_ring_cs, print_finished_timeout_cs)->by_default(30)->as_number();
+    string printing_rgb= THEKERNEL->config->value(led_ring_cs, printing_rgb_cs)->by_default("255,255,255")->as_string();
+    rgb= parse_number_list(printing_rgb.c_str());
+    if(rgb.size() == 3) {
+        printing_r= confine(rgb[0], 0, 255);
+        printing_g= confine(rgb[1], 0, 255);
+        printing_b= confine(rgb[2], 0, 255);
+    }
+
+    blink_timeout= THEKERNEL->config->value(led_ring_cs, print_finished_timeout_cs)->by_default(0)->as_number();
     hot_temp= THEKERNEL->config->value(led_ring_cs, hot_temp_cs)->by_default(50)->as_number();
 
     // enumerate temperature controls
@@ -175,7 +184,7 @@ void LedRing::on_idle( void* argument )
 
     if (!THEKERNEL->conveyor->is_queue_empty()) {
         // white when printing
-        setLeds(255, 255, 255);
+        setLeds(printing_r, printing_g, printing_b);
         if(!printing && ++queue_cnt > 3600) {
             // if it has been not empty for over 120 seconds we will guess it is printing
             printing= true;

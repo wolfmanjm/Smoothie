@@ -30,6 +30,7 @@ private:
     uint16_t blink_timeout;
     uint16_t seconds{0};
     uint8_t ready_r, ready_g, ready_b;
+    uint8_t printing_r, printing_g, printing_b;
 
     struct {
         uint16_t cooled_cnt:10;
