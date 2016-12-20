@@ -39,6 +39,7 @@
 
     Usage
     -----
+    G29 probes the three probe points and reports the Z at each point, if a plane is active it will be used to level the probe.
     G32 probes the three probe points and defines the bed plane, this will remain in effect until reset or M561
     G31 reports the status
 
@@ -132,13 +133,13 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 
         } else if( gcode->g == 32 ) { // three point probe
             // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
-            if(!gcode->has_letter('K')) { // K will keep current compensation to test plane
-                // clear any existing plane and compensation
-                delete this->plane;
-                this->plane= nullptr;
-                setAdjustFunction(false);
-            }
+            THEKERNEL->conveyor->wait_for_idle();
+
+             // clear any existing plane and compensation
+            delete this->plane;
+            this->plane= nullptr;
+            setAdjustFunction(false);
+
             if(!doProbing(gcode->stream)) {
                 gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             } else {
@@ -167,8 +168,9 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
                 this->plane= nullptr;
                 // delete the compensationTransform in robot
                 setAdjustFunction(false);
+                gcode->stream->printf("saved plane cleared\n");
             }else{
-                // smoothie specific way to restire a saved plane
+                // smoothie specific way to restore a saved plane
                 uint32_t a,b,c,d;
                 a=b=c=d= 0;
                 if(gcode->has_letter('A')) a = gcode->get_uint('A');
@@ -243,7 +245,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 
 void ThreePointStrategy::homeXY()
 {
-    Gcode gc("G28 X0 Y0", &(StreamOutput::NullStream));
+    Gcode gc(THEKERNEL->is_grbl_mode() ? "G28.2 X0 Y0": "G28 X0 Y0", &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 }
 
@@ -276,11 +278,11 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     // TODO this needs to be configurable to use min z or probe
 
     // find bed via probe
-    int s;
-    if(!zprobe->run_probe(s)) return false;
+    float mm;
+    if(!zprobe->run_probe(mm, zprobe->getSlowFeedrate())) return false;
 
     // TODO if using probe then we probably need to set Z to 0 at first probe point, but take into account probe offset from head
-    THEKERNEL->robot->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);
+    THEROBOT->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);
 
     // move up to specified probe start position
     zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getSlowFeedrate()); // move to probe start position
@@ -288,25 +290,26 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     // probe the three points
     Vector3 v[3];
     for (int i = 0; i < 3; ++i) {
+        float z;
         std::tie(x, y) = probe_points[i];
         // offset moves by the probe XY offset
-        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
-        if(isnan(z)) return false; // probe failed
+        if(!zprobe->doProbeAt(z, x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets))) return false;
+
         z= zprobe->getProbeHeight() - z; // relative distance between the probe points, lower is negative z
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
         v[i] = Vector3(x, y, z);
     }
 
     // if first point is not within tolerance report it, it should ideally be 0
-    if(abs(v[0][2]) > this->tolerance) {
-        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", abs(v[0][2]), this->tolerance);
+    if(fabsf(v[0][2]) > this->tolerance) {
+        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", fabsf(v[0][2]), this->tolerance);
     }
 
     // define the plane
     delete this->plane;
     // check tolerance level here default 0.03mm
-    auto mm = std::minmax({v[0][2], v[1][2], v[2][2]});
-    if((mm.second - mm.first) <= this->tolerance) {
+    auto mmx = std::minmax({v[0][2], v[1][2], v[2][2]});
+    if((mmx.second - mmx.first) <= this->tolerance) {
         this->plane= nullptr; // plane is flat no need to do anything
         stream->printf("DEBUG: flat plane\n");
         // clear the compensationTransform in robot
@@ -335,8 +338,9 @@ bool ThreePointStrategy::test_probe_points(Gcode *gcode)
             return false;
         }
 
-        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
-        if(isnan(z)) return false; // probe failed
+        float z;
+        if(!zprobe->doProbeAt(z, x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets))) return false;
+
         gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f\n", x, y, z);
 
         if(isnan(last_z)) {
@@ -355,10 +359,10 @@ void ThreePointStrategy::setAdjustFunction(bool on)
 {
     if(on) {
         // set the compensationTransform in robot
-        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->plane->getz(target[0], target[1]); };
+        THEROBOT->compensationTransform= [this](float *target, bool inverse) { if(inverse) target[2] -= this->plane->getz(target[0], target[1]); else target[2] += this->plane->getz(target[0], target[1]); };
     }else{
         // clear it
-        THEKERNEL->robot->compensationTransform= nullptr;
+        THEROBOT->compensationTransform= nullptr;
     }
 }
 

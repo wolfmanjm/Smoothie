@@ -26,12 +26,15 @@
 
 #include "MRI_Hooks.h"
 
+#include <algorithm>
+
 #define    startup_state_checksum       CHECKSUM("startup_state")
 #define    startup_value_checksum       CHECKSUM("startup_value")
 #define    input_pin_checksum           CHECKSUM("input_pin")
 #define    input_pin_behavior_checksum  CHECKSUM("input_pin_behavior")
 #define    toggle_checksum              CHECKSUM("toggle")
 #define    momentary_checksum           CHECKSUM("momentary")
+#define    command_subcode_checksum     CHECKSUM("subcode")
 #define    input_on_command_checksum    CHECKSUM("input_on_command")
 #define    input_off_command_checksum   CHECKSUM("input_off_command")
 #define    output_pin_checksum          CHECKSUM("output_pin")
@@ -64,6 +67,7 @@ void Switch::on_halt(void *arg)
             case HWPWM: this->pwm_pin->write(0); break;
             case NONE: break;
         }
+        this->switch_state= this->failsafe;
     }
 }
 
@@ -86,6 +90,7 @@ void Switch::on_config_reload(void *argument)
 {
     this->input_pin.from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->input_pin_behavior = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default(momentary_checksum)->as_number();
+    this->subcode = THEKERNEL->config->value(switch_checksum, this->name_checksum, command_subcode_checksum )->by_default(0)->as_number();
     std::string input_on_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
     std::string input_off_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
     this->output_on_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
@@ -209,18 +214,25 @@ void Switch::on_config_reload(void *argument)
         // SIGMADELTA
         THEKERNEL->slow_ticker->attach(1000, this->sigmadelta_pin, &Pwm::on_tick);
     }
+
+    // for commands we need to replace _ for space
+    std::replace(output_on_command.begin(), output_on_command.end(), '_', ' '); // replace _ with space
+    std::replace(output_off_command.begin(), output_off_command.end(), '_', ' '); // replace _ with space
 }
 
 bool Switch::match_input_on_gcode(const Gcode *gcode) const
 {
-    return ((input_on_command_letter == 'M' && gcode->has_m && gcode->m == input_on_command_code) ||
+    bool b= ((input_on_command_letter == 'M' && gcode->has_m && gcode->m == input_on_command_code) ||
             (input_on_command_letter == 'G' && gcode->has_g && gcode->g == input_on_command_code));
+
+    return (b && gcode->subcode == this->subcode);
 }
 
 bool Switch::match_input_off_gcode(const Gcode *gcode) const
 {
-    return ((input_off_command_letter == 'M' && gcode->has_m && gcode->m == input_off_command_code) ||
+    bool b= ((input_off_command_letter == 'M' && gcode->has_m && gcode->m == input_off_command_code) ||
             (input_off_command_letter == 'G' && gcode->has_g && gcode->g == input_off_command_code));
+    return (b && gcode->subcode == this->subcode);
 }
 
 void Switch::on_gcode_received(void *argument)
@@ -238,23 +250,23 @@ void Switch::on_gcode_received(void *argument)
         if (this->output_type == SIGMADELTA) {
             // SIGMADELTA output pin turn on (or off if S0)
             if(gcode->has_letter('S')) {
-                int v = round(gcode->get_value('S') * sigmadelta_pin->max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
+                int v = roundf(gcode->get_value('S') * sigmadelta_pin->max_pwm() / 255.0F); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
                 if(v != this->sigmadelta_pin->get_pwm()){ // optimize... ignore if already set to the same pwm
                     // drain queue
-                    THEKERNEL->conveyor->wait_for_empty_queue();
+                    THEKERNEL->conveyor->wait_for_idle();
                     this->sigmadelta_pin->pwm(v);
                     this->switch_state= (v > 0);
                 }
             } else {
                 // drain queue
-                THEKERNEL->conveyor->wait_for_empty_queue();
+                THEKERNEL->conveyor->wait_for_idle();
                 this->sigmadelta_pin->pwm(this->switch_value);
                 this->switch_state= (this->switch_value > 0);
             }
 
         } else if (this->output_type == HWPWM) {
             // drain queue
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
             // PWM output pin set duty cycle 0 - 100
             if(gcode->has_letter('S')) {
                 float v = gcode->get_value('S');
@@ -269,7 +281,7 @@ void Switch::on_gcode_received(void *argument)
 
         } else if (this->output_type == DIGITAL) {
             // drain queue
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
             // logic pin turn on
             this->digital_pin->set(true);
             this->switch_state = true;
@@ -277,7 +289,7 @@ void Switch::on_gcode_received(void *argument)
 
     } else if(match_input_off_gcode(gcode)) {
         // drain queue
-        THEKERNEL->conveyor->wait_for_empty_queue();
+        THEKERNEL->conveyor->wait_for_idle();
         this->switch_state = false;
         if (this->output_type == SIGMADELTA) {
             // SIGMADELTA output pin
@@ -322,8 +334,12 @@ void Switch::on_set_public_data(void *argument)
     if(pdr->third_element_is(state_checksum)) {
         bool t = *static_cast<bool *>(pdr->get_data_ptr());
         this->switch_state = t;
-        pdr->set_taken();
         this->switch_changed= true;
+        pdr->set_taken();
+
+        // if there is no gcode to be sent then we can do this now (in on_idle)
+        // Allows temperature switch to turn on a fan even if main loop is blocked with heat and wait
+        if(this->output_on_command.empty() && this->output_off_command.empty()) on_main_loop(nullptr);
 
     } else if(pdr->third_element_is(value_checksum)) {
         float t = *static_cast<float *>(pdr->get_data_ptr());

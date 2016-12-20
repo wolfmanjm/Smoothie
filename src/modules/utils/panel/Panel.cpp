@@ -16,11 +16,10 @@
 #include "libs/SDFAT.h"
 
 #include "modules/utils/player/PlayerPublicAccess.h"
-#include "screens/CustomScreen.h"
-#include "screens/MainMenuScreen.h"
+#include "CustomScreen.h"
+#include "MainMenuScreen.h"
 #include "SlowTicker.h"
 #include "Gcode.h"
-#include "Pauser.h"
 #include "TemperatureControlPublicAccess.h"
 #include "ModifyValuesScreen.h"
 #include "PublicDataRequest.h"
@@ -46,6 +45,7 @@
 #define lcd_checksum               CHECKSUM("lcd")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
+#define ssd1306_oled_checksum      CHECKSUM("ssd1306_oled")
 #define viki2_checksum             CHECKSUM("viki2")
 #define mini_viki2_checksum        CHECKSUM("mini_viki2")
 #define universal_adapter_checksum CHECKSUM("universal_adapter")
@@ -62,11 +62,18 @@
 #define spi_channel_checksum       CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
 
-#define hotend_temp_checksum CHECKSUM("hotend_temperature")
-#define bed_temp_checksum    CHECKSUM("bed_temperature")
+#define hotend_temp_checksum       CHECKSUM("hotend_temperature")
+#define bed_temp_checksum          CHECKSUM("bed_temperature")
 #define panel_display_message_checksum CHECKSUM("display_message")
+#define laser_checksum             CHECKSUM("laser")
+#define display_extruder_checksum  CHECKSUM("display_extruder")
 
 Panel* Panel::instance= nullptr;
+
+#define MENU_MODE                  0
+#define CONTROL_MODE               1
+#define DIRECT_ENCODER_MODE        2
+#define NOP_MODE                   3
 
 Panel::Panel()
 {
@@ -84,6 +91,8 @@ Panel::Panel()
     this->sd= nullptr;
     this->extmounter= nullptr;
     this->external_sd_enable= false;
+    this->in_idle= false;
+    this->display_extruder= false;
     strcpy(this->playing_file, "Playing file");
 }
 
@@ -115,6 +124,8 @@ void Panel::on_module_loaded()
         this->lcd = new ST7565(1); // variant 1
     } else if (lcd_cksm == mini_viki2_checksum) {
         this->lcd = new ST7565(2); // variant 2
+    } else if (lcd_cksm == ssd1306_oled_checksum) {
+        this->lcd = new ST7565(3); // variant 3
     } else if (lcd_cksm == universal_adapter_checksum) {
         this->lcd = new UniversalAdapter();
     } else {
@@ -165,7 +176,6 @@ void Panel::on_module_loaded()
     this->down_button.up_attach(  this, &Panel::on_down );
     this->click_button.up_attach( this, &Panel::on_select );
     this->back_button.up_attach(  this, &Panel::on_back );
-    this->pause_button.up_attach( this, &Panel::on_pause );
 
 
     //setting longpress_delay
@@ -176,7 +186,6 @@ void Panel::on_module_loaded()
 //    this->back_button.set_longpress_delay(longpress_delay);
 //    this->pause_button.set_longpress_delay(longpress_delay);
 
-
     THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
         // panel handles encoder pins and returns a delta
@@ -185,6 +194,9 @@ void Panel::on_module_loaded()
         // read encoder pins
         THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
     }
+
+    // configure display options.
+    this->display_extruder = THEKERNEL->config->value( panel_checksum, display_extruder_checksum )->by_default(false)->as_bool();
 
     // Register for events
     this->register_for_event(ON_IDLE);
@@ -201,6 +213,9 @@ void Panel::enter_screen(PanelScreen *screen)
     if(this->current_screen != nullptr)
         this->current_screen->on_exit();
 
+    if(screen == nullptr) {
+        screen= top_screen;
+    }
     this->current_screen = screen;
     this->reset_counter();
     this->current_screen->on_enter();
@@ -232,7 +247,16 @@ uint32_t Panel::encoder_check(uint32_t dummy)
     // NOTE FIXME (WHY is it in menu only?) this code will not work if change is not 1,0,-1 anything greater (as in above case) will not work properly
     static int encoder_counter = 0; // keeps track of absolute encoder position
     static int last_encoder_click= 0; // last readfing of divided encoder count
+
     int change = lcd->readEncoderDelta();
+
+    if(mode == DIRECT_ENCODER_MODE) {
+        if(change != 0 && encoder_cb_fnc) {
+            encoder_cb_fnc(change);
+        }
+        return 0;
+    }
+
     encoder_counter += change;
     int clicks= encoder_counter/this->encoder_click_resolution;
     int delta= clicks - last_encoder_click; // the number of clicks this time
@@ -253,11 +277,19 @@ uint32_t Panel::button_tick(uint32_t dummy)
     return 0;
 }
 
-// Read and update encoder
+// Read and update encoder from a slow source
 uint32_t Panel::encoder_tick(uint32_t dummy)
 {
     this->do_encoder = true;
     return 0;
+}
+
+// special mode where all encoder ticks are sent to the given function
+bool Panel::enter_direct_encoder_mode(encoder_cb_t fnc)
+{
+    encoder_cb_fnc= fnc;
+    this->mode= DIRECT_ENCODER_MODE;
+    return true;
 }
 
 void Panel::on_set_public_data(void *argument)
@@ -301,9 +333,17 @@ static const uint8_t ohw_logo_antipixel_bits[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
+void Panel::on_idle(void *argument)
+{
+    // avoid recursion if any screens end up calling ON_IDLE
+    if(in_idle) return;
+    in_idle= true;
+    idle_processing();
+    in_idle= false;
+}
 // On idle things, we don't want to do shit in interrupts
 // don't queue gcodes in this
-void Panel::on_idle(void *argument)
+void Panel::idle_processing()
 {
     if (this->start_up) {
         this->lcd->init();
@@ -326,6 +366,11 @@ void Panel::on_idle(void *argument)
         // Default top screen
         this->top_screen= new MainMenuScreen();
         this->custom_screen->set_parent(this->top_screen);
+
+        // see if laser module is enabled
+        void *dummy;
+        this->laser_enabled= PublicData::get_value(laser_checksum, (void *)&dummy);
+
         this->start_up = false;
         return;
     }
@@ -372,17 +417,17 @@ void Panel::on_idle(void *argument)
         this->down_button.check_signal(but & BUTTON_DOWN);
         this->back_button.check_signal(but & BUTTON_LEFT);
         this->click_button.check_signal(but & BUTTON_SELECT);
-        this->pause_button.check_signal(but & BUTTON_PAUSE);
     }
 
-    // If we are in menu mode and the position has changed
-    if ( this->mode == MENU_MODE && this->counter_change() ) {
-        this->menu_update();
-    }
-
-    // If we are in control mode
-    if ( this->mode == CONTROL_MODE && this->counter_change() ) {
-        this->control_value_update();
+    if(this->counter_change()) {
+        switch(this->mode) {
+            case MENU_MODE: // If we are in menu mode and the position has changed
+                this->menu_update();
+                break;
+            case CONTROL_MODE: // If we are in control mode
+                this->control_value_update();
+                break;
+        }
     }
 
     // If we must refresh
@@ -433,16 +478,6 @@ uint32_t Panel::on_select(uint32_t dummy)
     return 0;
 }
 
-uint32_t Panel::on_pause(uint32_t dummy)
-{
-    if (!THEKERNEL->pauser->paused()) {
-        THEKERNEL->pauser->take();
-    } else {
-        THEKERNEL->pauser->release();
-    }
-    return 0;
-}
-
 bool Panel::counter_change()
 {
     if ( this->counter_changed ) {
@@ -462,6 +497,10 @@ bool Panel::click()
     }
 }
 
+void Panel::enter_nop_mode()
+{
+    this->mode = NOP_MODE;
+}
 
 // Enter menu mode
 void Panel::enter_menu_mode(bool force)
@@ -469,6 +508,7 @@ void Panel::enter_menu_mode(bool force)
     this->mode = MENU_MODE;
     this->counter = &this->menu_selected_line;
     this->menu_changed = force;
+    encoder_cb_fnc= nullptr;
 }
 
 void Panel::setup_menu(uint16_t rows)
@@ -566,6 +606,7 @@ bool Panel::enter_control_mode(float passed_normal_increment, float passed_press
     this->counter = &this->control_normal_counter;
     this->control_normal_counter = 0;
     this->control_base_value = 0;
+    encoder_cb_fnc= nullptr;
     return true;
 }
 
@@ -608,6 +649,12 @@ bool Panel::is_suspended() const
     }
     return false;
 }
+
+bool Panel::is_extruder_display_enabled(void)
+{
+    return this->display_extruder;
+}
+
 
 void  Panel::set_playing_file(string f)
 {

@@ -12,6 +12,7 @@
 #include "ConfigValue.h"
 #include "libs/Pin.h"
 #include "StreamOutputPool.h"
+#include "utils.h"
 
 // config settings
 #define panel_checksum             CHECKSUM("panel")
@@ -101,7 +102,7 @@ void UniversalAdapter::wait_until_ready()
 {
     while(this->busy_pin->get() != 0) {
         // poll adapter for more room
-        wait_ms(100);
+        safe_delay_ms(100);
         writeSPI(POLL);
     }
 }

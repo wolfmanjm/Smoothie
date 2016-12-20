@@ -49,7 +49,7 @@ class Pin {
 
         Pin* pull_none(void);
 
-        inline bool get(){
+        inline bool get() const{
             if (!this->valid) return false;
             return this->inverting ^ (( this->port->FIOPIN >> this->pin ) & 1);
         }
@@ -67,11 +67,16 @@ class Pin {
 
         mbed::InterruptIn *interrupt_pin();
 
+        bool is_inverting() const { return inverting; }
+        void set_inverting(bool f) { inverting= f; }
+
         // these should be private, and use getters
         LPC_GPIO_TypeDef* port;
 
         unsigned char pin;
         char port_number;
+
+    private:
         struct {
             bool inverting:1;
             bool valid:1;

@@ -21,6 +21,7 @@ debug
 /mac_install.log
 /win_install.log
 /linux_install.log
+<<<<<<< HEAD
 /src/config.default
 smoothie.sublime-*
 .cproject
@@ -31,3 +32,5 @@ OBJ/
 .tags*
 configs
 stuff
+/src/default_excludes.mk
+

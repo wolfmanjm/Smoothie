@@ -18,6 +18,7 @@
 #include "FilamentDetector.h"
 #include "utils.h"
 #include "Gcode.h"
+#include "ExtruderPublicAccess.h"
 
 #include "InterruptIn.h" // mbed
 #include "us_ticker_api.h" // mbed
@@ -58,15 +59,6 @@ void FilamentDetector::on_module_loaded()
     Pin dummy_pin;
     dummy_pin.from_string( THEKERNEL->config->value(filament_detector_checksum, encoder_pin_checksum)->by_default("nc" )->as_string());
     this->encoder_pin= dummy_pin.interrupt_pin();
-    if(this->encoder_pin == nullptr) {
-        // was not a valid interrupt pin
-        delete this;
-        return;
-    }
-
-    // set interrupt on rising edge
-    this->encoder_pin->rise(this, &FilamentDetector::on_pin_rise);
-    NVIC_SetPriority(EINT3_IRQn, 16); // set to low priority
 
     // optional bulge detector
     bulge_pin.from_string( THEKERNEL->config->value(filament_detector_checksum, bulge_pin_checksum)->by_default("nc" )->as_string())->as_input();
@@ -75,6 +67,21 @@ void FilamentDetector::on_module_loaded()
         THEKERNEL->slow_ticker->attach( 100, this, &FilamentDetector::button_tick);
     }
 
+    //Valid configurations contain an encoder pin, a bulge pin or both.
+    //free the module if not a valid configuration
+    if(this->encoder_pin == nullptr && !bulge_pin.connected()) {
+        delete this;
+        return;
+    }
+
+    //only monitor the encoder if we are using the encodeer.
+    if (this->encoder_pin != nullptr) {
+        // set interrupt on rising edge
+        this->encoder_pin->rise(this, &FilamentDetector::on_pin_rise);
+        NVIC_SetPriority(EINT3_IRQn, 16); // set to low priority
+    }
+
+
     // how many seconds between checks, must be long enough for several pulses to be detected, but not too long
     seconds_per_check= THEKERNEL->config->value(filament_detector_checksum, seconds_per_check_checksum)->by_default(2)->as_number();
 
@@ -82,11 +89,16 @@ void FilamentDetector::on_module_loaded()
     pulses_per_mm= THEKERNEL->config->value(filament_detector_checksum, pulses_per_mm_checksum)->by_default(1)->as_number();
 
     // register event-handlers
-    register_for_event(ON_SECOND_TICK);
+    if (this->encoder_pin != nullptr) {
+        //This event is only valid if we are using the encodeer.
+        register_for_event(ON_SECOND_TICK);
+    }
+
     register_for_event(ON_MAIN_LOOP);
     register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_GCODE_RECEIVED);
 }
+
 
 void FilamentDetector::send_command(std::string msg, StreamOutput *stream)
 {
@@ -104,7 +116,7 @@ void FilamentDetector::on_console_line_received( void *argument )
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
     string possible_command = new_message.message;
     string cmd = shift_parameter(possible_command);
-    if(cmd == "resume") {
+    if(cmd == "resume" || cmd == "M601") {
         this->pulses= 0;
         e_last_moved= NAN;
         suspended= false;
@@ -113,10 +125,8 @@ void FilamentDetector::on_console_line_received( void *argument )
 
 float FilamentDetector::get_emove()
 {
-    float *rd;
-    if(PublicData::get_value( extruder_checksum, (void **)&rd )) {
-        return *(rd+5); // current position for extruder in mm
-    }
+    pad_extruder_t rd;
+    if(PublicData::get_value( extruder_checksum, (void *)&rd )) return rd.current_position;
     return NAN;
 }
 
@@ -224,7 +234,7 @@ void FilamentDetector::check_encoder()
 
 uint32_t FilamentDetector::button_tick(uint32_t dummy)
 {
-    if(!bulge_pin.connected() || suspended) return 0;
+    if(!bulge_pin.connected() || suspended || !active) return 0;
 
     if(bulge_pin.get()) {
         // we got a trigger from the bulge detector
