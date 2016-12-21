@@ -1220,7 +1220,7 @@ private:
 
 void SimpleShell::x_command( string parameters, StreamOutput *stream)
 {
-#if 1
+#if 0
     // time uploads over USB serial
     Timer timer;
 
@@ -1247,6 +1247,87 @@ void SimpleShell::x_command( string parameters, StreamOutput *stream)
             cnt++;
         }
     }
+#endif
+
+#if 1
+    // time processing gcode into planner queue
+    Timer timer;
+
+    const char *gcode[] = {
+        "G1 X0.1000 F50000",
+        "G1 X0.2000",
+        "G1 X0.3000",
+        "G1 X0.4000",
+        "G1 X0.5000",
+        "G1 X0.6000",
+        "G1 X0.7000",
+        "G1 X0.8000",
+        "G1 X0.9000",
+        "G1 X1.0000",
+        "G1 X1.1000",
+        "G1 X1.2000",
+        "G1 X1.3000",
+        "G1 X1.4000",
+        "G1 X1.5000",
+        "G1 X1.6000",
+        "G1 X1.7000",
+        "G1 X1.8000",
+        "G1 X1.9000",
+        "G1 X2.0000",
+        "G1 X2.1000",
+        "G1 X2.2000",
+        "G1 X2.3000",
+        "G1 X2.4000",
+        "G1 X2.5000",
+        "G1 X2.6000",
+        "G1 X2.7000",
+        "G1 X2.8000",
+        "G1 X2.9000",
+        "G1 X3.0000",
+        "G1 X3.1000",
+        "G1 X3.2000",
+        "G1 X3.3000",
+        "G1 X3.4000",
+        "G1 X3.5000",
+        "G1 X3.6000",
+        "G1 X3.7000",
+        "G1 X3.8000",
+        "G1 X3.9000",
+        "G1 X4.0000",
+        "G1 X4.1000",
+        "G1 X4.2000",
+        "G1 X4.3000",
+        "G1 X4.4000",
+        "G1 X4.5000",
+        "G1 X4.6000",
+        "G1 X4.7000",
+        "G1 X4.8000",
+        "G1 X4.9000",
+        "G1 X5.0000",
+        "G1 X5.1000",
+        "G1 X5.2000",
+        "G1 X5.3000",
+        "G1 X5.4000",
+        "G1 X5.5000",
+        "G1 X5.6000",
+        "G1 X5.7000",
+        "G1 X5.8000",
+        "G1 X5.9000"
+    };
+
+    int cnt = 30;
+    timer.start();
+    for (int i = 0; i < cnt; ++i) {
+        struct SerialMessage message;
+        message.message = gcode[i];
+        message.stream = stream;
+        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+    }
+
+    timer.stop();
+    float t= timer.read();
+    stream->printf("time: %f\n", t);
+    stream->printf("sent %d gcodes, %f gcodes/sec\n", cnt, cnt/t);
 #endif
 
 
