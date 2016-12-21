@@ -88,7 +88,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"test",     SimpleShell::test_command},
 
 
-    {"test",     SimpleShell::test_command},
+    {"x",     SimpleShell::x_command},
 
     // unknown command
     {NULL, NULL}
@@ -169,15 +169,6 @@ void SimpleShell::on_second_tick(void *)
             system_reset(false);
         }
     }
-}
-
-// handle backspace or delete in command by removing preceding character
-string SimpleShell::handle_bs(string cmd) {
-    unsigned int n;
-    while((n=cmd.find_first_of("\008\177")) != string::npos) {
-        cmd= cmd.substr(0, n) + cmd.substr(n+1);
-    }
-    return cmd;
 }
 
 void SimpleShell::on_gcode_received(void *argument)
@@ -1227,8 +1218,38 @@ private:
 //#include "mbed.h"
 //#include "PwmOut.h" // mbed.h lib
 
-void SimpleShell::test_command( string parameters, StreamOutput *stream)
+void SimpleShell::x_command( string parameters, StreamOutput *stream)
 {
+#if 1
+    // time uploads over USB serial
+    Timer timer;
+
+    int cnt = 0;
+    bool uploading = true;
+    while(uploading) {
+        if(!stream->ready()) {
+            // we need to kick things or they die
+            THEKERNEL->call_event(ON_IDLE);
+            continue;
+        }
+
+        char c = stream->_getc();
+        if( c == 4 || c == 26) { // ctrl-D or ctrl-Z
+            uploading = false;
+            timer.stop();
+            float t= timer.read();
+            stream->printf("time: %f\n", t);
+            stream->printf("received %d bytes, %f bytes/sec\n", cnt, cnt/t);
+            return;
+
+        } else {
+            if(cnt == 0) timer.start();
+            cnt++;
+        }
+    }
+#endif
+
+
 #if 0
     mbed::PwmOut led(LED3);
     while(1) {
@@ -1301,31 +1322,6 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         m[0], m[1], m[2]);
     delete k;
     THEKERNEL->config->config_cache_clear();
-#endif
-
-#if 0
-    Timer timer;
-    double a= 100.0, b= 200.0, f, x= 0.0;
-    timer.start();
-    for(int i=0;i<1000000;i++) {
-        f= hypot(a, b);
-        x += f;
-    }
-    timer.stop();
-    float t= timer.read();
-    stream->printf("hypot: %f, result: %f\n", t, f);
-
-    timer.reset();
-    timer.start();
-    for(int i=0;i<1000000;i++) {
-        double a2= pow(a, 2);
-        double b2= pow(b, 2);
-        f= sqrt(a2+b2);
-        x += f;
-    }
-    timer.stop();
-    t= timer.read();
-    stream->printf("sqrt: %f, result: %f, x: %f\n", t, f, x);
 #endif
 
 #if 0

@@ -70,9 +70,5 @@ public:
     static const ptentry_t commands_table[];
     static int reset_delay_secs;
 
-
-    // only in my branch
-    string last_command;
-    string handle_bs(string cmd);
-    static void test_command( string parameters, StreamOutput *stream);
+    static void x_command( string parameters, StreamOutput *stream);
 };
