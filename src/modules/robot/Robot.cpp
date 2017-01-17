@@ -399,6 +399,8 @@ Robot::wcs_t Robot::mcs2wcs(const Robot::wcs_t& pos) const
 void Robot::check_max_actuator_speeds()
 {
     for (size_t i = 0; i < n_motors; i++) {
+        if(actuators[i]->is_extruder()) continue; //extruders are not included in this check
+
         float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
         if (step_freq > THEKERNEL->base_stepping_frequency) {
             actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
@@ -421,10 +423,18 @@ void Robot::on_gcode_received(void *argument)
             case 1:  motion_mode = LINEAR;  break;
             case 2:  motion_mode = CW_ARC;  break;
             case 3:  motion_mode = CCW_ARC; break;
-            case 4: { // G4 pause
+            case 4: { // G4 Dwell
                 uint32_t delay_ms = 0;
                 if (gcode->has_letter('P')) {
-                    delay_ms = gcode->get_int('P');
+                    if(THEKERNEL->is_grbl_mode()) {
+                        // in grbl mode (and linuxcnc) P is decimal seconds
+                        float f= gcode->get_value('P');
+                        delay_ms= f * 1000.0F;
+
+                    }else{
+                        // in reprap P is milliseconds, they always have to be different!
+                        delay_ms = gcode->get_int('P');
+                    }
                 }
                 if (gcode->has_letter('S')) {
                     delay_ms += gcode->get_int('S') * 1000;
@@ -600,6 +610,7 @@ void Robot::on_gcode_received(void *argument)
 
             case 92: // M92 - set steps per mm
                 for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
                     char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-A_AXIS));
                     if(gcode->has_letter(axis)) {
                         actuators[i]->change_steps_per_mm(this->to_millimeters(gcode->get_value(axis)));
@@ -632,6 +643,7 @@ void Robot::on_gcode_received(void *argument)
                         }
                         if(gcode->subcode == 1) {
                             for (size_t i = A_AXIS; i < n_motors; i++) {
+                                if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
                                 gcode->stream->printf(" %c: %g ", 'A' + i - A_AXIS, actuators[i]->get_max_rate());
                             }
                         }
