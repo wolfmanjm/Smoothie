@@ -52,6 +52,10 @@ void GcodeDispatch::on_module_loaded()
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
 }
 
+#include "mbed.h" // for wait_ms()
+Timer timer;
+int test_line_cnt= 0;
+
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
 void GcodeDispatch::on_console_line_received(void *line)
 {
@@ -64,6 +68,28 @@ void GcodeDispatch::on_console_line_received(void *line)
     // just reply ok to empty lines
     if(possible_command.empty()) {
         new_message.stream->printf("ok\r\n");
+        return;
+    }
+
+    // test communication speed
+    if(possible_command.substr(0, 4) == "G997") {
+        test_line_cnt= 0;
+        timer.reset();
+        new_message.stream->printf("ok\r\n");
+        timer.start();
+        return;
+
+    }else if(possible_command.substr(0, 4) == "G998") {
+        timer.stop();
+        float t= timer.read();
+        new_message.stream->printf("time: %f, ", t);
+        new_message.stream->printf("sent %d lines, %f lines/sec\n", test_line_cnt, test_line_cnt/t);
+        new_message.stream->printf("ok\r\n");
+        return;
+
+    }else if(possible_command.substr(0, 4) == "G999") {
+        new_message.stream->printf("ok\r\n");
+        ++test_line_cnt;
         return;
     }
 
