@@ -213,8 +213,8 @@ void TemperatureControl::load_config()
     setPIDd( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number() );
 
     if(!this->readonly) {
-        // set to the same as max_pwm by default
-        this->i_max = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
+        // set to -1 to disbale it by default
+        this->i_max = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(-1)->as_number();
     }
 
     this->iTerm = 0.0;
@@ -283,23 +283,31 @@ void TemperatureControl::on_gcode_received(void *argument)
 
         } else if (gcode->m == 301) {
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
-                if (gcode->has_letter('P'))
-                    setPIDp( gcode->get_value('P') );
-                if (gcode->has_letter('I'))
-                    setPIDi( gcode->get_value('I') );
-                if (gcode->has_letter('D'))
-                    setPIDd( gcode->get_value('D') );
-                if (gcode->has_letter('X'))
-                    this->i_max = gcode->get_value('X');
-                if (gcode->has_letter('Y'))
-                    this->heater_pin.max_pwm(gcode->get_value('Y'));
+                if(gcode->subcode == 0) {
+                    if (gcode->has_letter('P'))
+                        setPIDp( gcode->get_value('P') );
+                    if (gcode->has_letter('I'))
+                        setPIDi( gcode->get_value('I') );
+                    if (gcode->has_letter('D'))
+                        setPIDd( gcode->get_value('D') );
+                    if (gcode->has_letter('Y'))
+                        this->heater_pin.max_pwm(gcode->get_value('Y'));
+
+                }else if(gcode->subcode == 1) {
+                    if (gcode->has_letter('X'))
+                        this->i_max = gcode->get_value('X');
+                }
 
             }else if(!gcode->has_letter('S')) {
                 gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g max pwm: %d O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm(), o);
             }
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
-            gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f X%1.4f Y%d\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm());
+            gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f Y%d\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->heater_pin.max_pwm());
+
+            if(this->i_max > 0) {
+                gcode->stream->printf(";Advanced PID settings:\nM301.1 S%d X%1.4f\n", this->pool_index, this->i_max);
+            }
 
             gcode->stream->printf(";Max temperature setting:\nM143 S%d P%1.4f\n", this->pool_index, this->max_temp);
 
@@ -449,7 +457,7 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
         this->lastInput= last_reading;
         // set to whatever the output currently is See http://brettbeauregard.com/blog/2011/04/improving-the-beginner%E2%80%99s-pid-initialization/
         this->iTerm= this->o;
-        if (this->iTerm > this->i_max) this->iTerm = this->i_max;
+        if (this->i_max > 0 && this->iTerm > this->i_max) this->iTerm = this->i_max;
         else if (this->iTerm < 0.0) this->iTerm = 0.0;
     }
 
@@ -509,7 +517,7 @@ void TemperatureControl::pid_process(float temperature)
     float error = target_temperature - temperature;
 
     float new_I = this->iTerm + (error * this->i_factor);
-    if (new_I > this->i_max) new_I = this->i_max;
+    if (this->i_max > 0 && new_I > this->i_max) new_I = this->i_max;
     else if (new_I < 0.0) new_I = 0.0;
     if(!this->windup) this->iTerm= new_I;
 
