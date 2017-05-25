@@ -441,6 +441,7 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool relative)
 {
     char *cmd= new char[128]; // use heap here to reduce stack usage
+    cmd[0]= '\0';
 
     if(relative) strcpy(cmd, "G91 G0 ");
     else strcpy(cmd, "G53 G0 "); // G53 forces movement in machine coordinate system
