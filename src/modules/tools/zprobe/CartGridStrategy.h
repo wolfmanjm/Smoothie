@@ -5,45 +5,50 @@
 #include <string.h>
 #include <tuple>
 
-#define delta_grid_leveling_strategy_checksum CHECKSUM("delta-grid")
+#define cart_grid_leveling_strategy_checksum CHECKSUM("rectangular-grid")
 
 class StreamOutput;
 class Gcode;
 
-class DeltaGridStrategy : public LevelingStrategy
+class CartGridStrategy : public LevelingStrategy
 {
 public:
-    DeltaGridStrategy(ZProbe *zprobe);
-    ~DeltaGridStrategy();
+    CartGridStrategy(ZProbe *zprobe);
+    ~CartGridStrategy();
     bool handleGcode(Gcode* gcode);
     bool handleConfig();
 
 private:
 
-    void extrapolate_one_point(int x, int y, int xdir, int ydir);
-    void extrapolate_unprobed_bed_level();
     bool doProbe(Gcode *gc);
-    float findBed();
+    bool findBed();
     void setAdjustFunction(bool on);
     void print_bed_level(StreamOutput *stream);
     void doCompensation(float *target, bool inverse);
     void reset_bed_level();
     void save_grid(StreamOutput *stream);
     bool load_grid(StreamOutput *stream);
-    bool probe_spiral(int n, float radius, StreamOutput *stream);
-    bool probe_grid(int n, float radius, StreamOutput *stream);
+    bool probe_grid(int n, int m, float _x_start, float _y_start, float _x_size, float _y_size, StreamOutput *stream);
 
     float initial_height;
     float tolerance;
 
     float *grid;
-    float grid_radius;
     std::tuple<float, float, float> probe_offsets;
-    uint8_t grid_size;
+    float x_start,y_start;
+    float x_size,y_size;
+
+    struct {
+        uint8_t configured_grid_x_size:8;
+        uint8_t configured_grid_y_size:8;
+        uint8_t current_grid_x_size:8;
+        uint8_t current_grid_y_size:8;
+    };
 
     struct {
         bool save:1;
         bool do_home:1;
-        bool is_square:1;
+        bool only_by_two_corners:1;
+        bool human_readable:1;
     };
 };

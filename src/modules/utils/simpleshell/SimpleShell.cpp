@@ -39,6 +39,7 @@
 #include "Thermistor.h"
 #include "md5.h"
 #include "utils.h"
+#include "AutoPushPop.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -591,7 +592,7 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
         AHB1.debug(stream);
     }
 
-    stream->printf("Block size: %u bytes\n", sizeof(Block));
+    stream->printf("Block size: %u bytes, Tickinfo size: %u bytes\n", sizeof(Block), sizeof(Block::tickinfo_t) * Block::n_actuators);
 }
 
 static uint32_t getDeviceType()
@@ -816,14 +817,14 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
    } else if (what == "pos") {
-        // convenience to call all the various M114 variants
-        char buf[64];
-        THEROBOT->print_position(0, buf, sizeof buf); stream->printf("last %s\n", buf);
-        THEROBOT->print_position(1, buf, sizeof buf); stream->printf("realtime %s\n", buf);
-        THEROBOT->print_position(2, buf, sizeof buf); stream->printf("%s\n", buf);
-        THEROBOT->print_position(3, buf, sizeof buf); stream->printf("%s\n", buf);
-        THEROBOT->print_position(4, buf, sizeof buf); stream->printf("%s\n", buf);
-        THEROBOT->print_position(5, buf, sizeof buf); stream->printf("%s\n", buf);
+        // convenience to call all the various M114 variants, shows ABC axis where relevant
+        std::string buf;
+        THEROBOT->print_position(0, buf); stream->printf("last %s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(1, buf); stream->printf("realtime %s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(2, buf); stream->printf("%s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(3, buf); stream->printf("%s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(4, buf); stream->printf("%s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(5, buf); stream->printf("%s\n", buf.c_str()); buf.clear();
 
     } else if (what == "wcs") {
         // print the wcs state
@@ -912,23 +913,36 @@ void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stre
     #endif
 }
 
-// used to test out the get public data events for switch
+// set or get switch state for a named switch
 void SimpleShell::switch_command( string parameters, StreamOutput *stream)
 {
     string type = shift_parameter( parameters );
     string value = shift_parameter( parameters );
     bool ok = false;
-    if(value == "on" || value == "off") {
-        bool b = value == "on";
-        ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
-    } else {
-        float v = strtof(value.c_str(), NULL);
-        ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
-    }
-    if (ok) {
-        stream->printf("switch %s set to: %s\r\n", type.c_str(), value.c_str());
-    } else {
-        stream->printf("%s is not a known switch device\r\n", type.c_str());
+    if(value.empty()) {
+        // get switch state
+        struct pad_switch pad;
+        bool ok = PublicData::get_value(switch_checksum, get_checksum(type), 0, &pad);
+        if (!ok) {
+            stream->printf("unknown switch %s.\n", type.c_str());
+            return;
+        }
+        stream->printf("switch %s is %d\n", type.c_str(), pad.state);
+
+    }else{
+        // set switch state
+        if(value == "on" || value == "off") {
+            bool b = value == "on";
+            ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
+        } else {
+            float v = strtof(value.c_str(), NULL);
+            ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
+        }
+        if (ok) {
+            stream->printf("switch %s set to: %s\n", type.c_str(), value.c_str());
+        } else {
+            stream->printf("%s is not a known switch device\n", type.c_str());
+        }
     }
 }
 
@@ -957,6 +971,7 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
 // runs several types of test on the mechanisms
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+    AutoPushPop app; // this will save the state and restore it on exit
     string what = shift_parameter( parameters );
 
     if (what == "jog") {
@@ -981,7 +996,6 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             struct SerialMessage message{&StreamOutput::NullStream, cmd};
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             if(THEKERNEL->is_halted()) break;
-            THECONVEYOR->wait_for_idle();
             toggle= !toggle;
         }
         stream->printf("done\n");
@@ -1013,7 +1027,6 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             stream->printf("%s\n", cmd);
             message.message= cmd;
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-            THECONVEYOR->wait_for_idle();
         }
 
         // leave it where it started
@@ -1024,7 +1037,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
         }
 
-       THEROBOT->pop_state();
+        THEROBOT->pop_state();
         stream->printf("done\n");
 
     }else if (what == "square") {
@@ -1067,8 +1080,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             if(THEKERNEL->is_halted()) break;
-            THECONVEYOR->wait_for_idle();
-        }
+         }
         stream->printf("done\n");
 
     }else if (what == "raw") {
@@ -1144,6 +1156,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("get [pos|wcs|state|status|fk|ik]\r\n");
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
+    stream->printf("switch name [value]\r\n");
     stream->printf("net\r\n");
     stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");

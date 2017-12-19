@@ -5,29 +5,30 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef max31855_h
-#define max31855_h
+#ifndef PT100_E3D_H
+#define PT100_E3D_H
 
 #include "TempSensor.h"
-#include <string>
-#include <libs/Pin.h>
-#include <mbed.h>
-#include "RingBuffer.h"
+#include "Pin.h"
 
-class Max31855 : public TempSensor
+// PT100 sensor via E3D amplifier
+class PT100_E3D : public TempSensor
 {
 public:
-    Max31855();
-    ~Max31855();
-    void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
-    float get_temperature();
-    void on_idle();
+	PT100_E3D();
+	~PT100_E3D();
+
+	// TempSensor interface.
+	void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
+	float get_temperature();
+	void get_raw();
 
 private:
-    struct { bool read_flag:1; } ; //when true, the next call to on_idle will read a new temperature value
-    Pin spi_cs_pin;
-    mbed::SPI *spi;
-    RingBuffer<float,16> readings;
+    int new_pt100_reading();
+    float adc_value_to_temperature(uint32_t adc_value);
+
+	Pin amplifier_pin;
+    float min_temp, max_temp;
 };
 
 #endif
