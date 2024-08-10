@@ -29,6 +29,7 @@ public:
     Adc();
     void enable_pin(Pin *pin);
     unsigned int read(Pin *pin);
+    unsigned int raw_read(Pin *pin);
 
     static Adc *instance;
     void new_sample(int chan, uint32_t value);

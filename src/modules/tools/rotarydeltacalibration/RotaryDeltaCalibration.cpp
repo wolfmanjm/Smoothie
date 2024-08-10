@@ -10,9 +10,17 @@
 #include "PublicData.h"
 #include "Gcode.h"
 #include "StepperMotor.h"
+#include "Pin.h"
+#include "Adc.h"
+#include "SerialMessage.h"
+#include "utils.h"
+#include "Gcode.h"
 
 #define rotarydelta_checksum CHECKSUM("rotary_delta_calibration")
 #define enable_checksum CHECKSUM("enable")
+#define rotary_pin_checksum CHECKSUM("rotary_adc_pin")
+#define rotary_min_checksum CHECKSUM("rotary_adc_min")
+#define rotary_max_checksum CHECKSUM("rotary_adc_max")
 
 void RotaryDeltaCalibration::on_module_loaded()
 {
@@ -23,6 +31,19 @@ void RotaryDeltaCalibration::on_module_loaded()
         return;
     }
 
+    // ADC pin for rotary readings
+    std::string name = THEKERNEL->config->value(rotary_pin_checksum )->as_string();
+    if(!name.empty()) {
+        Pin *pin= new Pin();
+        pin->from_string(name);
+        THEKERNEL->adc->enable_pin(pin);
+        register_for_event(ON_CONSOLE_LINE_RECEIVED);
+        rotary_pin = pin;
+
+    } else {
+        rotary_pin = nullptr;
+    }
+
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
 }
@@ -31,6 +52,26 @@ bool RotaryDeltaCalibration::get_homing_offset(float *theta_offset)
 {
     bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, theta_offset );
     return ok;
+}
+
+void RotaryDeltaCalibration::on_console_line_received( void *argument )
+{
+    SerialMessage new_message = *static_cast<SerialMessage *>(argument);
+    string possible_command = new_message.message;
+    StreamOutput *strm = new_message.stream;
+
+    string cmd = shift_parameter(possible_command);
+    if(cmd == "getangle" && rotary_pin != nullptr) {
+        strm->printf("Use ^Y to exit\n");
+        while(!THEKERNEL->get_stop_request()) {
+            if(THEKERNEL->is_halted()) break;
+            uint32_t adc = THEKERNEL->adc->raw_read(rotary_pin); // 12 bit median value
+            float angle = ((float)adc / 4095.0F) * 360.0F;
+            strm->printf("raw adc= %lu %04lX, angle= %1.3f\n", adc, adc, angle);
+            safe_delay_ms(500);
+        }
+        THEKERNEL->set_stop_request(false);
+    }
 }
 
 void RotaryDeltaCalibration::on_gcode_received(void *argument)

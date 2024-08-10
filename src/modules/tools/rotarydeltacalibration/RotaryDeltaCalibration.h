@@ -2,7 +2,10 @@
 
 #include "Module.h"
 
+#include <stdint.h>
+
 class Gcode;
+class Pin;
 
 class RotaryDeltaCalibration : public Module
 {
@@ -14,5 +17,9 @@ public:
 
 private:
     void on_gcode_received(void *argument);
+    void on_console_line_received( void *argument );
     bool get_homing_offset(float*);
+
+    Pin *rotary_pin;
+    uint32_t rotary_min, rotary_max;
 };

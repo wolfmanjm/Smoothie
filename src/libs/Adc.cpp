@@ -75,6 +75,22 @@ void Adc::new_sample(int chan, uint32_t value)
     }
 }
 
+// just reads the Median alue
+unsigned int Adc::raw_read(Pin *pin)
+{
+    PinName p = this->_pin_to_pinname(pin);
+    int channel = adc->_pin_to_channel(p);
+
+    uint16_t median_buffer[num_samples];
+    // needs atomic access TODO maybe be able to use std::atomic here or some lockless mutex
+    __disable_irq();
+    memcpy(median_buffer, sample_buffers[channel], sizeof(median_buffer));
+    __enable_irq();
+
+    // returns the median value of the last 8 samples
+    return median_buffer[quick_median(median_buffer, num_samples)];
+}
+
 //#define USE_MEDIAN_FILTER
 // Read the filtered value ( burst mode ) on a given pin
 unsigned int Adc::read(Pin *pin)
