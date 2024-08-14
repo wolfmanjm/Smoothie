@@ -20,6 +20,8 @@ private:
     void on_console_line_received( void *argument );
     bool get_homing_offset(float*);
 
-    Pin *rotary_pin;
+    Pin *adc_x_pin;
+    Pin *adc_y_pin;
+    Pin *adc_z_pin;
     uint32_t rotary_min, rotary_max;
 };

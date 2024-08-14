@@ -53,15 +53,18 @@ AD7 P0.2    0-GPIO,     1-TXD0, 2-AD0[7], 3-                4,5 bits of PINSEL0
 */
 
 // Enables ADC on a given pin
-void Adc::enable_pin(Pin *pin)
+bool Adc::enable_pin(Pin *pin)
 {
     PinName pin_name = this->_pin_to_pinname(pin);
+    if(pin_name == NC) return false;
+
     int channel = adc->_pin_to_channel(pin_name);
     memset(sample_buffers[channel], 0, sizeof(sample_buffers[0]));
 
     this->adc->burst(1);
     this->adc->setup(pin_name, 1);
     this->adc->interrupt_state(pin_name, 1);
+    return true;
 }
 
 // Keeps the last 8 values for each channel

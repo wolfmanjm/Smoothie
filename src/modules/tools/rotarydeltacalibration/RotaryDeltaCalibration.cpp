@@ -18,7 +18,9 @@
 
 #define rotarydelta_checksum CHECKSUM("rotary_delta_calibration")
 #define enable_checksum CHECKSUM("enable")
-#define rotary_pin_checksum CHECKSUM("rotary_adc_pin")
+#define rotary_pinx_checksum CHECKSUM("rotary_adc_x_pin")
+#define rotary_piny_checksum CHECKSUM("rotary_adc_y_pin")
+#define rotary_pinz_checksum CHECKSUM("rotary_adc_z_pin")
 #define rotary_min_checksum CHECKSUM("rotary_adc_min")
 #define rotary_max_checksum CHECKSUM("rotary_adc_max")
 
@@ -31,17 +33,56 @@ void RotaryDeltaCalibration::on_module_loaded()
         return;
     }
 
-    // ADC pin for rotary readings
-    std::string name = THEKERNEL->config->value(rotary_pin_checksum )->as_string();
-    if(!name.empty()) {
-        Pin *pin= new Pin();
-        pin->from_string(name);
-        THEKERNEL->adc->enable_pin(pin);
-        register_for_event(ON_CONSOLE_LINE_RECEIVED);
-        rotary_pin = pin;
+    adc_x_pin = nullptr;
+    adc_y_pin = nullptr;
+    adc_z_pin = nullptr;
 
-    } else {
-        rotary_pin = nullptr;
+    do {
+        // ADC pin for rotary readings
+        std::string name = THEKERNEL->config->value(rotarydelta_checksum, rotary_pinx_checksum )->as_string();
+        if(name.empty()) break;
+
+        Pin *pin = new Pin();
+        pin->from_string(name);
+        if(THEKERNEL->adc->enable_pin(pin)) {
+            adc_x_pin = pin;
+        }else{
+            printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
+            delete pin;
+            break;
+        }
+
+        name = THEKERNEL->config->value(rotarydelta_checksum, rotary_piny_checksum )->as_string();
+        if(name.empty()) break;
+        pin = new Pin();
+        pin->from_string(name);
+        if(THEKERNEL->adc->enable_pin(pin)) {
+            adc_y_pin = pin;
+        }else{
+            printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
+            delete pin;
+            delete adc_x_pin; adc_x_pin= nullptr;
+            break;
+        }
+
+        name = THEKERNEL->config->value(rotarydelta_checksum, rotary_pinz_checksum )->as_string();
+        if(name.empty()) break;
+        pin = new Pin();
+        pin->from_string(name);
+        if(THEKERNEL->adc->enable_pin(pin)) {
+            adc_z_pin = pin;
+        }else{
+            printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
+            delete pin;
+            delete adc_x_pin; adc_x_pin= nullptr;
+            delete adc_y_pin; adc_y_pin= nullptr;
+            break;
+        }
+
+    }while(false);
+
+    if(adc_x_pin != nullptr || adc_y_pin != nullptr || adc_z_pin != nullptr) {
+        register_for_event(ON_CONSOLE_LINE_RECEIVED);
     }
 
     // register event-handlers
@@ -61,11 +102,11 @@ void RotaryDeltaCalibration::on_console_line_received( void *argument )
     StreamOutput *strm = new_message.stream;
 
     string cmd = shift_parameter(possible_command);
-    if(cmd == "getangle" && rotary_pin != nullptr) {
+    if(cmd == "getangle" && adc_x_pin != nullptr) {
         strm->printf("Use ^Y to exit\n");
         while(!THEKERNEL->get_stop_request()) {
             if(THEKERNEL->is_halted()) break;
-            uint32_t adc = THEKERNEL->adc->raw_read(rotary_pin); // 12 bit median value
+            uint32_t adc = THEKERNEL->adc->raw_read(adc_x_pin); // 12 bit median value
             float angle = ((float)adc / 4095.0F) * 360.0F;
             strm->printf("raw adc= %lu %04lX, angle= %1.3f\n", adc, adc, angle);
             safe_delay_ms(500);
@@ -108,7 +149,7 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                 // get the current angle for each actuator, relies on being left where probe triggered (G30.1)
                 // NOTE we only deal with XYZ so if there are more than 3 actuators this will probably go wonky
                 for (size_t i = 0; i < 3; i++) {
-                    current_angle[i]= THEROBOT->actuators[i]->get_current_position();
+                    current_angle[i] = THEROBOT->actuators[i]->get_current_position();
                 }
 
                 if (gcode->has_letter('L') && gcode->get_value('L') != 0) {
@@ -135,25 +176,25 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                     return;
                 }
 
-                int cnt= 0;
+                int cnt = 0;
 
                 // figure out what home_offset needs to be to correct the homing_position
                 if (gcode->has_letter('X')) {
                     float a = gcode->get_value('X'); // what actual angle is
                     theta_offset[0] += (a - current_angle[0]);
-                    current_angle[0]= a;
+                    current_angle[0] = a;
                     cnt++;
                 }
                 if (gcode->has_letter('Y')) {
                     float b = gcode->get_value('Y');
                     theta_offset[1] += (b - current_angle[1]);
-                    current_angle[1]= b;
+                    current_angle[1] = b;
                     cnt++;
                 }
                 if (gcode->has_letter('Z')) {
                     float c = gcode->get_value('Z');
                     theta_offset[2] += (c - current_angle[2]);
-                    current_angle[2]= c;
+                    current_angle[2] = c;
                     cnt++;
                 }
 
@@ -164,7 +205,7 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                 if(cnt == 3 || (gcode->has_letter('R') && gcode->get_value('R') != 0)) {
                     THEROBOT->reset_actuator_position(current_angle);
                     gcode->stream->printf("NOTE: actuator position reset\n");
-                }else{
+                } else {
                     gcode->stream->printf("NOTE: actuator position NOT reset\n");
                 }
 

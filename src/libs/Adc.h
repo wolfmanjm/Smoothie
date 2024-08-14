@@ -27,7 +27,7 @@ class Adc
 {
 public:
     Adc();
-    void enable_pin(Pin *pin);
+    bool enable_pin(Pin *pin);
     unsigned int read(Pin *pin);
     unsigned int raw_read(Pin *pin);
 
