@@ -33,10 +33,6 @@ void RotaryDeltaCalibration::on_module_loaded()
         return;
     }
 
-    adc_x_pin = nullptr;
-    adc_y_pin = nullptr;
-    adc_z_pin = nullptr;
-
     do {
         // ADC pin for rotary readings
         std::string name = THEKERNEL->config->value(rotarydelta_checksum, rotary_pinx_checksum )->as_string();
@@ -45,7 +41,7 @@ void RotaryDeltaCalibration::on_module_loaded()
         Pin *pin = new Pin();
         pin->from_string(name);
         if(THEKERNEL->adc->enable_pin(pin)) {
-            adc_x_pin = pin;
+            adc_pins.push_back(pin);
         }else{
             printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
             delete pin;
@@ -57,11 +53,10 @@ void RotaryDeltaCalibration::on_module_loaded()
         pin = new Pin();
         pin->from_string(name);
         if(THEKERNEL->adc->enable_pin(pin)) {
-            adc_y_pin = pin;
+            adc_pins.push_back(pin);
         }else{
             printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
             delete pin;
-            delete adc_x_pin; adc_x_pin= nullptr;
             break;
         }
 
@@ -70,18 +65,15 @@ void RotaryDeltaCalibration::on_module_loaded()
         pin = new Pin();
         pin->from_string(name);
         if(THEKERNEL->adc->enable_pin(pin)) {
-            adc_z_pin = pin;
+            adc_pins.push_back(pin);
         }else{
             printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
             delete pin;
-            delete adc_x_pin; adc_x_pin= nullptr;
-            delete adc_y_pin; adc_y_pin= nullptr;
             break;
         }
-
     }while(false);
 
-    if(adc_x_pin != nullptr || adc_y_pin != nullptr || adc_z_pin != nullptr) {
+    if(!adc_pins.empty()) {
         register_for_event(ON_CONSOLE_LINE_RECEIVED);
     }
 
@@ -102,13 +94,15 @@ void RotaryDeltaCalibration::on_console_line_received( void *argument )
     StreamOutput *strm = new_message.stream;
 
     string cmd = shift_parameter(possible_command);
-    if(cmd == "getangle" && adc_x_pin != nullptr) {
+    if(cmd == "getangle" && !adc_pins.empty()) {
         strm->printf("Use ^Y to exit\n");
         while(!THEKERNEL->get_stop_request()) {
             if(THEKERNEL->is_halted()) break;
-            uint32_t adc = THEKERNEL->adc->raw_read(adc_x_pin); // 12 bit median value
-            float angle = ((float)adc / 4095.0F) * 360.0F;
-            strm->printf("raw adc= %lu %04lX, angle= %1.3f\n", adc, adc, angle);
+            for (uint32_t i = 0; i < adc_pins.size(); ++i) {
+                uint32_t adc = THEKERNEL->adc->raw_read(adc_pins[i]); // 12 bit median value
+                float angle = ((float)adc / 4095.0F) * 360.0F;
+                strm->printf("%lu: raw adc= %lu %04lX, angle= %1.3f\n", i, adc, adc, angle);
+            }
             safe_delay_ms(500);
         }
         THEKERNEL->set_stop_request(false);

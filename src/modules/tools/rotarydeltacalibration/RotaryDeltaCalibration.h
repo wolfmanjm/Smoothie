@@ -3,6 +3,7 @@
 #include "Module.h"
 
 #include <stdint.h>
+#include <vector>
 
 class Gcode;
 class Pin;
@@ -20,8 +21,6 @@ private:
     void on_console_line_received( void *argument );
     bool get_homing_offset(float*);
 
-    Pin *adc_x_pin;
-    Pin *adc_y_pin;
-    Pin *adc_z_pin;
+    std::vector<Pin *> adc_pins;
     uint32_t rotary_min, rotary_max;
 };
