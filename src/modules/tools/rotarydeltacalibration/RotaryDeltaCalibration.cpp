@@ -33,9 +33,10 @@ void RotaryDeltaCalibration::on_module_loaded()
         return;
     }
 
-    do {
-        // ADC pin for rotary readings
-        std::string name = THEKERNEL->config->value(rotarydelta_checksum, rotary_pinx_checksum )->as_string();
+    uint32_t checksums[] = {rotary_pinx_checksum, rotary_piny_checksum, rotary_pinz_checksum};
+    for (int i = 0; i < 3; ++i) {
+        // ADC pins for rotary readings
+        std::string name = THEKERNEL->config->value(rotarydelta_checksum, checksums[i] )->as_string();
         if(name.empty()) break;
 
         Pin *pin = new Pin();
@@ -43,35 +44,11 @@ void RotaryDeltaCalibration::on_module_loaded()
         if(THEKERNEL->adc->enable_pin(pin)) {
             adc_pins.push_back(pin);
         }else{
-            printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
+            printf("Error: RotaryDeltaCalibration. ADC %d: cannot use P%d.%d\n", i, pin->port_number, pin->pin);
             delete pin;
             break;
         }
-
-        name = THEKERNEL->config->value(rotarydelta_checksum, rotary_piny_checksum )->as_string();
-        if(name.empty()) break;
-        pin = new Pin();
-        pin->from_string(name);
-        if(THEKERNEL->adc->enable_pin(pin)) {
-            adc_pins.push_back(pin);
-        }else{
-            printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
-            delete pin;
-            break;
-        }
-
-        name = THEKERNEL->config->value(rotarydelta_checksum, rotary_pinz_checksum )->as_string();
-        if(name.empty()) break;
-        pin = new Pin();
-        pin->from_string(name);
-        if(THEKERNEL->adc->enable_pin(pin)) {
-            adc_pins.push_back(pin);
-        }else{
-            printf("Error: RotaryDeltaCalibration. ADC cannot use P%d.%d\n", pin->port_number, pin->pin);
-            delete pin;
-            break;
-        }
-    }while(false);
+    }
 
     if(!adc_pins.empty()) {
         register_for_event(ON_CONSOLE_LINE_RECEIVED);
